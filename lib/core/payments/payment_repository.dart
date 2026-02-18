@@ -62,13 +62,10 @@ class PaymentRepository {
     );
     return PaymentResponse(
       transactionId: transactionId,
-      status: success ? PaymentStatus.success : PaymentStatus.failed,
+      status: success ? 'success' : 'failed',
       amount: amount.toDouble(),
       currency: 'NGN',
-      provider: PaymentProvider.values.firstWhere(
-        (e) => e.name == provider,
-        orElse: () => PaymentProvider.paystack,
-      ),
+      provider: provider,
       timestamp: DateTime.now(),
       message: success ? 'Refund successful' : 'Refund failed',
     );

@@ -92,10 +92,10 @@ class PaystackPaymentService implements PaymentService {
       return PaymentResponse(
         transactionId: request.transactionId,
         paymentId: data['reference'],
-        status: PaymentStatus.pending,
+        status: 'pending',
         amount: request.amount,
         currency: request.currency,
-        provider: PaymentProvider.paystack,
+        provider: 'paystack',
         timestamp: DateTime.now(),
         authorizationUrl: data['authorization_url'],
         rawResponse: response.data,
@@ -103,10 +103,10 @@ class PaystackPaymentService implements PaymentService {
     } on DioException catch (e) {
       return PaymentResponse(
         transactionId: request.transactionId,
-        status: PaymentStatus.failed,
+        status: 'failed',
         amount: request.amount,
         currency: request.currency,
-        provider: PaymentProvider.paystack,
+        provider: 'paystack',
         timestamp: DateTime.now(),
         message: 'Payment initialization failed: ${e.message}',
       );
@@ -124,10 +124,10 @@ class PaystackPaymentService implements PaymentService {
       return PaymentResponse(
         transactionId: data['metadata']['transaction_id'],
         paymentId: reference,
-        status: _parsePaystackStatus(status),
+        status: _parsePaystackStatusString(status),
         amount: (data['amount'] / 100).toDouble(),
         currency: data['currency'],
-        provider: PaymentProvider.paystack,
+        provider: 'paystack',
         timestamp: DateTime.parse(data['created_at']),
         message: data['gateway_response'],
         rawResponse: response.data,
@@ -135,10 +135,10 @@ class PaystackPaymentService implements PaymentService {
     } on DioException catch (e) {
       return PaymentResponse(
         transactionId: reference,
-        status: PaymentStatus.failed,
+        status: 'failed',
         amount: 0,
         currency: 'NGN',
-        provider: PaymentProvider.paystack,
+        provider: 'paystack',
         timestamp: DateTime.now(),
         message: 'Verification failed: ${e.message}',
       );
@@ -179,12 +179,12 @@ class PaystackPaymentService implements PaymentService {
         queryParameters: {'perPage': limit, 'page': page},
       );
 
-      final transactions =
-          (response.data['data'] as List?)
+      final transactions = (response.data['data'] as List?)
               ?.map(
                 (t) => PaymentTransaction(
                   id: t['id'].toString(),
-                  orderId: t['metadata']['transaction_id'] ?? '',
+                  paymentId: t['reference'],
+                  orderId: t['metadata']?['transaction_id'],
                   amount: (t['amount'] / 100).toDouble(),
                   currency: t['currency'],
                   provider: PaymentProvider.paystack,
@@ -213,6 +213,19 @@ class PaystackPaymentService implements PaymentService {
         return PaymentStatus.failed;
       default:
         return PaymentStatus.pending;
+    }
+  }
+
+  String _parsePaystackStatusString(String status) {
+    switch (status.toLowerCase()) {
+      case 'success':
+        return 'success';
+      case 'pending':
+        return 'pending';
+      case 'failed':
+        return 'failed';
+      default:
+        return 'pending';
     }
   }
 
@@ -286,10 +299,10 @@ class FlutterwavePaymentService implements PaymentService {
       return PaymentResponse(
         transactionId: request.transactionId,
         paymentId: data['id'].toString(),
-        status: PaymentStatus.pending,
+        status: 'pending',
         amount: request.amount,
         currency: request.currency,
-        provider: PaymentProvider.flutterwave,
+        provider: 'flutterwave',
         timestamp: DateTime.now(),
         authorizationUrl: data['link'],
         rawResponse: response.data,
@@ -297,10 +310,10 @@ class FlutterwavePaymentService implements PaymentService {
     } on DioException catch (e) {
       return PaymentResponse(
         transactionId: request.transactionId,
-        status: PaymentStatus.failed,
+        status: 'failed',
         amount: request.amount,
         currency: request.currency,
-        provider: PaymentProvider.flutterwave,
+        provider: 'flutterwave',
         timestamp: DateTime.now(),
         message: 'Payment initialization failed: ${e.message}',
       );
@@ -318,10 +331,10 @@ class FlutterwavePaymentService implements PaymentService {
       return PaymentResponse(
         transactionId: data['tx_ref'],
         paymentId: reference,
-        status: _parseFlutterwaveStatus(status),
+        status: _parseFlutterwaveStatusString(status),
         amount: (data['amount']).toDouble(),
         currency: data['currency'],
-        provider: PaymentProvider.flutterwave,
+        provider: 'flutterwave',
         timestamp: DateTime.parse(data['created_at']),
         message: data['processor_response'],
         rawResponse: response.data,
@@ -329,10 +342,10 @@ class FlutterwavePaymentService implements PaymentService {
     } on DioException catch (e) {
       return PaymentResponse(
         transactionId: reference,
-        status: PaymentStatus.failed,
+        status: 'failed',
         amount: 0,
         currency: 'NGN',
-        provider: PaymentProvider.flutterwave,
+        provider: 'flutterwave',
         timestamp: DateTime.now(),
         message: 'Verification failed: ${e.message}',
       );
@@ -372,12 +385,12 @@ class FlutterwavePaymentService implements PaymentService {
         queryParameters: {'page': page, 'limit': limit},
       );
 
-      final transactions =
-          (response.data['data'] as List?)
+      final transactions = (response.data['data'] as List?)
               ?.map(
                 (t) => PaymentTransaction(
                   id: t['id'].toString(),
-                  orderId: t['tx_ref'] ?? '',
+                  paymentId: t['id'].toString(),
+                  orderId: t['tx_ref'],
                   amount: (t['amount']).toDouble(),
                   currency: t['currency'],
                   provider: PaymentProvider.flutterwave,
@@ -410,6 +423,23 @@ class FlutterwavePaymentService implements PaymentService {
         return PaymentStatus.cancelled;
       default:
         return PaymentStatus.pending;
+    }
+  }
+
+  String _parseFlutterwaveStatusString(String status) {
+    switch (status.toLowerCase()) {
+      case 'successful':
+      case 'approved':
+        return 'success';
+      case 'pending':
+        return 'pending';
+      case 'failed':
+      case 'declined':
+        return 'failed';
+      case 'cancelled':
+        return 'cancelled';
+      default:
+        return 'pending';
     }
   }
 

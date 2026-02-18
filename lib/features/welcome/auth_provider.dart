@@ -55,19 +55,24 @@ class AuthController extends AsyncNotifier<void> {
   }
 
   Future<void> signInWithGoogle() async {
-    // TODO: Implement actual Google Sign In
     state = const AsyncValue.loading();
-    // state = await AsyncValue.guard(() => _authService.signInWithGoogle());
+    state = await AsyncValue.guard(
+      () => _authService.signInWithGoogle(rememberMe: true),
+    );
   }
 
   Future<void> signInWithFacebook() async {
-    // TODO: Implement actual Facebook Sign In
     state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => _authService.signInWithFacebook(rememberMe: true),
+    );
   }
 
   Future<void> signInWithApple() async {
-    // TODO: Implement actual Apple Sign In
     state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => _authService.signInWithApple(rememberMe: true),
+    );
   }
 
   Future<void> forgotPassword(String email) async {
@@ -77,12 +82,17 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<void> forgotPasswordWithPhone(String phone) async {
     state = const AsyncValue.loading();
-    // TODO: Implement phone reset in backend
+    state = await AsyncValue.guard(() => _authService.forgotPassword(phone));
   }
 
-  Future<void> resetPassword(String newPassword) async {
+  Future<void> resetPassword(
+    String newPassword, {
+    required String token,
+  }) async {
     state = const AsyncValue.loading();
-    // TODO: Need token from deep link
+    state = await AsyncValue.guard(
+      () => _authService.resetPassword(token: token, newPassword: newPassword),
+    );
   }
 
   Future<void> signOut() async {
@@ -94,3 +104,12 @@ class AuthController extends AsyncNotifier<void> {
 final authControllerProvider = AsyncNotifierProvider<AuthController, void>(
   AuthController.new,
 );
+
+/// Provider to check if user is authenticated
+final isAuthenticatedProvider = Provider<bool>((ref) {
+  final authState = ref.watch(authStateProvider);
+  return authState.maybeWhen(
+    data: (user) => user != null,
+    orElse: () => false,
+  );
+});

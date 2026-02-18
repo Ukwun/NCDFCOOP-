@@ -20,6 +20,28 @@ class CartItem {
     this.imageUrl,
   });
 
+  /// Convert to JSON for storage
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'productId': productId,
+        'productName': productName,
+        'memberPrice': memberPrice,
+        'marketPrice': marketPrice,
+        'quantity': quantity,
+        'imageUrl': imageUrl,
+      };
+
+  /// Create from JSON
+  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
+        id: json['id'] as String,
+        productId: json['productId'] as String,
+        productName: json['productName'] as String,
+        memberPrice: (json['memberPrice'] as num).toDouble(),
+        marketPrice: (json['marketPrice'] as num).toDouble(),
+        quantity: json['quantity'] as int,
+        imageUrl: json['imageUrl'] as String?,
+      );
+
   /// Calculate total price for this item (member price)
   double get totalPrice => memberPrice * quantity;
 
@@ -62,9 +84,8 @@ class CartState {
   /// Total number of items in cart
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
-  /// Total price (member price)
-  double get totalPrice =>
-      items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  /// Total price (member price) - subtotal
+  double get subtotal => items.fold(0.0, (sum, item) => sum + item.totalPrice);
 
   /// Total market price
   double get totalMarketPrice =>
@@ -73,6 +94,12 @@ class CartState {
   /// Total savings across all items
   double get totalSavings =>
       items.fold(0.0, (sum, item) => sum + item.totalSavings);
+
+  /// Delivery fee: Free for orders above ₦50,000, ₦5,000 otherwise
+  double get deliveryFee => subtotal > 50000 ? 0 : 5000;
+
+  /// Total with delivery fee
+  double get totalPrice => subtotal + deliveryFee;
 
   /// Savings percentage
   double get savingsPercentage {
@@ -120,9 +147,8 @@ class CartNotifier extends Notifier<CartState> {
 
   /// Remove item from cart
   void removeItem(String productId) {
-    final updatedItems = state.items
-        .where((item) => item.productId != productId)
-        .toList();
+    final updatedItems =
+        state.items.where((item) => item.productId != productId).toList();
     state = state.copyWith(items: updatedItems);
   }
 

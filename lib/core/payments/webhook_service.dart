@@ -65,10 +65,10 @@ class WebhookService {
 
     return PaymentResponse(
       transactionId: '',
-      status: PaymentStatus.failed,
+      status: 'failed',
       amount: 0,
       currency: 'NGN',
-      provider: PaymentProvider.paystack,
+      provider: 'paystack',
       timestamp: DateTime.now(),
       message: 'Unknown provider',
     );
@@ -78,12 +78,10 @@ class WebhookService {
     return PaymentResponse(
       transactionId: data['metadata']['transaction_id'] ?? '',
       paymentId: data['reference'],
-      status: data['status'] == 'success'
-          ? PaymentStatus.success
-          : PaymentStatus.failed,
+      status: data['status'] == 'success' ? 'success' : 'failed',
       amount: (data['amount'] / 100).toDouble(),
       currency: data['currency'],
-      provider: PaymentProvider.paystack,
+      provider: 'paystack',
       timestamp: DateTime.parse(data['created_at']),
       message: data['gateway_response'],
     );
@@ -93,12 +91,10 @@ class WebhookService {
     return PaymentResponse(
       transactionId: data['tx_ref'] ?? '',
       paymentId: data['id'].toString(),
-      status: data['status'] == 'successful'
-          ? PaymentStatus.success
-          : PaymentStatus.failed,
+      status: data['status'] == 'successful' ? 'success' : 'failed',
       amount: (data['amount']).toDouble(),
       currency: data['currency'],
-      provider: PaymentProvider.flutterwave,
+      provider: 'flutterwave',
       timestamp: DateTime.parse(data['created_at']),
       message: data['processor_response'],
     );

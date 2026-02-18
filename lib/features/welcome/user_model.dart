@@ -1,9 +1,15 @@
+import 'package:coop_commerce/core/auth/role.dart';
+import 'package:coop_commerce/core/auth/permission.dart';
+import 'package:coop_commerce/core/auth/user_context.dart';
+
 class User {
   final String id;
   final String email;
   final String name;
   final String? photoUrl;
   final String? token;
+  final List<UserRole> roles;
+  final Map<UserRole, UserContext> contexts;
 
   const User({
     required this.id,
@@ -11,25 +17,54 @@ class User {
     required this.name,
     this.photoUrl,
     this.token,
+    this.roles = const [UserRole.consumer],
+    this.contexts = const {},
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final rolesList = (json['roles'] as List<dynamic>?)
+            ?.map((r) => UserRole.values.firstWhere(
+                  (role) => role.name == r,
+                  orElse: () => UserRole.consumer,
+                ))
+            .toList() ??
+        [UserRole.consumer];
+
+    final contextsMap = <UserRole, UserContext>{};
+    if (json['contexts'] is Map) {
+      for (final entry in (json['contexts'] as Map).entries) {
+        try {
+          final role = UserRole.values.firstWhere(
+            (r) => r.name == entry.key,
+          );
+          contextsMap[role] = UserContext.fromJson(entry.value);
+        } catch (_) {}
+      }
+    }
+
     return User(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
       name: json['name'] ?? '',
       photoUrl: json['photoUrl'],
       token: json['token'],
+      roles: rolesList,
+      contexts: contextsMap,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'email': email,
-    'name': name,
-    'photoUrl': photoUrl,
-    'token': token,
-  };
+        'id': id,
+        'email': email,
+        'name': name,
+        'photoUrl': photoUrl,
+        'token': token,
+        'roles': roles.map((r) => r.name).toList(),
+        'contexts': {
+          for (final entry in contexts.entries)
+            entry.key.name: entry.value.toJson(),
+        },
+      };
 
   User copyWith({
     String? id,
@@ -37,6 +72,8 @@ class User {
     String? name,
     String? photoUrl,
     String? token,
+    List<UserRole>? roles,
+    Map<UserRole, UserContext>? contexts,
   }) {
     return User(
       id: id ?? this.id,
@@ -44,6 +81,28 @@ class User {
       name: name ?? this.name,
       photoUrl: photoUrl ?? this.photoUrl,
       token: token ?? this.token,
+      roles: roles ?? this.roles,
+      contexts: contexts ?? this.contexts,
     );
+  }
+
+  /// Get permissions for a specific role
+  Set<Permission> getPermissions(UserRole role) {
+    return rolePermissions[role] ?? {};
+  }
+
+  /// Check if user has a specific permission in a role
+  bool hasPermission(UserRole role, Permission permission) {
+    return getPermissions(role).contains(permission);
+  }
+
+  /// Get context for a role
+  UserContext? getContext(UserRole role) {
+    return contexts[role];
+  }
+
+  /// Check if user has a specific role
+  bool hasRole(UserRole role) {
+    return roles.contains(role);
   }
 }

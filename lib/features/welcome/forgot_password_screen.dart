@@ -18,7 +18,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final String _maskedPhone = '(555)*****67';
   final String _maskedEmail = 'sa*******er@yahoo.com';
 
-  @override
   void _handleSubmit() {
     if (_selectedIndex == -1) {
       ScaffoldMessenger.of(context).showSnackBar(

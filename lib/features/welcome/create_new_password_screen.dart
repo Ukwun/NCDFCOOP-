@@ -5,7 +5,8 @@ import 'package:coop_commerce/theme/app_theme.dart';
 import 'auth_provider.dart';
 
 class CreateNewPasswordScreen extends ConsumerStatefulWidget {
-  const CreateNewPasswordScreen({super.key});
+  final String token;
+  const CreateNewPasswordScreen({super.key, required this.token});
 
   @override
   ConsumerState<CreateNewPasswordScreen> createState() =>
@@ -32,7 +33,7 @@ class _CreateNewPasswordScreenState
     if (_formKey.currentState!.validate()) {
       ref
           .read(authControllerProvider.notifier)
-          .resetPassword(_passwordController.text);
+          .resetPassword(_passwordController.text, token: widget.token);
     }
   }
 

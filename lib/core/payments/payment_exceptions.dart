@@ -99,3 +99,63 @@ class PaymentNetworkException extends PaymentException {
     super.stackTrace,
   });
 }
+
+/// Thrown when bank transfer fails
+class BankTransferException extends PaymentException {
+  BankTransferException(
+    String message, {
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  }) : super(
+          message: message,
+        );
+}
+
+/// Thrown when card processing fails
+class CardProcessingException extends PaymentException {
+  CardProcessingException(
+    String message, {
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  }) : super(
+          message: message,
+        );
+}
+
+/// Thrown when card validation fails
+class CardValidationException extends PaymentException {
+  CardValidationException(
+    String message, {
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  }) : super(
+          message: message,
+        );
+}
+
+/// Thrown when USSD processing fails
+class USSDException extends PaymentException {
+  USSDException(
+    String message, {
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  }) : super(
+          message: message,
+        );
+}
+
+/// Thrown when payment storage fails
+class PaymentStorageException extends PaymentException {
+  PaymentStorageException(
+    String message, {
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  }) : super(
+          message: message,
+        );
+}

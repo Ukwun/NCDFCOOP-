@@ -4,7 +4,7 @@ import 'category_service.dart';
 import 'member_service.dart';
 import 'order_service.dart';
 import 'product_service.dart';
-import 'package:coop_commerce/core/storage/local_storage.dart';
+import 'local_storage.dart';
 
 /// Service locator for dependency injection
 class ServiceLocator {

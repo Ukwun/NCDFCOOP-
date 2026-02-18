@@ -1,55 +1,7 @@
 import 'api_client.dart';
-
-/// Product model for API
-class Product {
-  final String id;
-  final String name;
-  final String description;
-  final double memberPrice;
-  final double marketPrice;
-  final String categoryId;
-  final String? imageUrl;
-  final int stock;
-  final double rating;
-
-  Product({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.memberPrice,
-    required this.marketPrice,
-    required this.categoryId,
-    this.imageUrl,
-    required this.stock,
-    this.rating = 0.0,
-  });
-
-  factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      memberPrice: (json['memberPrice'] ?? 0).toDouble(),
-      marketPrice: (json['marketPrice'] ?? 0).toDouble(),
-      categoryId: json['categoryId'] ?? '',
-      imageUrl: json['imageUrl'],
-      stock: json['stock'] ?? 0,
-      rating: (json['rating'] ?? 0).toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'description': description,
-    'memberPrice': memberPrice,
-    'marketPrice': marketPrice,
-    'categoryId': categoryId,
-    'imageUrl': imageUrl,
-    'stock': stock,
-    'rating': rating,
-  };
-}
+import 'package:coop_commerce/models/product.dart';
+import 'package:coop_commerce/core/auth/role.dart';
+import 'package:coop_commerce/features/welcome/user_model.dart';
 
 /// Product service for API calls
 class ProductService {
@@ -137,5 +89,64 @@ class ProductService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Get products filtered by role
+  Future<List<Product>> getProductsByRole({
+    required User user,
+    required UserRole role,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      // Get all products
+      final allProducts = await getAllProducts(page: page, limit: limit);
+
+      // Filter based on role visibility
+      return allProducts.where((product) {
+        return _isProductVisibleToRole(product, role);
+      }).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Search products with role filtering
+  Future<List<Product>> searchProductsByRole({
+    required User user,
+    required UserRole role,
+    required String query,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      // Search all products
+      final results = await searchProducts(query, page: page, limit: limit);
+
+      // Filter by role
+      return results.where((product) {
+        return _isProductVisibleToRole(product, role);
+      }).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Check if product is visible to a role
+  bool _isProductVisibleToRole(Product product, UserRole role) {
+    // Admins see everything
+    if (role.isAdmin) return true;
+
+    // Check visibility flags
+    if (role.isWholesale) {
+      return product.visibleToWholesale;
+    }
+
+    if (role.isInstitutional) {
+      return product.visibleToInstitutions;
+    }
+
+    // Consumers and members see retail
+    return product.visibleToRetail;
   }
 }

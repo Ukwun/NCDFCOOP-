@@ -1,41 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:coop_commerce/config/router.dart';
 import 'package:coop_commerce/core/api/service_locator.dart';
+import 'package:coop_commerce/core/error/exception_handler.dart';
+import 'package:coop_commerce/core/services/fcm_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:coop_commerce/features/notifications/notification_screens.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Setup global exception handler
+  ExceptionHandler.setupGlobalExceptionHandler();
+
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp();
+    // Initialize FCM after Firebase is ready
+    final fcmService = FCMService();
+    await fcmService.initialize();
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+  }
+
   serviceLocator.initialize();
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = AppRouter.createRouter(ref);
+
+    return InAppNotificationBanner(
+      child: MaterialApp.router(
+        title: 'Coop Commerce',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        ),
+        routerConfig: router,
       ),
-      home: MaterialApp.router(routerConfig: AppRouter.router),
     );
   }
 }

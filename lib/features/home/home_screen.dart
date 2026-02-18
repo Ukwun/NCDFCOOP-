@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'home_viewmodel.dart';
 import 'home_widgets.dart';
@@ -182,6 +183,10 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.lg),
           // Search bar
           TextField(
+            onTap: () {
+              context.pushNamed('search');
+            },
+            readOnly: true,
             decoration: InputDecoration(
               hintText: 'Search products, categories...',
               prefixIcon: const Icon(Icons.search),
