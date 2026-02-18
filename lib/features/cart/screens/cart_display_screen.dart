@@ -44,8 +44,7 @@ class _CartDisplayScreenState extends State<CartDisplayScreen> {
             id: '1',
             productId: 'prod_001',
             name: 'Premium Basmati Rice',
-            imageUrl:
-                'https://images.unsplash.com/photo-1638551112442-20fcf9f96f64?w=200&h=200&fit=crop',
+            imageUrl: 'assets/images/ijebugarri1.png',
             memberPrice: 6800,
             quantity: 2,
           ),
@@ -53,8 +52,7 @@ class _CartDisplayScreenState extends State<CartDisplayScreen> {
             id: '2',
             productId: 'prod_002',
             name: 'Organic Sugar',
-            imageUrl:
-                'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=200&h=200&fit=crop',
+            imageUrl: 'assets/images/All inclusive pack.png',
             memberPrice: 2500,
             quantity: 1,
           ),
