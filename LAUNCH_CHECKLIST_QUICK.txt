@@ -1,0 +1,369 @@
+================================================================================
+  NCDFCOOP - PLAY STORE LAUNCH CHECKLIST
+  January 31, 2026 | 48-Hour Launch Plan
+================================================================================
+
+DECISION: Which path are you taking?
+  [ ] FAST PATH: Ship tonight (submit to Play Store by 19:00 today)
+  [ ] STANDARD PATH: Ship tomorrow morning (submit by 17:00 tomorrow)
+  [ ] THOROUGH PATH: Extra validation over weekend (submit Monday)
+
+================================================================================
+TODAY (FRIDAY, JANUARY 31) - 6-8 HOURS
+================================================================================
+
+PHASE 1: DEVICE TESTING (2 hours) ⏰ 14:00-16:00
+─────────────────────────────────────────────────────────────────────────────
+Required: Android device + USB cable
+
+[ ] 1. Connect Android device via USB
+[ ] 2. Enable Developer Mode: Settings → About → Tap Build 7 times
+[ ] 3. Allow USB debugging when prompted
+[ ] 4. Terminal: flutter run
+[ ] 5. App launches and shows home screen
+[ ] 6. Login with test credentials
+[ ] 7. Browse products (see real data from Firestore)
+[ ] 8. Try category filter
+[ ] 9. Try search filter
+[ ] 10. Try price range filter
+[ ] 11. Try sort options
+[ ] 12. Tap product to see detail screen
+[ ] 13. See price displayed (with real-time banner if promotion active)
+[ ] 14. See inventory badge (if low stock/out of stock)
+[ ] 15. Add to cart
+[ ] 16. Go to checkout
+[ ] 17. Select delivery address
+[ ] 18. Select payment method
+[ ] 19. Click "Place Order"
+[ ] 20. See order confirmation screen
+[ ] 21. Verify order number displayed
+[ ] 22. Click "Track Order"
+[ ] 23. See order tracking screen with real-time status
+[ ] 24. Use app for 15 minutes, navigate around
+[ ] 25. No crashes? ✅ PASS
+
+PHASE 2: FIRESTORE VALIDATION (30 minutes) ⏰ 16:00-16:30
+─────────────────────────────────────────────────────────────────────────────
+Required: Firebase Console access
+
+[ ] 1. Go to console.firebase.google.com
+[ ] 2. Select your project
+[ ] 3. Go to Firestore Database
+[ ] 4. Click on 'products' collection
+[ ] 5. Verify at least 10 documents exist
+[ ] 6. Check first product has: name, category, retailPrice, wholesalePrice, stock, imageUrl
+[ ] 7. Check at least 5 products have featured: true
+[ ] 8. Click on 'users' collection
+[ ] 9. Find your test user document
+[ ] 10. Verify user has address in addresses[] array
+[ ] 11. Verify user has paymentMethod in paymentMethods[] array
+[ ] 12. All data correct? ✅ PASS
+
+PHASE 3: REAL-TIME TESTING (1 hour) ⏰ 16:30-17:30
+─────────────────────────────────────────────────────────────────────────────
+Required: App on device + Firebase Console
+
+TEST 3A: PRICE UPDATES
+[ ] 1. In app: Navigate to Products Listing screen
+[ ] 2. In Firebase: Go to pricing_rules_updates collection
+[ ] 3. In Firebase: Click "Add document"
+[ ] 4. Add field: affectedProductIds (array) = ["product_id_of_first_product"]
+[ ] 5. Add field: oldPrice (number) = 5000
+[ ] 6. Add field: newPrice (number) = 3500
+[ ] 7. Add field: promotionActive (boolean) = true
+[ ] 8. Add field: timestamp (timestamp) = now
+[ ] 9. Click Save
+[ ] 10. In app: Look for amber banner "Price Updated!" at top
+[ ] 11. Banner appears within 2 seconds? ✅ PASS
+[ ] 12. Banner shows correct old/new prices? ✅ PASS
+
+TEST 3B: INVENTORY UPDATES
+[ ] 1. In Firebase: Go to products collection
+[ ] 2. Click on first product document
+[ ] 3. Change stock field: 100 → 0
+[ ] 4. Click Save
+[ ] 5. In app: Refresh products listing (navigate away and back)
+[ ] 6. Look for RED badge "Out of Stock" on first product
+[ ] 7. Red badge appears? ✅ PASS
+[ ] 8. In Firebase: Change stock field: 0 → 5
+[ ] 9. Click Save
+[ ] 10. In app: Refresh products listing
+[ ] 11. Look for ORANGE badge "Low Stock" on first product
+[ ] 12. Orange badge appears? ✅ PASS
+[ ] 13. In Firebase: Change stock field: 5 → 15
+[ ] 14. Click Save
+[ ] 15. In app: Refresh products listing
+[ ] 16. Badge should disappear (no badge for in-stock)
+[ ] 17. Badge gone? ✅ PASS
+
+TEST 3C: ORDER STATUS UPDATES
+[ ] 1. In app: Complete a full checkout to create an order
+[ ] 2. Note the order ID from confirmation screen (first 8 chars)
+[ ] 3. In Firebase: Go to orders collection
+[ ] 4. Find document with that order ID
+[ ] 5. Change status: "pending" → "processing"
+[ ] 6. Click Save
+[ ] 7. In app: Click "Track Order"
+[ ] 8. Look for GREEN banner "Order Status Updated"
+[ ] 9. Green banner appears within 2 seconds? ✅ PASS
+[ ] 10. Status shows "PROCESSING"? ✅ PASS
+[ ] 11. In Firebase: Change status: "processing" → "packed"
+[ ] 12. In app: Refresh order tracking screen
+[ ] 13. Status updated to "PACKED"? ✅ PASS
+
+PHASE 4: BUILD PREPARATION (1 hour) ⏰ 17:30-18:30
+─────────────────────────────────────────────────────────────────────────────
+Required: Terminal access
+
+[ ] 1. Terminal: keytool -genkey -v -keystore ~/coop_commerce.jks -keyalg RSA -keysize 2048 -validity 10000 -alias coop_commerce_key
+[ ] 2. When prompted, enter keystore password: [SAVE THIS!]
+[ ] 3. When prompted, enter key password: [SAVE THIS!]
+[ ] 4. When prompted, name: National Cooperative Development Commission
+[ ] 5. When prompted, org unit: Technology
+[ ] 6. When prompted, org: NCDFCOOP
+[ ] 7. When prompted, city: Abuja
+[ ] 8. When prompted, state: Federal Capital Territory
+[ ] 9. When prompted, country: NG
+[ ] 10. Key created: ~/coop_commerce.jks ✅
+[ ] 11. CREATE FILE: android/key.properties
+       Content:
+       storeFile=/Users/[YOUR_USERNAME]/coop_commerce.jks
+       storePassword=[PASSWORD_YOU_SAVED]
+       keyAlias=coop_commerce_key
+       keyPassword=[PASSWORD_YOU_SAVED]
+[ ] 12. File saved at android/key.properties? ✅
+[ ] 13. UPDATE: android/app/build.gradle (see PROJECT_ANALYSIS_COMPREHENSIVE.md for code)
+[ ] 14. UPDATE: pubspec.yaml - version: 1.0.0+1
+[ ] 15. Terminal: flutter clean
+[ ] 16. Terminal: flutter pub get
+[ ] 17. Terminal: flutter analyze
+[ ] 18. Output shows "0 error -"? ✅ PASS
+
+PHASE 5: BUILD RELEASE (45 minutes) ⏰ 18:30-19:15
+─────────────────────────────────────────────────────────────────────────────
+Required: Patience! Build takes 5-15 minutes
+
+[ ] 1. Terminal: flutter build appbundle --release
+[ ] 2. Watch terminal... this will take several minutes
+[ ] 3. Should see: "Built build/app/outputs/bundle/release/app-release.aab"
+[ ] 4. Output shows success? ✅ PASS
+[ ] 5. Terminal: ls -lh build/app/outputs/bundle/release/app-release.aab
+[ ] 6. File size > 50MB? ✅ PASS
+[ ] 7. File created successfully? ✅ PASS
+
+PHASE 6: TEST RELEASE APK (20 minutes) ⏰ 19:15-19:35
+─────────────────────────────────────────────────────────────────────────────
+[ ] 1. Terminal: flutter build apk --release
+[ ] 2. Wait for build
+[ ] 3. Terminal: adb install build/app/outputs/app/release/app-release.apk
+[ ] 4. App installs on device
+[ ] 5. Uninstall debug version first if needed
+[ ] 6. App launches after install? ✅
+[ ] 7. Login works? ✅
+[ ] 8. Products load? ✅
+[ ] 9. Checkout works? ✅
+[ ] 10. No crashes for 10 minutes? ✅ PASS
+
+PHASE 7: GIT BACKUP (5 minutes) ⏰ 19:35-19:40
+─────────────────────────────────────────────────────────────────────────────
+[ ] 1. Terminal: git status
+[ ] 2. Terminal: git add -A
+[ ] 3. Terminal: git commit -m "Ready for Play Store submission - MVP validated"
+[ ] 4. Terminal: git push
+[ ] 5. Code backed up to cloud? ✅ PASS
+
+✅ END OF FRIDAY - READY FOR PLAY STORE!
+
+================================================================================
+TOMORROW MORNING (SATURDAY, FEBRUARY 1) - 4-5 HOURS
+================================================================================
+
+PHASE 8: PLAY STORE SETUP (30 minutes) ⏰ 09:00-09:30
+─────────────────────────────────────────────────────────────────────────────
+Required: Google account + $25 USD
+
+[ ] 1. Go to https://play.google.com/console
+[ ] 2. Click "Create account"
+[ ] 3. Enter organization: National Cooperative Development Commission
+[ ] 4. Enter email: [your@email.com]
+[ ] 5. Accept terms
+[ ] 6. Pay $25 USD (one-time)
+[ ] 7. Wait for verification
+[ ] 8. Account active? ✅ PASS
+[ ] 9. In Play Console: Click "Create app"
+[ ] 10. App name: NCDFCOOP
+[ ] 11. Default language: English
+[ ] 12. App or game: App
+[ ] 13. Free or paid: Free
+[ ] 14. Content rating: Shopping
+[ ] 15. Create app
+[ ] 16. New app created? ✅ PASS
+
+PHASE 9: LISTING CONTENT (1 hour) ⏰ 09:30-10:30
+─────────────────────────────────────────────────────────────────────────────
+Required: Screenshots, icon, descriptions
+
+[ ] 1. In Play Console, go to "Listing" tab
+[ ] 2. Short description: "Cooperative commerce platform for wholesale & retail shopping"
+[ ] 3. Full description: (See PROJECT_ANALYSIS_COMPREHENSIVE.md for full text)
+[ ] 4. Create 2-4 screenshots from your device:
+       - Home screen with products
+       - Product browsing screen
+       - Checkout screen
+       - Order confirmation
+[ ] 5. Upload screenshots (1080x1920px recommended)
+[ ] 6. Create or upload app icon (512x512px)
+[ ] 7. Create feature graphic (1024x500px) optional
+[ ] 8. Add contact email
+[ ] 9. Add privacy policy URL: https://www.example.com/privacy (or your real policy)
+[ ] 10. Submit content rating questionnaire
+[ ] 11. All fields filled? ✅ PASS
+
+PHASE 10: BUILD UPLOAD (30 minutes) ⏰ 10:30-11:00
+─────────────────────────────────────────────────────────────────────────────
+Required: app-release.aab file from earlier
+
+[ ] 1. In Play Console, go to "Releases" tab
+[ ] 2. Click "Create new release" under "Production"
+[ ] 3. Click "Browse files"
+[ ] 4. Select: build/app/outputs/bundle/release/app-release.aab
+[ ] 5. File uploaded (shows version code 1)
+[ ] 6. In Release notes box, type: "Initial release of NCDFCOOP commerce platform"
+[ ] 7. Click "Save"
+[ ] 8. Review release details
+[ ] 9. All looks correct? Click "Review"
+[ ] 10. On review page, click "Start rollout to Production"
+[ ] 11. Confirm when asked
+
+PHASE 11: SUBMIT FOR REVIEW (10 minutes) ⏰ 11:00-11:10
+─────────────────────────────────────────────────────────────────────────────
+[ ] 1. In Play Console, go to "App content" tab
+[ ] 2. Fill in: Target audience (Shopping)
+[ ] 3. Review all sections (should show ✅)
+[ ] 4. Go to "Overview" tab
+[ ] 5. Scroll to bottom
+[ ] 6. Click blue button: "Submit to review"
+[ ] 7. Confirm submission
+[ ] 8. Check status - should say "Pending review" or "In review"
+[ ] 9. Status shows "Pending"? ✅ PASS
+[ ] 10. Check email for submission confirmation
+
+✅ APP SUBMITTED!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT HAPPENS NEXT (No action required):
+  ⏱️  1-2 hours: Google automated checks
+  🤖 2-4 hours: App scanned by antivirus
+  👤 1-5 days: Human review
+  📧 Email when approved
+  🚀 App appears on Play Store
+
+APPROVAL TIMELINE:
+  Most likely: 24-48 hours
+  Worst case: Up to 5 days
+  BUT you can make updates during this time
+
+================================================================================
+AFTER APPROVAL (Next 2-5 days)
+================================================================================
+
+[ ] 1. Check email for approval notification
+[ ] 2. Go to https://play.google.com/store
+[ ] 3. Search for "NCDFCOOP"
+[ ] 4. App appears in search results? ✅
+[ ] 5. Download on test device
+[ ] 6. Install and test one more time
+[ ] 7. All working? ✅
+[ ] 8. Share download link with team
+[ ] 9. Monitor reviews and crash reports
+[ ] 10. Celebrate! 🎉
+
+================================================================================
+EMERGENCY CONTACTS
+================================================================================
+
+If build fails:
+  1. Run: flutter clean && flutter pub get
+  2. Check Java is installed: java -version
+  3. Check Android SDK: flutter doctor -v
+  4. Read full error message carefully
+  5. Google the exact error message
+
+If Play Store submission fails:
+  1. Check all required fields are filled
+  2. Read rejection reason email carefully
+  3. Fix the issue
+  4. Click "Fix issue" in Play Console
+  5. Re-submit
+
+If app crashes after launch:
+  1. Go to Google Play Console
+  2. Click on app
+  3. Go to "Crashes" tab
+  4. See what's crashing
+  5. Fix in code
+  6. Build new AAB (version 1.0.0+2)
+  7. Submit as update (same process)
+
+================================================================================
+PASSWORDS TO SAVE (CRITICAL!)
+================================================================================
+
+Signing Key Password: ________________
+Key Alias Password: ________________
+Play Store Account: ________________
+Firebase Project: ________________
+Test User Email: ________________
+Test User Password: ________________
+
+Keep these in a safe place - password manager recommended!
+
+================================================================================
+TIMELINE SUMMARY
+================================================================================
+
+Friday, Jan 31:    6-8 hours → Everything ready, app built
+Saturday, Feb 1:   4-5 hours → Submitted to Play Store
+Tuesday, Feb 3-4:  Approval (24-48 hours typical)
+Wednesday, Feb 5:  ✅ LIVE ON PLAY STORE
+
+Total time investment: 10-14 hours spread over 5 days
+Waiting time: 24-48 hours (Google's review)
+
+================================================================================
+SUCCESS CHECKLIST
+================================================================================
+
+BEFORE TESTING:
+  [ ] Device connected
+  [ ] Firebase project set up
+  [ ] Test data in Firestore
+  [ ] Play Store developer account created ($25 paid)
+
+AFTER TESTING:
+  [ ] 0 crashes in 30-minute usage test
+  [ ] Real-time updates working
+  [ ] Checkout flow complete
+  [ ] All features working
+
+BEFORE BUILDING:
+  [ ] Signing key generated + backed up
+  [ ] pubspec.yaml version updated
+  [ ] pubspec.yaml saved
+
+BEFORE SUBMITTING:
+  [ ] AAB file created
+  [ ] APK tested on device
+  [ ] App icon uploaded
+  [ ] Description written
+  [ ] Screenshots uploaded
+  [ ] Privacy policy provided
+
+AFTER SUBMITTING:
+  [ ] Status shows "Pending review"
+  [ ] Confirmation email received
+  [ ] Monitor approval progress
+
+✅ YOU'RE GOING TO SHIP THIS. YOU'VE GOT THIS. 🚀
+
+================================================================================

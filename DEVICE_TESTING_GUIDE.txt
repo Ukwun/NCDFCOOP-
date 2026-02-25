@@ -1,0 +1,215 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                 COOP COMMERCE - ANDROID DEVICE TESTING                      ║
+║                        Signed Release APK v1.0.0                            ║
+║                          February 20, 2026                                  ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+✅ SIGNING CONFIGURATION: COMPLETE
+   • Keystore: c:\development\coop_commerce\android\coop-commerce-key.jks
+   • APK Size: 76.3 MB
+   • APK Location: build/app/outputs/flutter-apk/app-release.apk
+   • Application ID: com.cooperativenicorp.coopcommerce
+
+════════════════════════════════════════════════════════════════════════════════
+
+🔧 INSTALLATION INSTRUCTIONS
+
+STEP 1: Enable USB Debugging on Android Device
+────────────────────────────────────────────────
+1. On your Android device, go to: Settings → About Phone
+2. Tap "Build Number" 7 times (until you see "You are now a developer")
+3. Go back to Settings → Developer Options
+4. Enable "USB Debugging"
+5. Plug device into computer via USB cable
+6. When prompted "Allow USB debugging?", tap YES and check "Always allow"
+
+STEP 2: List Connected Devices
+────────────────────────────────
+Run in PowerShell:
+  adb devices
+
+Expected output:
+  List of attached devices
+  xxxxxxxxxxxxx device
+
+STEP 3: Install APK on Device
+──────────────────────────────
+Run in PowerShell:
+  adb install -r "c:\development\coop_commerce\build\app\outputs\flutter-apk\app-release.apk"
+
+Expected output:
+  Success
+  Success
+  Success
+  ...
+  Package /data/app/com.cooperativenicorp.coopcommerce-xxxxx/base.apk
+  Unzipping native libraries: success
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ CRITICAL TEST CHECKLIST (30 minutes)
+
+TEST 1: APP LAUNCH & ONBOARDING (5 min)
+─────────────────────────────────────────
+On your device:
+  [ ] Tap "CoopCommerce" app icon
+  [ ] App launches without crashing
+  [ ] Splash screen shows logo
+  [ ] Welcome screen appears (takes ~2 seconds from tap)
+  [ ] No red error screens
+  [ ] No white blank screens
+  
+Check device logs:
+  adb logcat | Select-String "error|Exception|crash"
+  Expected: No critical errors
+
+TEST 2: LOGIN / SIGNUP (10 min)
+───────────────────────────────
+On your device:
+  [ ] Tap "Sign In"
+  [ ] Email field appears
+  [ ] Password field appears
+  [ ] Enter test email: consumer@test.com
+  [ ] Enter test password: Test@12345
+  [ ] Tap "Sign In"
+  [ ] Loading spinner shows (1-2 seconds)
+  [ ] Successfully redirects to Home screen
+  [ ] User name displayed (e.g., "Welcome Back, Consumer")
+  
+If Sign In is not available:
+  [ ] Tap "Create Account"
+  [ ] Fill in: First Name, Last Name, Email, Password
+  [ ] Tap "Create Account"
+  [ ] Auto-redirects to Home screen
+
+TEST 3: PRODUCT BROWSING (10 min)
+──────────────────────────────────
+On your device from Home screen:
+  [ ] See product cards with images
+  [ ] Tap product card
+  [ ] Product detail screen loads
+  [ ] See product name, price, description
+  [ ] Tap "Add to Cart"
+  [ ] Cart count badge updates (shows 1)
+  [ ] No crashes
+
+Additional browsing tests:
+  [ ] Scroll through products (check for lag)
+  [ ] Try search bar - search for "rice"
+  [ ] Results appear in <2 seconds
+  [ ] Tap back button (navigation works)
+  [ ] Bottom navigation (tabs) work
+
+TEST 4: SHOPPING CART (5 min)
+──────────────────────────────
+From any product:
+  [ ] Tap "Add to Cart"
+  [ ] Cart count updates
+  [ ] Navigate to Cart screen (usually bottom nav)
+  [ ] See items in cart
+  [ ] Try increasing quantity (↑ button)
+  [ ] Price updates correctly
+  [ ] Remove item button works
+  [ ] Empty cart message shows if no items
+
+════════════════════════════════════════════════════════════════════════════════
+
+⚠️ COMMON ISSUES & SOLUTIONS
+
+ISSUE: "App not installed" or fails to install
+SOLUTION:
+  [ ] Uninstall first: adb uninstall com.cooperativenicorp.coopcommerce
+  [ ] Then reinstall: adb install -r app-release.apk
+
+ISSUE: APK installs but app crashes on launch
+SOLUTION A:
+  [ ] Check if device is connected: adb devices
+  [ ] Check logs: adb logcat | Select-String "coopcommerce|error"
+  [ ] Look for permission errors or Firebase issues
+
+SOLUTION B (Firebase not configured):
+  [ ] This is expected if Firebase isn't configured
+  [ ] App may show:
+    - "Firebase initialization error"
+    - Can still use basic features
+    - Payments may not work
+
+ISSUE: "Cannot read properties from null" error
+SOLUTION:
+  [ ] This is usually a Firebase configuration issue
+  [ ] First time setup - OK, expected
+  [ ] Clear app data: adb shell pm clear com.cooperativenicorp.coopcommerce
+
+ISSUE: Login fails with "Network error"
+SOLUTION:
+  [ ] Check WiFi connection: Have you enabled WiFi on device?
+  [ ] Check if Firebase is reachable: open browser, go to any Google site
+  [ ] Try signing up instead of signing in
+
+════════════════════════════════════════════════════════════════════════════════
+
+📊 TESTING SUCCESS CRITERIA
+
+✓ PASSING IF:
+  • App installs without errors
+  • App launches without crashing
+  • Can see at least one screen (login, home, or splash)
+  • No blank white screens or error dialogs
+  • Bottom navigation works
+  • Can tap buttons and see responses
+  
+✗ FAILING IF:
+  • Installation fails
+  • Immediate crash on launch
+  • Persistent white/blank screen
+  • Red error dialogs on first launch
+  • Cannot interact with app (buttons don't respond)
+  • Consistent crashes when navigating
+
+════════════════════════════════════════════════════════════════════════════════
+
+📝 DOCUMENTATION TO CHECK
+
+If you encounter issues, review these files:
+  [ ] PHASE_1_COMPLETION_SUMMARY.md - Feature status
+  [ ] COMPREHENSIVE_PROJECT_ANALYSIS_FEB_2026.md - Known issues
+  [ ] LAUNCH_CHECKLIST_QUICK.txt - Detailed procedures
+  [ ] TESTING_SCENARIOS_PLAYSTORE_VALIDATION.md - More test cases
+
+════════════════════════════════════════════════════════════════════════════════
+
+🎯 WHAT'S NEXT (After Device Testing)
+
+If Tests Pass (✅):
+  1. ✅ Return here and report results
+  2. ✅ We proceed to Flutterwave keys configuration
+  3. ✅ Full payment flow testing
+  4. ✅ PlayStore submission preparation
+
+If Tests Fail (❌):
+  1. Check the "COMMON ISSUES & SOLUTIONS" section above
+  2. Provide error messages + device logs
+  3. We'll debug and fix
+  4. Then retest
+
+════════════════════════════════════════════════════════════════════════════════
+
+📱 DEVICE INFORMATION (For Testing)
+
+Recommended testing devices:
+  • Minimum: Android 5.0 (API 21)
+  • Target: Android 12-14 (latest)
+  • Test on both: Emulator AND real device if possible
+
+Device Setup Verification:
+  adb devices
+  adb shell getprop ro.build.version.release  (shows Android version)
+  adb shell getprop ro.product.model          (shows device model)
+
+════════════════════════════════════════════════════════════════════════════════
+
+Questions or Issues? Check the error message output:
+  adb logcat -s "flutter"    (shows Flutter-specific logs)
+  adb logcat -s "coopcommerce" (shows app-specific logs)
+
+════════════════════════════════════════════════════════════════════════════════

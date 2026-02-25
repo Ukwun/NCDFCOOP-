@@ -1,0 +1,200 @@
+02-16 08:08:39.720  5383  5406 D FlutterJNI: Beginning load of flutter...
+02-16 08:08:40.179  5383  5407 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/kernel_blob.bin
+02-16 08:08:40.180  5383  5407 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/vm_snapshot_data
+02-16 08:08:40.224  5383  5407 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/isolate_snapshot_data
+02-16 08:08:40.272  5383  5406 D nativeloader: Load /data/app/~~D-ylpqg3XdxfVmidhFb5dg==/com.example.coop_commerce-nrzlNIHND7H2Wt2d9mD7NA==/base.apk!/lib/x86_64/libflutter.so using class loader ns clns-9 (caller=/data/app/~~D-ylpqg3XdxfVmidhFb5dg==/com.example.coop_commerce-nrzlNIHND7H2Wt2d9mD7NA==/base.apk): ok
+02-16 08:08:40.394  5383  5406 D FlutterJNI: flutter (null) was loaded normally!
+02-16 08:08:41.136  5383  5418 I flutter : The Dart VM service is listening on http://127.0.0.1:35751/KXQ2SPOgnEg=/
+02-16 08:08:41.173  5383  5409 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: Error registering plugin flutter_facebook_auth, app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FacebookAuth.<init>(FacebookAuth.java:27)
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin.<init>(FlutterFacebookAuthPlugin.java:20)
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: 	at io.flutter.plugins.GeneratedPluginRegistrant.registerWith(GeneratedPluginRegistrant.java:59)
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: 	at io.flutter.embedding.engine.plugins.util.GeneratedPluginRegister.registerGeneratedPlugins(GeneratedPluginRegister.java:80)
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.configureFlutterEngine(FlutterActivity.java:1356)
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivityAndFragmentDelegate.onAttach(FlutterActivityAndFragmentDelegate.java:226)
+02-16 08:08:42.474  5383  5383 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.onCreate(FlutterActivity.java:646)
+02-16 08:08:43.010  5383  5383 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityNodeInfo;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported,test-api) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:08:43.012  5383  5383 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityRecord;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:08:43.013  5383  5383 I e.coop_commerce: hiddenapi: Accessing hidden field Landroid/view/accessibility/AccessibilityNodeInfo;->mChildNodeIds:Landroid/util/LongArray; (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:08:43.014  5383  5383 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/util/LongArray;->get(I)J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:08:43.465  5383  5383 I flutter : 📱 App starting...
+02-16 08:08:43.466  5383  5383 I flutter : 🔥 Initializing Firebase...
+02-16 08:08:44.683   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b/sksl size=8192 mod=1771229320 from UID=10249 used=73728 quota=67108864 ratio=10
+02-16 08:08:44.684   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b size=8192 mod=1771229320 from UID=10249 used=65536 quota=67108864 ratio=9
+02-16 08:08:44.684   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia size=8192 mod=1771229320 from UID=10249 used=57344 quota=67108864 ratio=8
+02-16 08:08:44.710   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b size=8192 mod=1771229320 from UID=10249 used=49152 quota=67108864 ratio=7
+02-16 08:08:44.747   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine size=8192 mod=1771229320 from UID=10249 used=40960 quota=67108864 ratio=6
+02-16 08:08:45.907  5383  5383 I flutter : Firebase initialization error: PlatformException(java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly., Exception, Cause: null, Stacktrace: java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly.
+02-16 08:08:45.907  5383  5383 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin.lambda$optionsFromResource$4$io-flutter-plugins-firebase-core-FlutterFirebaseCorePlugin(FlutterFirebaseCorePlugin.java:207)
+02-16 08:08:45.907  5383  5383 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+02-16 08:08:45.907  5383  5383 I flutter : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+02-16 08:08:45.907  5383  5383 I flutter : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+02-16 08:08:45.907  5383  5383 I flutter : 	at java.lang.Thread.run(Thread.java:1563)
+02-16 08:08:45.907  5383  5383 I flutter : , null)
+02-16 08:08:45.919  5383  5383 I flutter : 🔧 Initializing service locator...
+02-16 08:08:45.941  5383  5383 I flutter : 🔄 ServiceLocator initializing...
+02-16 08:08:45.997  5383  5383 I flutter : 🌐 API Client initialized with base URL: https://api.ncdfcoop.ng (Mock: false)
+02-16 08:08:46.007  5383  5383 I flutter : ❌ ServiceLocator initialization error: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:08:46.007  5383  5383 I flutter : ⚠️  Creating fallback services...
+02-16 08:08:46.008  5383  5383 I flutter : ⚠️ OrderService creation failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:08:46.009  5383  5383 I flutter : ✅ ServiceLocator initialized with fallback services
+02-16 08:08:46.009  5383  5383 I flutter : ✅ Service locator initialized
+02-16 08:08:53.902  5383  5383 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@392c5ba
+02-16 08:08:58.763  5383  5383 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@392c5ba
+02-16 08:09:57.755  5628  5648 D FlutterJNI: Beginning load of flutter...
+02-16 08:09:57.847  5628  5648 D nativeloader: Load /data/app/~~Rs8fjYHFNZRun6rVYU5eOw==/com.example.coop_commerce-CFD-DJBPqNZdMRC2yHJkdA==/base.apk!/lib/x86_64/libflutter.so using class loader ns clns-9 (caller=/data/app/~~Rs8fjYHFNZRun6rVYU5eOw==/com.example.coop_commerce-CFD-DJBPqNZdMRC2yHJkdA==/base.apk): ok
+02-16 08:09:57.851  5628  5648 D FlutterJNI: flutter (null) was loaded normally!
+02-16 08:09:58.352  5628  5649 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/kernel_blob.bin
+02-16 08:09:58.353  5628  5649 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/vm_snapshot_data
+02-16 08:09:58.420  5628  5649 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/isolate_snapshot_data
+02-16 08:09:58.555  5628  5651 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+02-16 08:09:58.649  5628  5660 I flutter : The Dart VM service is listening on http://127.0.0.1:39997/t30M-eA8dns=/
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: Error registering plugin flutter_facebook_auth, app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FacebookAuth.<init>(FacebookAuth.java:27)
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin.<init>(FlutterFacebookAuthPlugin.java:20)
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: 	at io.flutter.plugins.GeneratedPluginRegistrant.registerWith(GeneratedPluginRegistrant.java:59)
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: 	at io.flutter.embedding.engine.plugins.util.GeneratedPluginRegister.registerGeneratedPlugins(GeneratedPluginRegister.java:80)
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.configureFlutterEngine(FlutterActivity.java:1356)
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivityAndFragmentDelegate.onAttach(FlutterActivityAndFragmentDelegate.java:226)
+02-16 08:09:59.285  5628  5628 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.onCreate(FlutterActivity.java:646)
+02-16 08:09:59.746  5628  5628 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityNodeInfo;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported,test-api) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:09:59.746  5628  5628 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityRecord;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:09:59.746  5628  5628 I e.coop_commerce: hiddenapi: Accessing hidden field Landroid/view/accessibility/AccessibilityNodeInfo;->mChildNodeIds:Landroid/util/LongArray; (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:09:59.746  5628  5628 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/util/LongArray;->get(I)J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:10:00.130  5628  5628 I flutter : 📱 App starting...
+02-16 08:10:00.131  5628  5628 I flutter : 🔥 Initializing Firebase...
+02-16 08:10:01.117  5628  5628 I flutter : Firebase initialization error: PlatformException(java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly., Exception, Cause: null, Stacktrace: java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly.
+02-16 08:10:01.117  5628  5628 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin.lambda$optionsFromResource$4$io-flutter-plugins-firebase-core-FlutterFirebaseCorePlugin(FlutterFirebaseCorePlugin.java:207)
+02-16 08:10:01.117  5628  5628 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+02-16 08:10:01.117  5628  5628 I flutter : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+02-16 08:10:01.118  5628  5628 I flutter : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+02-16 08:10:01.118  5628  5628 I flutter : 	at java.lang.Thread.run(Thread.java:1563)
+02-16 08:10:01.118  5628  5628 I flutter : , null)
+02-16 08:10:01.122  5628  5628 I flutter : 🔧 Initializing service locator...
+02-16 08:10:01.132  5628  5628 I flutter : 🔄 ServiceLocator initializing...
+02-16 08:10:01.155  5628  5628 I flutter : 🌐 API Client initialized with base URL: https://api.ncdfcoop.ng (Mock: false)
+02-16 08:10:01.164  5628  5628 I flutter : ❌ ServiceLocator initialization error: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:10:01.165  5628  5628 I flutter : ⚠️  Creating fallback services...
+02-16 08:10:01.168  5628  5628 I flutter : ⚠️ OrderService creation failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:10:01.170  5628  5628 I flutter : ✅ ServiceLocator initialized with fallback services
+02-16 08:10:01.170  5628  5628 I flutter : ✅ Service locator initialized
+02-16 08:10:07.212  5628  5628 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@1978386
+02-16 08:10:12.192  5628  5628 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@1978386
+02-16 08:10:45.078   664   675 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b/sksl size=8192 mod=1771229398 from UID=10250 used=90112 quota=67108864 ratio=13
+02-16 08:10:45.079   664   675 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b size=8192 mod=1771229398 from UID=10250 used=81920 quota=67108864 ratio=12
+02-16 08:10:45.079   664   675 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia size=8192 mod=1771229398 from UID=10250 used=73728 quota=67108864 ratio=10
+02-16 08:10:45.079   664   675 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b size=8192 mod=1771229398 from UID=10250 used=65536 quota=67108864 ratio=9
+02-16 08:10:45.103   664   675 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine size=8192 mod=1771229398 from UID=10250 used=57344 quota=67108864 ratio=8
+02-16 08:19:26.776  6060  6091 D FlutterJNI: Beginning load of flutter...
+02-16 08:19:26.901  6060  6091 D nativeloader: Load /data/app/~~fHF8GmXAXtu1M30hQYdNZg==/com.example.coop_commerce-40ktrWZUeCY8Iv1vNNgLZg==/base.apk!/lib/x86_64/libflutter.so using class loader ns clns-9 (caller=/data/app/~~fHF8GmXAXtu1M30hQYdNZg==/com.example.coop_commerce-40ktrWZUeCY8Iv1vNNgLZg==/base.apk): ok
+02-16 08:19:26.909  6060  6091 D FlutterJNI: flutter (null) was loaded normally!
+02-16 08:19:27.308  6060  6092 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/kernel_blob.bin
+02-16 08:19:27.309  6060  6092 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/vm_snapshot_data
+02-16 08:19:27.369  6060  6092 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/isolate_snapshot_data
+02-16 08:19:27.541  6060  6094 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+02-16 08:19:27.633  6060  6103 I flutter : The Dart VM service is listening on http://127.0.0.1:42093/lJ5teR0vH8g=/
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: Error registering plugin flutter_facebook_auth, app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FacebookAuth.<init>(FacebookAuth.java:27)
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin.<init>(FlutterFacebookAuthPlugin.java:20)
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: 	at io.flutter.plugins.GeneratedPluginRegistrant.registerWith(GeneratedPluginRegistrant.java:59)
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: 	at io.flutter.embedding.engine.plugins.util.GeneratedPluginRegister.registerGeneratedPlugins(GeneratedPluginRegister.java:80)
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.configureFlutterEngine(FlutterActivity.java:1356)
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivityAndFragmentDelegate.onAttach(FlutterActivityAndFragmentDelegate.java:226)
+02-16 08:19:28.267  6060  6060 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.onCreate(FlutterActivity.java:646)
+02-16 08:19:28.747  6060  6060 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityNodeInfo;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported,test-api) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:19:28.748  6060  6060 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityRecord;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:19:28.748  6060  6060 I e.coop_commerce: hiddenapi: Accessing hidden field Landroid/view/accessibility/AccessibilityNodeInfo;->mChildNodeIds:Landroid/util/LongArray; (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:19:28.748  6060  6060 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/util/LongArray;->get(I)J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:19:29.173  6060  6060 I flutter : 📱 App starting...
+02-16 08:19:29.174  6060  6060 I flutter : 🔥 Initializing Firebase...
+02-16 08:19:30.757  6060  6060 I flutter : Firebase initialization error: PlatformException(java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly., Exception, Cause: null, Stacktrace: java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly.
+02-16 08:19:30.757  6060  6060 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin.lambda$optionsFromResource$4$io-flutter-plugins-firebase-core-FlutterFirebaseCorePlugin(FlutterFirebaseCorePlugin.java:207)
+02-16 08:19:30.758  6060  6060 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+02-16 08:19:30.759  6060  6060 I flutter : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+02-16 08:19:30.760  6060  6060 I flutter : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+02-16 08:19:30.762  6060  6060 I flutter : 	at java.lang.Thread.run(Thread.java:1563)
+02-16 08:19:30.765  6060  6060 I flutter : , null)
+02-16 08:19:30.776  6060  6060 I flutter : 🔧 Initializing service locator...
+02-16 08:19:30.794  6060  6060 I flutter : 🔄 ServiceLocator initializing...
+02-16 08:19:30.850  6060  6060 I flutter : 🌐 API Client initialized with base URL: https://api.ncdfcoop.ng (Mock: false)
+02-16 08:19:30.866  6060  6060 I flutter : ❌ ServiceLocator initialization error: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:19:30.867  6060  6060 I flutter : ⚠️  Creating fallback services...
+02-16 08:19:30.868  6060  6060 I flutter : ⚠️ OrderService creation failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:19:30.869  6060  6060 I flutter : ✅ ServiceLocator initialized with fallback services
+02-16 08:19:30.870  6060  6060 I flutter : ✅ Service locator initialized
+02-16 08:19:37.412  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:19:42.337  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:19:46.162   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b/sksl size=8192 mod=1771229967 from UID=10251 used=90112 quota=67108864 ratio=13
+02-16 08:19:46.162   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b size=8192 mod=1771229967 from UID=10251 used=81920 quota=67108864 ratio=12
+02-16 08:19:46.163   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia size=8192 mod=1771229967 from UID=10251 used=73728 quota=67108864 ratio=10
+02-16 08:19:46.163   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b size=8192 mod=1771229967 from UID=10251 used=65536 quota=67108864 ratio=9
+02-16 08:19:46.189   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine size=8192 mod=1771229967 from UID=10251 used=57344 quota=67108864 ratio=8
+02-16 08:20:02.689  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:20:03.639  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:20:04.917  6060  6060 I flutter : 🔄 AuthController initializing...
+02-16 08:20:05.586  6060  6060 I flutter : ✅ AuthController initialized successfully
+02-16 08:20:05.598  6060  6060 I flutter : ✅ SIGN UP SUCCESS - Navigating to home
+02-16 08:20:05.892  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:20:06.026  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:20:07.915  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:20:30.184  6060  6060 I flutter : 🔗 Attempting real backend registration...
+02-16 08:20:30.479  6060  6060 I flutter : ⚠️ Real backend registration failed: DioException [connection error]: The connection errored: Failed host lookup: 'api.ncdfcoop.ng' This indicates an error which most likely cannot be solved by the library.
+02-16 08:20:30.479  6060  6060 I flutter : Error: SocketException: Failed host lookup: 'api.ncdfcoop.ng' (OS Error: No address associated with hostname, errno = 7)
+02-16 08:20:30.479  6060  6060 I flutter : 📱 Falling back to mock authentication...
+02-16 08:20:31.520  6060  6060 I flutter : ⚠️ Firestore not available: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:20:31.521  6060  6060 I flutter : ⚠️ Audit logging failed (Firebase may not be initialized): [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:20:31.580  6060  6060 I flutter : ✅ SIGN UP SUCCESS - Navigating to home
+02-16 08:20:31.707  6060  6060 I flutter : ❌ Error fetching member data: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:20:31.713  6060  6060 I flutter : ❌ Error fetching exclusive products: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:20:31.989  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:20:55.610  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:20:59.642  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:21:03.546  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:21:08.062  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:21:10.987  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:21:25.230  6060  6060 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@73a0447
+02-16 08:33:45.488  6757  6796 D FlutterJNI: Beginning load of flutter...
+02-16 08:33:45.566  6757  6796 D nativeloader: Load /data/app/~~hQ4QI-j8JX7aoEtiWRRlEA==/com.example.coop_commerce-yesf5X6U2rQ5iG2q-0Tdmg==/base.apk!/lib/x86_64/libflutter.so using class loader ns clns-9 (caller=/data/app/~~hQ4QI-j8JX7aoEtiWRRlEA==/com.example.coop_commerce-yesf5X6U2rQ5iG2q-0Tdmg==/base.apk): ok
+02-16 08:33:45.571  6757  6796 D FlutterJNI: flutter (null) was loaded normally!
+02-16 08:33:46.103  6757  6797 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/kernel_blob.bin
+02-16 08:33:46.104  6757  6797 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/vm_snapshot_data
+02-16 08:33:46.170  6757  6797 I ResourceExtractor: Extracted baseline resource assets/flutter_assets/isolate_snapshot_data
+02-16 08:33:46.389  6757  6801 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+02-16 08:33:46.546  6757  6812 I flutter : The Dart VM service is listening on http://127.0.0.1:36525/AFHdqKW7PQM=/
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: Error registering plugin flutter_facebook_auth, app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FacebookAuth.<init>(FacebookAuth.java:27)
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: 	at app.meedu.flutter_facebook_auth.FlutterFacebookAuthPlugin.<init>(FlutterFacebookAuthPlugin.java:20)
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: 	at io.flutter.plugins.GeneratedPluginRegistrant.registerWith(GeneratedPluginRegistrant.java:59)
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: 	at io.flutter.embedding.engine.plugins.util.GeneratedPluginRegister.registerGeneratedPlugins(GeneratedPluginRegister.java:80)
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.configureFlutterEngine(FlutterActivity.java:1356)
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivityAndFragmentDelegate.onAttach(FlutterActivityAndFragmentDelegate.java:226)
+02-16 08:33:46.944  6757  6757 E GeneratedPluginRegistrant: 	at io.flutter.embedding.android.FlutterActivity.onCreate(FlutterActivity.java:646)
+02-16 08:33:47.448  6757  6757 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityNodeInfo;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported,test-api) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:33:47.449  6757  6757 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityRecord;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:33:47.449  6757  6757 I e.coop_commerce: hiddenapi: Accessing hidden field Landroid/view/accessibility/AccessibilityNodeInfo;->mChildNodeIds:Landroid/util/LongArray; (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:33:47.449  6757  6757 I e.coop_commerce: hiddenapi: Accessing hidden method Landroid/util/LongArray;->get(I)J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+02-16 08:33:47.915  6757  6757 I flutter : 📱 App starting...
+02-16 08:33:47.916  6757  6757 I flutter : 🔥 Initializing Firebase...
+02-16 08:33:48.424   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b/sksl size=8192 mod=1771230826 from UID=10252 used=73728 quota=67108864 ratio=10
+02-16 08:33:48.425   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia/fec78c0da2e6a446f873275277ed75d7e328891b size=8192 mod=1771230826 from UID=10252 used=65536 quota=67108864 ratio=9
+02-16 08:33:48.455   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b/skia size=8192 mod=1771230826 from UID=10252 used=57344 quota=67108864 ratio=8
+02-16 08:33:48.456   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine/d2913632a4578ee4d0b8b1c4a69888c8a0672c4b size=8192 mod=1771230826 from UID=10252 used=49152 quota=67108864 ratio=7
+02-16 08:33:48.456   664   664 D installd: Purging /data/data/com.example.coop_commerce/code_cache/flutter_engine size=8192 mod=1771230826 from UID=10252 used=40960 quota=67108864 ratio=6
+02-16 08:33:49.386  6757  6757 I flutter : Firebase initialization error: PlatformException(java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly., Exception, Cause: null, Stacktrace: java.lang.Exception: Failed to load FirebaseOptions from resource. Check that you have defined values.xml correctly.
+02-16 08:33:49.387  6757  6757 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin.lambda$optionsFromResource$4$io-flutter-plugins-firebase-core-FlutterFirebaseCorePlugin(FlutterFirebaseCorePlugin.java:207)
+02-16 08:33:49.387  6757  6757 I flutter : 	at io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+02-16 08:33:49.387  6757  6757 I flutter : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+02-16 08:33:49.387  6757  6757 I flutter : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+02-16 08:33:49.387  6757  6757 I flutter : 	at java.lang.Thread.run(Thread.java:1563)
+02-16 08:33:49.388  6757  6757 I flutter : , null)
+02-16 08:33:49.396  6757  6757 I flutter : 🔧 Initializing service locator...
+02-16 08:33:49.416  6757  6757 I flutter : 🔄 ServiceLocator initializing...
+02-16 08:33:49.457  6757  6757 I flutter : 🌐 API Client initialized with base URL: https://api.ncdfcoop.ng (Mock: false)
+02-16 08:33:49.465  6757  6757 I flutter : ❌ ServiceLocator initialization error: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:33:49.467  6757  6757 I flutter : ⚠️  Creating fallback services...
+02-16 08:33:49.470  6757  6757 I flutter : ⚠️ OrderService creation failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+02-16 08:33:49.471  6757  6757 I flutter : ✅ ServiceLocator initialized with fallback services
+02-16 08:33:49.471  6757  6757 I flutter : ✅ Service locator initialized
+02-16 08:33:55.934  6757  6757 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@1978386
+02-16 08:34:00.920  6757  6757 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): io.flutter.embedding.android.FlutterActivity$1@1978386
