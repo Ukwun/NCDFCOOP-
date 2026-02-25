@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "962109579563",
+    "project_id": "coop-commerce-8d43f",
+    "storage_bucket": "coop-commerce-8d43f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:962109579563:android:d39def0f6df971231ee56e",
+        "android_client_info": {
+          "package_name": "com.example.coop_commerce"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "962109579563-ch8rpkorj6vm17jsm94jku4cjan96ekd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.coop_commerce",
+            "certificate_hash": "924fc9716f999f353e9c2ea9070f8ef69efcac19"
+          }
+        },
+        {
+          "client_id": "962109579563-37o8pt0u1gjp4p550h46eiqjkmjnahq2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzUyYeQKEYA1pETIHAhRvBNOoytzHNWYg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "962109579563-37o8pt0u1gjp4p550h46eiqjkmjnahq2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

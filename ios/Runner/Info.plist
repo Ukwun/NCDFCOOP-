@@ -45,5 +45,54 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Facebook OAuth Configuration -->
+	<key>FacebookAppID</key>
+	<string>FACEBOOK_APP_ID</string>
+	<key>FacebookDisplayName</key>
+	<string>Coop Commerce</string>
+	<key>FacebookClientToken</key>
+	<string>FACEBOOK_CLIENT_TOKEN</string>
+	
+	<!-- URL Schemes for OAuth callbacks -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<!-- Facebook OAuth URL scheme -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fbFACEBOOK_APP_ID</string>
+			</array>
+		</dict>
+		<!-- Google OAuth URL scheme -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.GOOGLE_OAUTH_REVERSED_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
+	
+	<!-- LSApplicationQueriesSchemes for Facebook OAuth -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fbapi20130228</string>
+		<string>fbappevents</string>
+		<string>fbauth2</string>
+		<string>fb-messenger-share-api</string>
+	</array>
+	
+	<!-- Privacy permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photos to upload profile pictures and items for sale</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access for video calls and product verification</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show nearby products and delivery partners</string>
 </dict>
 </plist>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <string name="app_name">Coop Commerce</string>
+    
+    <!-- Facebook OAuth Configuration -->
+    <!-- Replace these with your actual Facebook App ID and Client Token from Facebook Developer console -->
+    <!-- Get from: https://developers.facebook.com/docs/facebook-login/android -->
+    <string name="facebook_app_id">FACEBOOK_APP_ID</string>
+    <string name="facebook_client_token">FACEBOOK_CLIENT_TOKEN</string>
+    
+    <!-- Google OAuth Configuration -->
+    <!-- The client ID should be configured via google-services.json and Google Cloud Console -->
+    <!-- Get from: https://console.cloud.google.com -->
+    <string name="google_web_client_id">GOOGLE_WEB_CLIENT_ID</string>
+</resources>
