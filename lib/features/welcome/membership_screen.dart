@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/core/providers/order_providers.dart';
 
 class MembershipScreen extends StatelessWidget {
   const MembershipScreen({super.key});
@@ -19,7 +22,13 @@ class MembershipScreen extends StatelessWidget {
             top: 35,
             left: 20,
             child: GestureDetector(
-              onTap: () => context.pop(),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/welcome');
+                }
+              },
               child: Container(
                 width: 40,
                 height: 40,
@@ -41,11 +50,46 @@ class MembershipScreen extends StatelessWidget {
   }
 }
 
-class Membership1 extends StatelessWidget {
+class Membership1 extends ConsumerWidget {
   const Membership1({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    
+    // If no user, show login prompt
+    if (currentUser == null) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 100),
+          Text(
+            'Sign in to manage your membership',
+            style: TextStyle(
+              color: const Color(0xFF0A0A0A),
+              fontSize: 20,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 60),
+        ],
+      );
+    }
+
+    // Check if user has any orders
+    final userOrdersAsync = ref.watch(userOrdersProvider(currentUser.id));
+    
+    return userOrdersAsync.when(
+      data: (orders) => _buildContent(context, orders.isNotEmpty),
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      error: (error, stackTrace) => _buildContent(context, false),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, bool isActiveMember) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -126,150 +170,13 @@ class Membership1 extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // Title
-        Text(
-          'My cooperate wallet',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: const Color(0xFF0A0A0A),
-            fontSize: 30,
-            fontFamily: 'Libre Baskerville',
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        // Conditional content based on membership status
+        if (isActiveMember)
+          _buildActiveMemberContent(context)
+        else
+          _buildNewUserContent(context),
 
-        const SizedBox(height: 20),
-
-        // Total savings banner
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-          decoration: const BoxDecoration(color: Color(0xFF1A4E00)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                spacing: 10,
-                children: [
-                  Text(
-                    'Total savings:',
-                    style: TextStyle(
-                      color: const Color(0xFFFAFAFA),
-                      fontSize: 24,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    '₦42,500.00',
-                    style: TextStyle(
-                      color: const Color(0xFFFAFAFA),
-                      fontSize: 28,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: ShapeDecoration(
-                  color: const Color(0xFFF3951A),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  spacing: 6,
-                  children: [
-                    Icon(
-                      Icons.star,
-                      color: Colors.black,
-                      size: 14,
-                    ),
-                    Text(
-                      'Gold member',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 30),
-
-        // Savings stat cards
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              spacing: 16,
-              children: [
-                _buildStatCard(
-                  title: "You've saved a total of",
-                  value: '₦42,500',
-                  color: const Color(0xFFF3951A),
-                ),
-                _buildStatCard(
-                  title: 'You saved the most on',
-                  value: 'Groceries',
-                  color: const Color(0xFF1A4E00),
-                ),
-                _buildStatCard(
-                  title: 'This month\nyou saved',
-                  value: '₦8,200',
-                  color: const Color(0xFF98D32A),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 30),
-
-        // Date range
-        Text(
-          'December 01, 2025 - December 31, 2025',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-
-        const SizedBox(height: 30),
-
-        // Pie chart and legend
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _buildPieChart(),
-        ),
-
-        const SizedBox(height: 30),
-
-        // Table legend
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _buildCategoryTable(),
-        ),
-
-        const SizedBox(height: 40),
-
-        // Benefits sections
+        // Benefits sections (show for both new and active members)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -457,7 +364,7 @@ class Membership1 extends StatelessWidget {
           ),
         ),
 
-        // Unlock more savings section
+        // Unlock more savings section (with different copy for new users)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -476,7 +383,7 @@ class Membership1 extends StatelessWidget {
                 spacing: 20,
                 children: [
                   Text(
-                    'Unlock more savings',
+                    isActiveMember ? 'Unlock more savings' : 'Start your savings journey',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: const Color(0xFF0A0A0A),
@@ -485,34 +392,46 @@ class Membership1 extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Upgrade to ',
-                          style: TextStyle(
-                            color: const Color(0xFF0A0A0A),
-                            fontSize: 20,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
+                  if (isActiveMember)
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Upgrade to ',
+                            style: TextStyle(
+                              color: const Color(0xFF0A0A0A),
+                              fontSize: 16,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        TextSpan(
-                          text: 'Platinum',
-                          style: TextStyle(
-                            color: const Color(0xFF3F2604),
-                            fontSize: 20,
-                            fontStyle: FontStyle.italic,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
+                          TextSpan(
+                            text: 'Platinum',
+                            style: TextStyle(
+                              color: const Color(0xFF3F2604),
+                              fontSize: 20,
+                              fontStyle: FontStyle.italic,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    )
+                  else
+                    Text(
+                      'Make your first purchase and start earning rewards',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: const Color(0xFF0A0A0A),
+                        fontSize: 16,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
                   Text(
-                    'Save up to ₦30K monthly',
+                    isActiveMember ? 'Save up to ₦30K monthly' : 'Join thousands saving together',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: const Color(0xFFFAFAFA),
@@ -524,7 +443,7 @@ class Membership1 extends StatelessWidget {
                 ],
               ),
               GestureDetector(
-                onTap: () => context.pushNamed('member-benefits'),
+                onTap: () => context.go('/'),
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
@@ -535,7 +454,7 @@ class Membership1 extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    'View benefits',
+                    isActiveMember ? 'View benefits' : 'Start shopping',
                     style: TextStyle(
                       color: const Color(0xFFFAFAFA),
                       fontSize: 13,
@@ -550,88 +469,518 @@ class Membership1 extends StatelessWidget {
         ),
 
         const SizedBox(height: 40),
+      ],
+    );
+  }
 
-        // Purchase history title
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Purchase History',
-                style: TextStyle(
-                  color: const Color(0xFF0A0A0A),
-                  fontSize: 28,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w600,
+  // New user onboarding content
+  Widget _buildNewUserContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Title
+          Text(
+            'Your membership journey',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF0A0A0A),
+              fontSize: 30,
+              fontFamily: 'Libre Baskerville',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Welcome message
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A4E00).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF1A4E00).withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              spacing: 12,
+              children: [
+                Text(
+                  'Welcome to NCDFCOOP Fairmarket!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color(0xFF0A0A0A),
+                    fontSize: 18,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'As a new member, you\'re about to join thousands of Nigerians saving money on quality products. Every purchase earns you rewards and brings you closer to exclusive benefits.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color(0xFF666666),
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Journey roadmap
+          Text(
+            'Your membership roadmap',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF0A0A0A),
+              fontSize: 20,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Journey steps
+          _buildJourneyStep(
+            number: '1',
+            title: 'Make your first purchase',
+            description: 'Browse our selection of fresh products and place your first order',
+            icon: '🛒',
+          ),
+          _buildJourneyStep(
+            number: '2',
+            title: 'Start earning savings',
+            description: 'Each purchase automatically earns you member discounts and rewards',
+            icon: '💰',
+          ),
+          _buildJourneyStep(
+            number: '3',
+            title: 'Unlock tier benefits',
+            description: 'As you spend more, unlock Gold and Platinum membership benefits',
+            icon: '⭐',
+          ),
+          _buildJourneyStep(
+            number: '4',
+            title: 'Earn community dividends',
+            description: 'Share in the profits generated by our cooperative community',
+            icon: '🎁',
+          ),
+
+          const SizedBox(height: 40),
+
+          // Benefits preview
+          Text(
+            'What you\'ll gain',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF0A0A0A),
+              fontSize: 20,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          _buildBenefitPreview(
+            icon: '📊',
+            title: 'Price transparency',
+            description: 'See real-time savings on every product',
+          ),
+          _buildBenefitPreview(
+            icon: '🚚',
+            title: 'Fast delivery',
+            description: '2-3 day delivery to most locations',
+          ),
+          _buildBenefitPreview(
+            icon: '🛡️',
+            title: 'Quality assured',
+            description: 'All products verified and certified',
+          ),
+
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  // Active member content showing statistics
+  Widget _buildActiveMemberContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Title
+          Text(
+            'My cooperate wallet',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF0A0A0A),
+              fontSize: 30,
+              fontFamily: 'Libre Baskerville',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Total savings banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+            decoration: const BoxDecoration(color: Color(0xFF1A4E00)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  spacing: 10,
+                  children: [
+                    Text(
+                      'Total savings:',
+                      style: TextStyle(
+                        color: const Color(0xFFFAFAFA),
+                        fontSize: 24,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '₦42,500.00',
+                      style: TextStyle(
+                        color: const Color(0xFFFAFAFA),
+                        fontSize: 28,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: ShapeDecoration(
+                    color: const Color(0xFFF3951A),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    spacing: 6,
+                    children: [
+                      Icon(
+                        Icons.star,
+                        color: Colors.black,
+                        size: 14,
+                      ),
+                      Text(
+                        'Gold member',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Savings stat cards
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                spacing: 16,
+                children: [
+                  _buildStatCard(
+                    title: "You've saved a total of",
+                    value: '₦42,500',
+                    color: const Color(0xFFF3951A),
+                  ),
+                  _buildStatCard(
+                    title: 'You saved the most on',
+                    value: 'Groceries',
+                    color: const Color(0xFF1A4E00),
+                  ),
+                  _buildStatCard(
+                    title: 'This month\nyou saved',
+                    value: '₦8,200',
+                    color: const Color(0xFF98D32A),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Date range
+          Text(
+            'December 01, 2025 - December 31, 2025',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Pie chart and legend
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildPieChart(),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Table legend
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildCategoryTable(),
+          ),
+
+          const SizedBox(height: 40),
+
+          // Purchase history title
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Purchase History',
+                  style: TextStyle(
+                    color: const Color(0xFF0A0A0A),
+                    fontSize: 28,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Icon(Icons.more_vert, size: 28),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Purchase history items
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              spacing: 16,
+              children: [
+                _buildPurchaseHistoryCard(
+                  name: 'Ijebu garri',
+                  original: '₦7,500',
+                  price: '₦5,500',
+                  save: 'Save ₦2000',
+                  quantity: '5.0kg',
+                  date: '19/12/2025',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1599599810694-b5ac4dd33cca?w=100&h=100&fit=crop',
+                ),
+                _buildPurchaseHistoryCard(
+                  name: 'Honey beans',
+                  original: '₦7,800',
+                  price: '₦7,000',
+                  save: 'Save ₦800',
+                  quantity: '5.0kg',
+                  date: '11/12/2025',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=100&h=100&fit=crop',
+                ),
+                _buildPurchaseHistoryCard(
+                  name: 'Egusi seeds',
+                  original: '₦3,500',
+                  price: '₦2,000',
+                  save: 'Save ₦1,500',
+                  quantity: '1.0kg',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1585328707852-8ec06e647f0b?w=100&h=100&fit=crop',
+                ),
+                _buildPurchaseHistoryCard(
+                  name: 'Natural honey',
+                  original: '₦8,000',
+                  price: '₦7,000',
+                  save: 'Save ₦1000',
+                  quantity: '50cl',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1587049352584-5374c67271f1?w=100&h=100&fit=crop',
+                ),
+                _buildPurchaseHistoryCard(
+                  name: '6in1 Spices',
+                  original: '₦14,000',
+                  price: '₦12,000',
+                  save: 'Save ₦2000',
+                  quantity: '1.0kg',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1596040541256-a8e434c75c31?w=100&h=100&fit=crop',
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  // Journey step for new users
+  Widget _buildJourneyStep({
+    required String number,
+    required String title,
+    required String description,
+    required String icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A4E00),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  number,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
                 ),
               ),
-              const Icon(Icons.more_vert, size: 28),
-            ],
-          ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: const Color(0xFF0A0A0A),
+                      fontSize: 16,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: const Color(0xFF666666),
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              icon,
+              style: const TextStyle(fontSize: 24),
+            ),
+          ],
         ),
-
-        const SizedBox(height: 20),
-
-        // Purchase history items
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            spacing: 16,
-            children: [
-              _buildPurchaseHistoryCard(
-                name: 'Ijebu garri',
-                original: '₦7,500',
-                price: '₦5,500',
-                save: 'Save ₦2000',
-                quantity: '5.0kg',
-                date: '19/12/2025',
-                imageUrl:
-                    'https://images.unsplash.com/photo-1599599810694-b5ac4dd33cca?w=100&h=100&fit=crop',
-              ),
-              _buildPurchaseHistoryCard(
-                name: 'Honey beans',
-                original: '₦7,800',
-                price: '₦7,000',
-                save: 'Save ₦800',
-                quantity: '5.0kg',
-                date: '11/12/2025',
-                imageUrl:
-                    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=100&h=100&fit=crop',
-              ),
-              _buildPurchaseHistoryCard(
-                name: 'Egusi seeds',
-                original: '₦3,500',
-                price: '₦2,000',
-                save: 'Save ₦1,500',
-                quantity: '1.0kg',
-                imageUrl:
-                    'https://images.unsplash.com/photo-1585328707852-8ec06e647f0b?w=100&h=100&fit=crop',
-              ),
-              _buildPurchaseHistoryCard(
-                name: 'Natural honey',
-                original: '₦8,000',
-                price: '₦7,000',
-                save: 'Save ₦1000',
-                quantity: '50cl',
-                imageUrl:
-                    'https://images.unsplash.com/photo-1587049352584-5374c67271f1?w=100&h=100&fit=crop',
-              ),
-              _buildPurchaseHistoryCard(
-                name: '6in1 Spices',
-                original: '₦14,000',
-                price: '₦12,000',
-                save: 'Save ₦2000',
-                quantity: '1.0kg',
-                imageUrl:
-                    'https://images.unsplash.com/photo-1596040541256-a8e434c75c31?w=100&h=100&fit=crop',
-              ),
-            ],
+        if (number != '4') ...[
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(left: 24),
+            child: Container(
+              width: 2,
+              height: 20,
+              color: const Color(0xFF1A4E00).withValues(alpha: 0.3),
+            ),
           ),
-        ),
-
-        const SizedBox(height: 40),
+          const SizedBox(height: 16),
+        ],
       ],
+    );
+  }
+
+  // Benefit preview cards for new users
+  Widget _buildBenefitPreview({
+    required String icon,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE5E5E5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            icon,
+            style: const TextStyle(fontSize: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: const Color(0xFF0A0A0A),
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: const Color(0xFF666666),
+                    fontSize: 12,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

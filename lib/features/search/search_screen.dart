@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/product_providers.dart';
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 
 /// Search screen for browsing products with real-time search
 class SearchScreen extends ConsumerStatefulWidget {
@@ -28,11 +29,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _updateSearchQuery() {
+    final query = _searchController.text;
+
     // Update the provider state with the new search query
-    ref.read(productSearchQueryProvider.notifier).state =
-        _searchController.text;
+    ref.read(productSearchQueryProvider.notifier).state = query;
+
     // Reset pagination when search changes
-    ref.read(paginationNotifierProvider.notifier).reset();
+    ref.read(paginationNotifierProvider.notifier).state = 0;
+
+    // Log search activity to Firestore if query is not empty
+    if (query.isNotEmpty) {
+      _logSearchActivity(query);
+    }
+  }
+
+  /// Log search activity to Firestore
+  Future<void> _logSearchActivity(String query) async {
+    try {
+      final activityLogger = ref.read(activityLoggerProvider.notifier);
+      await activityLogger.logSearch(
+        query: query,
+        resultsCount: 0, // Will be updated when results load
+        category: null,
+      );
+      debugPrint('✅ Search logged: "$query"');
+    } catch (e) {
+      debugPrint('⚠️ Failed to log search: $e');
+    }
   }
 
   @override
@@ -71,7 +94,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ? _buildEmptyState()
           : searchResults.when(
               data: (data) {
-                if (data.products.isEmpty) {
+                if (data.isEmpty) {
                   return _buildNoResultsState();
                 }
 
@@ -83,9 +106,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     crossAxisSpacing: AppSpacing.md,
                     mainAxisSpacing: AppSpacing.md,
                   ),
-                  itemCount: data.products.length,
+                  itemCount: data.length,
                   itemBuilder: (context, index) {
-                    final product = data.products[index];
+                    final product = data[index];
                     return _buildSearchProductCard(product);
                   },
                 );
@@ -172,7 +195,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget _buildSearchProductCard(dynamic product) {
     return GestureDetector(
       onTap: () {
-        context.pushNamed('product-detail', extra: product.id);
+        context.goNamed('product-detail',
+            pathParameters: {'productId': product.id});
       },
       child: Container(
         decoration: BoxDecoration(
@@ -195,7 +219,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
                 image: product.imageUrl != null
                     ? DecorationImage(
-                        image: NetworkImage(product.imageUrl!),
+                        image: product.imageUrl!.startsWith('assets/')
+                            ? AssetImage(product.imageUrl!)
+                            : NetworkImage(product.imageUrl!) as ImageProvider,
                         fit: BoxFit.cover,
                       )
                     : null,

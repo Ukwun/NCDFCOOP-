@@ -29,6 +29,9 @@ class PaymentRequest {
   final String customerEmail;
   final String customerName;
   final String customerPhone;
+  final String? customerId;
+  final String? orderId;
+  final String? description;
   final Map<String, dynamic>? metadata;
 
   PaymentRequest({
@@ -40,6 +43,9 @@ class PaymentRequest {
     required this.customerEmail,
     required this.customerName,
     required this.customerPhone,
+    this.customerId,
+    this.orderId,
+    this.description,
     this.metadata,
   });
 }
@@ -57,6 +63,7 @@ class PaymentResponse {
   final String? provider;
   final DateTime? timestamp;
   final String? authorizationUrl;
+  final String? accessCode;
   final Map<String, dynamic>? rawResponse;
 
   PaymentResponse({
@@ -72,6 +79,7 @@ class PaymentResponse {
     this.provider,
     this.timestamp,
     this.authorizationUrl,
+    this.accessCode,
     this.rawResponse,
   });
 }

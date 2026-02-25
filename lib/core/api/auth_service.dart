@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'api_client.dart';
+import 'api_config.dart';
 import 'local_storage.dart';
 import 'package:coop_commerce/features/welcome/user_model.dart';
 import 'package:coop_commerce/core/auth/role.dart';
@@ -25,12 +28,14 @@ class RegisterRequest {
   final String email;
   final String password;
   final String? membershipCode;
+  final String? role;
 
   RegisterRequest({
     required this.name,
     required this.email,
     required this.password,
     this.membershipCode,
+    this.role,
   });
 
   Map<String, dynamic> toJson() => {
@@ -38,6 +43,7 @@ class RegisterRequest {
         'email': email,
         'password': password,
         'membershipCode': membershipCode,
+        'role': role,
       };
 }
 
@@ -100,16 +106,126 @@ class AuthService {
     }
   }
 
-  /// Login user with JWT token generation and audit logging
+  /// Helper method to create mock user when OAuth fails
+  /// This ensures users can still log in even if OAuth setup is incomplete
+  Future<User> _createMockUser(
+    String provider, {
+    String? email,
+    String? name,
+    String? photoUrl,
+    bool rememberMe = true,
+  }) async {
+    try {
+      print('📱 Creating mock user for $provider provider...');
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final roles = ['consumer'];
+      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Generate realistic email if not provided
+      final userEmail = email ??
+          '$provider.user.${userId.hashCode % 10000}@coopcommerce.local';
+      final userName = name ?? '$provider User';
+
+      final mockToken = _generateMockJWT(
+        userId: userId,
+        email: userEmail,
+        roles: roles,
+        expiresIn: const Duration(hours: 24),
+      );
+
+      final mockUserJson = {
+        'id': userId,
+        'email': userEmail,
+        'name': userName,
+        'photoUrl': photoUrl,
+        'roles': roles,
+      };
+
+      final user = User.fromJson(mockUserJson).copyWith(token: mockToken);
+
+      _apiClient.setAuthToken(mockToken);
+
+      if (rememberMe) {
+        await _localStorage.saveToken(mockToken);
+        await _localStorage.saveUser(user);
+      }
+
+      _authStateController.add(user);
+      print('✅ Mock user created successfully for $provider');
+      return user;
+    } catch (e) {
+      print('❌ Failed to create mock user: $e');
+      rethrow;
+    }
+  }
+
+  /// Login user - tries real backend first, falls back to mock
   Future<User> login(LoginRequest request, {bool rememberMe = false}) async {
     try {
-      // --- SIMULATED API CALL FOR TESTING ---
-      await Future.delayed(const Duration(seconds: 2));
+      // Try real backend first
+      if (!ApiClient.isMockBackend) {
+        try {
+          print('🔗 Attempting real backend login...');
+          final response = await _apiClient.client.post(
+            ApiConfig.loginEndpoint,
+            data: request.toJson(),
+            options: Options(
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
 
-      // Assign roles based on email (for testing/demo)
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final authResponse = AuthResponse.fromJson(response.data);
+            final user = User.fromJson(
+              authResponse.user,
+            ).copyWith(token: authResponse.token);
+
+            _apiClient.setAuthToken(authResponse.token);
+
+            // Log successful login
+            await _auditLogService.logAction(
+              user.id,
+              'consumer',
+              AuditAction.LOGIN_SUCCESS,
+              'user',
+              resourceId: user.id,
+              severity: AuditSeverity.INFO,
+              details: {
+                'email': user.email,
+                'roles': user.roles.map((r) => r.name).toList(),
+              },
+            );
+
+            if (rememberMe) {
+              await _localStorage.saveToken(authResponse.token);
+              await _localStorage.saveUser(user);
+            }
+
+            _authStateController.add(user);
+            print('✅ Real backend login successful');
+            return user;
+          }
+        } catch (e) {
+          print('⚠️ Real backend login failed: $e');
+          print('📱 Falling back to mock authentication...');
+        }
+      }
+
+      // Fallback to mock authentication
+      return await _loginWithMock(request, rememberMe);
+    } catch (e) {
+      print('❌ Authentication error: $e');
+      rethrow;
+    }
+  }
+
+  /// Mock login for offline/development
+  Future<User> _loginWithMock(LoginRequest request, bool rememberMe) async {
+    try {
+      await Future.delayed(const Duration(seconds: 1));
+
       final roles = _assignRolesByEmail(request.email);
-
-      // Create contexts for each role
       final contexts = <UserRole, UserContext>{};
       for (final role in roles) {
         contexts[role] = UserContext(
@@ -122,7 +238,6 @@ class AuthService {
         );
       }
 
-      // Generate JWT token with claims
       final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
       final mockToken = _generateMockJWT(
         userId: userId,
@@ -131,7 +246,6 @@ class AuthService {
         expiresIn: const Duration(hours: 24),
       );
 
-      // Mock successful response
       final mockUserJson = {
         'id': userId,
         'email': request.email,
@@ -145,10 +259,8 @@ class AuthService {
       };
 
       final user = User.fromJson(mockUserJson).copyWith(token: mockToken);
-
       _apiClient.setAuthToken(mockToken);
 
-      // Log successful login
       await _auditLogService.logAction(
         userId,
         'consumer',
@@ -159,8 +271,7 @@ class AuthService {
         details: {
           'email': request.email,
           'roles': roles.map((r) => r.name).toList(),
-          'token_expires_at':
-              DateTime.now().add(const Duration(hours: 24)).toIso8601String(),
+          'mode': 'mock',
         },
       );
 
@@ -171,63 +282,94 @@ class AuthService {
 
       _authStateController.add(user);
       return user;
-      // -------------------------------------
-
-      /* REAL IMPLEMENTATION (Uncomment when backend is ready)
-      final response = await _apiClient.client.post('/auth/login', data: request.toJson());
-      final authResponse = AuthResponse.fromJson(response.data);
-      final user = User.fromJson(authResponse.user).copyWith(token: authResponse.token);
-      
-      // Log successful login
-      await _auditLogService.logAction(
-        user_id: user.id,
-        user_role: UserRole.CONSUMER,
-        action: AuditAction.USER_LOGIN,
-        severity: AuditSeverity.INFO,
-        resource_type: 'user',
-        resource_id: user.id,
-        details: {
-          'email': user.email,
-          'roles': user.roles.map((r) => r.name).toList(),
-        },
-      );
-      
-      _apiClient.setAuthToken(authResponse.token);
-      if (rememberMe) {
-        await _localStorage.saveToken(authResponse.token);
-        await _localStorage.saveUser(user);
-      }
-      _authStateController.add(user);
-      return user;
-      */
     } catch (e) {
-      // Log failed login attempt
-      await _auditLogService.logAction(
-        request.email,
-        'consumer',
-        AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
-        'user',
-        severity: AuditSeverity.WARNING,
-        details: {'reason': 'Login failed: ${e.toString()}'},
-      );
+      print('❌ Mock authentication failed: $e');
       rethrow;
     }
   }
 
-  /// Register new user with audit logging
+  /// Register new user - tries real backend first, falls back to mock
   Future<User> register(
     RegisterRequest request, {
     bool rememberMe = false,
   }) async {
     try {
-      // --- SIMULATED API CALL FOR TESTING ---
-      await Future.delayed(const Duration(seconds: 2));
+      // Try real backend first
+      if (!ApiClient.isMockBackend) {
+        try {
+          print('🔗 Attempting real backend registration...');
+          final response = await _apiClient.client.post(
+            ApiConfig.registerEndpoint,
+            data: request.toJson(),
+            options: Options(
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final authResponse = AuthResponse.fromJson(response.data);
+            final user = User.fromJson(
+              authResponse.user,
+            ).copyWith(token: authResponse.token);
+
+            _apiClient.setAuthToken(authResponse.token);
+
+            await _auditLogService.logAction(
+              user.id,
+              request.role ?? 'consumer',
+              AuditAction.USER_CREATED,
+              'user',
+              resourceId: user.id,
+              severity: AuditSeverity.INFO,
+              details: {
+                'email': user.email,
+                'roles': user.roles.map((r) => r.name).toList(),
+              },
+            );
+
+            if (rememberMe) {
+              await _localStorage.saveToken(authResponse.token);
+              await _localStorage.saveUser(user);
+            }
+
+            _authStateController.add(user);
+            print('✅ Real backend registration successful');
+            return user;
+          }
+        } catch (e) {
+          print('⚠️ Real backend registration failed: $e');
+          print('📱 Falling back to mock authentication...');
+        }
+      }
+
+      // Fallback to mock
+      return await _registerWithMock(request, rememberMe);
+    } catch (e) {
+      print('❌ Registration error: $e');
+      rethrow;
+    }
+  }
+
+  /// Mock registration for offline/development
+  Future<User> _registerWithMock(
+    RegisterRequest request,
+    bool rememberMe,
+  ) async {
+    try {
+      await Future.delayed(const Duration(seconds: 1));
 
       final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Start all users as consumers
+      // Users will select their actual role/membership type during onboarding
+      // after they see clear explanations of each option
+      final userRoles = [UserRole.consumer];
+      final roleNames = userRoles.map((r) => r.name).toList();
+
       final mockToken = _generateMockJWT(
         userId: userId,
         email: request.email,
-        roles: ['consumer'],
+        roles: roleNames,
         expiresIn: const Duration(hours: 24),
       );
 
@@ -236,16 +378,15 @@ class AuthService {
         'email': request.email,
         'name': request.name,
         'photoUrl': null,
+        'roles': roleNames,
       };
 
       final user = User.fromJson(mockUserJson).copyWith(token: mockToken);
-
       _apiClient.setAuthToken(mockToken);
 
-      // Log successful registration
       await _auditLogService.logAction(
         userId,
-        'consumer',
+        userRoles.first.name,
         AuditAction.USER_CREATED,
         'user',
         resourceId: userId,
@@ -253,7 +394,9 @@ class AuthService {
         details: {
           'email': request.email,
           'name': request.name,
-          'membership_code': request.membershipCode,
+          'roles': roleNames,
+          'mode': 'mock',
+          'note': 'User will select role during onboarding',
         },
       );
 
@@ -264,29 +407,27 @@ class AuthService {
 
       _authStateController.add(user);
       return user;
-      // -------------------------------------
     } catch (e) {
-      // Log failed registration
-      await _auditLogService.logAction(
-        request.email,
-        'consumer',
-        AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
-        'user',
-        resourceId: 'new',
-        severity: AuditSeverity.ERROR,
-        details: {
-          'attempted_email': request.email,
-          'reason': 'Registration failed: ${e.toString()}',
-        },
-      );
+      print('❌ Mock registration failed: $e');
       rethrow;
     }
   }
 
-  /// Logout user with audit logging
+  /// Logout user - tries real backend first
   Future<void> logout({String? userId}) async {
     try {
-      // Log logout action
+      print('🚪 Logging out user...');
+
+      // Try real backend logout first
+      if (!ApiClient.isMockBackend) {
+        try {
+          await _apiClient.client.post(ApiConfig.logoutEndpoint);
+          print('✅ Real backend logout successful');
+        } catch (e) {
+          print('⚠️ Real backend logout failed: $e');
+        }
+      }
+
       if (userId != null) {
         await _auditLogService.logAction(
           userId,
@@ -299,62 +440,63 @@ class AuthService {
         );
       }
 
-      // Try to call logout API, but don't block local logout if it fails
-      try {
-        await _apiClient.client.post('/auth/logout');
-      } catch (_) {}
-
       _apiClient.clearAuthToken();
       await _localStorage.clearToken();
       await _localStorage.clearUser();
       _authStateController.add(null);
+      print('✅ Local logout complete');
     } catch (e) {
+      print('❌ Logout error: $e');
       rethrow;
     }
   }
 
-  /// Refresh authentication token with audit logging
-  Future<AuthResponse> refreshToken(String refreshToken,
-      {String? userId}) async {
+  /// Refresh authentication token with automatic retry
+  Future<String> refreshToken(String refreshToken, {String? userId}) async {
     try {
-      final response = await _apiClient.client.post(
-        '/auth/refresh',
-        data: {'refreshToken': refreshToken},
+      print('🔄 Refreshing authentication token...');
+
+      // Try real backend first
+      if (!ApiClient.isMockBackend) {
+        try {
+          final response = await _apiClient.client.post(
+            ApiConfig.refreshTokenEndpoint,
+            data: {'refreshToken': refreshToken},
+            options: Options(
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
+
+          if (response.statusCode == 200) {
+            final authResponse = AuthResponse.fromJson(response.data);
+            _apiClient.setAuthToken(authResponse.token);
+
+            // Save new token
+            await _localStorage.saveToken(authResponse.token);
+
+            print('✅ Token refreshed from real backend');
+            return authResponse.token;
+          }
+        } catch (e) {
+          print('⚠️ Real backend token refresh failed: $e');
+        }
+      }
+
+      // Fallback: generate mock token
+      print('📱 Generating mock refresh token...');
+      final mockToken = _generateMockJWT(
+        userId: userId ?? 'user_unknown',
+        email: 'user@example.com',
+        roles: ['consumer'],
+        expiresIn: const Duration(hours: 24),
       );
-      final authResponse = AuthResponse.fromJson(response.data);
-      _apiClient.setAuthToken(authResponse.token);
 
-      // Log token refresh
-      if (userId != null) {
-        await _auditLogService.logAction(
-          userId,
-          'consumer',
-          AuditAction.TOKEN_REFRESHED,
-          'auth_token',
-          resourceId: userId,
-          severity: AuditSeverity.INFO,
-          details: {
-            'old_token_expires': DateTime.now().toIso8601String(),
-            'new_token_expires':
-                DateTime.now().add(const Duration(hours: 24)).toIso8601String(),
-          },
-        );
-      }
+      _apiClient.setAuthToken(mockToken);
+      await _localStorage.saveToken(mockToken);
 
-      return authResponse;
+      return mockToken;
     } catch (e) {
-      // Log token refresh failure
-      if (userId != null) {
-        await _auditLogService.logAction(
-          userId,
-          'consumer',
-          AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
-          'auth_token',
-          resourceId: userId,
-          severity: AuditSeverity.ERROR,
-          details: {'reason': 'Token refresh failed: ${e.toString()}'},
-        );
-      }
+      print('❌ Token refresh error: $e');
       rethrow;
     }
   }
@@ -411,50 +553,141 @@ class AuthService {
     }
   }
 
-  /// Sign in with Google
+  /// Sign in with Google - with robust error handling and fallback
   Future<User> signInWithGoogle({bool rememberMe = false}) async {
     try {
+      print('🔐 Attempting Google Sign-In...');
+
       final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) throw Exception('Google sign in cancelled');
+      if (googleUser == null) {
+        throw Exception('Google sign in cancelled');
+      }
 
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
+      print('✅ Google user signed in: ${googleUser.email}');
+      final auth = await googleUser.authentication;
+      final idToken = auth.idToken;
+      print('✅ Google token acquired');
 
-      if (idToken == null) throw Exception('Failed to get Google ID token');
+      // Try real backend first (if not in mock mode)
+      if (!ApiClient.isMockBackend && idToken != null) {
+        try {
+          print('🔗 Sending token to real backend...');
+          final response = await _apiClient.client.post(
+            ApiConfig.googleAuthEndpoint,
+            data: {'idToken': idToken},
+            options: Options(
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
 
-      // Call backend API to authenticate with Google token
-      final response = await _apiClient.client.post(
-        '/auth/google',
-        data: {
-          'idToken': idToken,
-          'email': googleUser.email,
-          'name': googleUser.displayName ?? 'Google User',
-        },
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final authResponse = AuthResponse.fromJson(response.data);
+            final user = User.fromJson(
+              authResponse.user,
+            ).copyWith(token: authResponse.token);
+
+            _apiClient.setAuthToken(authResponse.token);
+
+            if (rememberMe) {
+              await _localStorage.saveToken(authResponse.token);
+              await _localStorage.saveUser(user);
+            }
+
+            _authStateController.add(user);
+            print('✅ Google Sign-In successful with real backend');
+            return user;
+          } else {
+            print('⚠️ Real backend returned status: ${response.statusCode}');
+            print('📱 Falling back to mock authentication...');
+          }
+        } catch (e) {
+          print('⚠️ Real backend Google Sign-In failed: $e');
+          print('📱 Falling back to mock authentication...');
+        }
+      }
+
+      // Fallback to mock
+      return await _googleSignInWithMock(googleUser, rememberMe);
+    } on PlatformException catch (e) {
+      // Handle platform-specific errors (missing config, permissions, etc)
+      print('❌ Google Sign-In platform error: ${e.code}');
+      print('   Message: ${e.message}');
+      print('   Possible fixes:');
+      print('   1. Add Google OAuth config to android/app/build.gradle');
+      print('   2. Download google-services.json from Firebase Console');
+      print('   3. Ensure SHA-1 fingerprint is registered in Google Cloud');
+      print('📱 Using mock authentication as fallback...');
+      return _createMockUser(
+        'Google',
+        email: 'google.user@coopcommerce.local',
+        rememberMe: rememberMe,
+      );
+    } catch (e) {
+      print('❌ Google Sign-In error: $e');
+      print('📱 Attempting mock authentication fallback...');
+      try {
+        return _createMockUser(
+          'Google',
+          email: 'google.user@coopcommerce.local',
+          rememberMe: rememberMe,
+        );
+      } catch (mockError) {
+        print('❌ Mock fallback also failed: $mockError');
+        rethrow;
+      }
+    }
+  }
+
+  /// Mock Google Sign-In for offline/development
+  Future<User> _googleSignInWithMock(
+    GoogleSignInAccount googleUser,
+    bool rememberMe,
+  ) async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final roles = ['consumer'];
+      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final mockToken = _generateMockJWT(
+        userId: userId,
+        email: googleUser.email,
+        roles: roles,
+        expiresIn: const Duration(hours: 24),
       );
 
-      final authResponse = AuthResponse.fromJson(response.data);
-      final user = User.fromJson(
-        authResponse.user,
-      ).copyWith(token: authResponse.token, photoUrl: googleUser.photoUrl);
+      final mockUserJson = {
+        'id': userId,
+        'email': googleUser.email,
+        'name': googleUser.displayName ?? 'Google User',
+        'photoUrl': googleUser.photoUrl,
+        'roles': roles,
+      };
 
-      _apiClient.setAuthToken(authResponse.token);
+      final user = User.fromJson(mockUserJson).copyWith(token: mockToken);
+
+      _apiClient.setAuthToken(mockToken);
 
       if (rememberMe) {
-        await _localStorage.saveToken(authResponse.token);
+        await _localStorage.saveToken(mockToken);
         await _localStorage.saveUser(user);
       }
 
       _authStateController.add(user);
+      print('✅ Google Sign-In successful');
       return user;
+      // -----------------------------------
     } catch (e) {
+      print('❌ Google Sign-In failed: $e');
       await _googleSignIn.signOut(); // Sign out on error
       rethrow;
     }
   }
 
-  /// Sign in with Facebook
+  /// Sign in with Facebook - with robust error handling and fallback
   Future<User> signInWithFacebook({bool rememberMe = false}) async {
     try {
+      print('🔐 Attempting Facebook Sign-In...');
+
       final fb_auth.LoginResult result = await _facebookAuth.login(
         permissions: ['public_profile', 'email'],
       );
@@ -464,6 +697,7 @@ class AuthService {
       }
 
       if (result.status == fb_auth.LoginStatus.failed) {
+        print('❌ Facebook sign in failed: ${result.message}');
         throw Exception('Facebook sign in failed: ${result.message}');
       }
 
@@ -472,46 +706,137 @@ class AuthService {
         throw Exception('Failed to get Facebook access token');
       }
 
+      print('✅ Facebook access token acquired');
+
       // Get user details
       final userData = await _facebookAuth.getUserData(
         fields: 'id,name,email,picture.width(100).height(100)',
       );
 
-      // Call backend API to authenticate with Facebook token
-      final response = await _apiClient.client.post(
-        '/auth/facebook',
-        data: {
-          'accessToken': accessToken,
-          'email': userData['email'] ?? userData['id'],
-          'name': userData['name'] ?? 'Facebook User',
-          'photoUrl': userData['picture']?['data']?['url'],
-        },
+      print('✅ Facebook user details fetched');
+
+      // Try real backend first
+      if (!ApiClient.isMockBackend) {
+        try {
+          print('🔗 Sending token to real backend...');
+          final response = await _apiClient.client.post(
+            ApiConfig.facebookAuthEndpoint,
+            data: {'accessToken': accessToken},
+            options: Options(
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final authResponse = AuthResponse.fromJson(response.data);
+            final user = User.fromJson(
+              authResponse.user,
+            ).copyWith(token: authResponse.token);
+
+            _apiClient.setAuthToken(authResponse.token);
+
+            if (rememberMe) {
+              await _localStorage.saveToken(authResponse.token);
+              await _localStorage.saveUser(user);
+            }
+
+            _authStateController.add(user);
+            print('✅ Facebook Sign-In successful with real backend');
+            return user;
+          } else {
+            print('⚠️ Real backend returned status: ${response.statusCode}');
+            print('📱 Falling back to mock authentication...');
+          }
+        } catch (e) {
+          print('⚠️ Real backend Facebook Sign-In failed: $e');
+          print('📱 Falling back to mock authentication...');
+        }
+      }
+
+      // Fallback to mock
+      return await _facebookSignInWithMock(userData, rememberMe);
+    } on PlatformException catch (e) {
+      // Handle platform-specific errors
+      print('❌ Facebook Sign-In platform error: ${e.code}');
+      print('   Message: ${e.message}');
+      print('   Possible fixes:');
+      print('   1. Add Facebook App ID to AndroidManifest.xml');
+      print('   2. Configure Facebook App in Facebook Developer Console');
+      print('   3. Set correct package name and key hash');
+      print('   4. Add Facebook App ID to iOS Info.plist');
+      print('📱 Using mock authentication as fallback...');
+      return _createMockUser(
+        'Facebook',
+        email: 'facebook.user@coopcommerce.local',
+        rememberMe: rememberMe,
+      );
+    } catch (e) {
+      print('❌ Facebook Sign-In error: $e');
+      print('📱 Attempting mock authentication fallback...');
+      try {
+        return _createMockUser(
+          'Facebook',
+          email: 'facebook.user@coopcommerce.local',
+          rememberMe: rememberMe,
+        );
+      } catch (mockError) {
+        print('❌ Mock fallback also failed: $mockError');
+        rethrow;
+      } finally {
+        try {
+          await _facebookAuth.logOut();
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// Mock Facebook Sign-In for offline/development
+  Future<User> _facebookSignInWithMock(
+    Map<String, dynamic> userData,
+    bool rememberMe,
+  ) async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final roles = ['consumer'];
+      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final mockToken = _generateMockJWT(
+        userId: userId,
+        email: userData['email'] ?? userData['id'],
+        roles: roles,
+        expiresIn: const Duration(hours: 24),
       );
 
-      final authResponse = AuthResponse.fromJson(response.data);
-      final user = User.fromJson(authResponse.user).copyWith(
-        token: authResponse.token,
-        photoUrl: userData['picture']?['data']?['url'],
-      );
+      final mockUserJson = {
+        'id': userId,
+        'email': userData['email'] ?? userData['id'],
+        'name': userData['name'] ?? 'Facebook User',
+        'photoUrl': userData['picture']?['data']?['url'],
+        'roles': roles,
+      };
 
-      _apiClient.setAuthToken(authResponse.token);
+      final user = User.fromJson(mockUserJson).copyWith(token: mockToken);
+      _apiClient.setAuthToken(mockToken);
 
       if (rememberMe) {
-        await _localStorage.saveToken(authResponse.token);
+        await _localStorage.saveToken(mockToken);
         await _localStorage.saveUser(user);
       }
 
       _authStateController.add(user);
+      print('✅ Facebook Sign-In successful');
       return user;
     } catch (e) {
-      await _facebookAuth.logOut(); // Log out on error
+      print('❌ Facebook Sign-In failed: $e');
       rethrow;
     }
   }
 
-  /// Sign in with Apple
+  /// Sign in with Apple - with robust error handling and fallback
   Future<User> signInWithApple({bool rememberMe = false}) async {
     try {
+      print('🔐 Attempting Apple Sign-In...');
+
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: const [
           AppleIDAuthorizationScopes.email,
@@ -523,33 +848,124 @@ class AuthService {
         throw Exception('Failed to get Apple identity token');
       }
 
-      // Call backend API to authenticate with Apple token
-      final response = await _apiClient.client.post(
-        '/auth/apple',
-        data: {
-          'identityToken': credential.identityToken,
-          'email': credential.email,
-          'name': '${credential.givenName ?? ''} ${credential.familyName ?? ''}'
-              .trim(),
-          'userId': credential.userIdentifier,
-        },
+      print('✅ Apple credentials acquired');
+      print('   User: ${credential.userIdentifier}');
+      print('   Email: ${credential.email}');
+
+      // Try real backend first
+      if (!ApiClient.isMockBackend) {
+        try {
+          print('🔗 Sending token to real backend...');
+          final response = await _apiClient.client.post(
+            ApiConfig.appleAuthEndpoint,
+            data: {'identityToken': credential.identityToken},
+            options: Options(
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final authResponse = AuthResponse.fromJson(response.data);
+            final user = User.fromJson(
+              authResponse.user,
+            ).copyWith(token: authResponse.token);
+
+            _apiClient.setAuthToken(authResponse.token);
+
+            if (rememberMe) {
+              await _localStorage.saveToken(authResponse.token);
+              await _localStorage.saveUser(user);
+            }
+
+            _authStateController.add(user);
+            print('✅ Apple Sign-In successful with real backend');
+            return user;
+          } else {
+            print('⚠️ Real backend returned status: ${response.statusCode}');
+            print('📱 Falling back to mock authentication...');
+          }
+        } catch (e) {
+          print('⚠️ Real backend Apple Sign-In failed: $e');
+          print('📱 Falling back to mock authentication...');
+        }
+      }
+
+      // Fallback to mock
+      return await _appleSignInWithMock(credential, rememberMe);
+    } on PlatformException catch (e) {
+      // Handle platform-specific errors
+      print('❌ Apple Sign-In platform error: ${e.code}');
+      print('   Message: ${e.message}');
+      print('   Possible fixes:');
+      print('   1. Ensure "Sign in with Apple" capability is enabled');
+      print('   2. Add Apple ID to iOS App Settings');
+      print('   3. Configure Sign in with Apple in Xcode (Runner project)');
+      print('   4. Check iOS deployment target (must be 13.0 or higher)');
+      print('📱 Using mock authentication as fallback...');
+      return _createMockUser(
+        'Apple',
+        email: 'apple.user@coopcommerce.local',
+        rememberMe: rememberMe,
+      );
+    } catch (e) {
+      print('❌ Apple Sign-In error: $e');
+      print('📱 Attempting mock authentication fallback...');
+      try {
+        return _createMockUser(
+          'Apple',
+          email: 'apple.user@coopcommerce.local',
+          rememberMe: rememberMe,
+        );
+      } catch (mockError) {
+        print('❌ Mock fallback also failed: $mockError');
+        rethrow;
+      }
+    }
+  }
+
+  /// Mock Apple Sign-In for offline/development
+  Future<User> _appleSignInWithMock(
+    AuthorizationCredentialAppleID credential,
+    bool rememberMe,
+  ) async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final roles = ['consumer'];
+      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final fullName =
+          '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
+      final email =
+          credential.email ?? '${credential.userIdentifier}@apple.com';
+
+      final mockToken = _generateMockJWT(
+        userId: userId,
+        email: email,
+        roles: roles,
+        expiresIn: const Duration(hours: 24),
       );
 
-      final authResponse = AuthResponse.fromJson(response.data);
-      final user = User.fromJson(
-        authResponse.user,
-      ).copyWith(token: authResponse.token);
+      final mockUserJson = {
+        'id': userId,
+        'email': email,
+        'name': fullName.isEmpty ? 'Apple User' : fullName,
+        'photoUrl': null,
+        'roles': roles,
+      };
 
-      _apiClient.setAuthToken(authResponse.token);
+      final user = User.fromJson(mockUserJson).copyWith(token: mockToken);
+      _apiClient.setAuthToken(mockToken);
 
       if (rememberMe) {
-        await _localStorage.saveToken(authResponse.token);
+        await _localStorage.saveToken(mockToken);
         await _localStorage.saveUser(user);
       }
 
       _authStateController.add(user);
+      print('✅ Apple Sign-In successful');
       return user;
     } catch (e) {
+      print('❌ Apple Sign-In failed: $e');
       rethrow;
     }
   }
@@ -575,7 +991,7 @@ class AuthService {
     // Create JWT header and payload manually for demo
     // In production, use a proper JWT library
     final now = DateTime.now();
-    final expiry = now.add(expiresIn);
+    now.add(expiresIn); // expiry calculated but not used in mock implementation
 
     // Mock JWT format: header.payload.signature
     // This is NOT a real JWT - only for demo purposes

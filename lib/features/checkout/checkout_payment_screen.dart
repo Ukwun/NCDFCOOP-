@@ -33,7 +33,7 @@ class CheckoutPaymentScreen extends ConsumerWidget {
               const Text('Please log in to proceed with checkout'),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => context.go('/login'),
+                onPressed: () => context.go('/signin'),
                 child: const Text('Go to Login'),
               ),
             ],
@@ -259,7 +259,7 @@ class CheckoutPaymentScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: OutlinedButton.icon(
-                  onPressed: () => context.push('/profile/payment-methods'),
+                  onPressed: () => context.push('/add-payment-method'),
                   icon: const Icon(Icons.add),
                   label: const Text('Add New Payment Method'),
                 ),
@@ -335,7 +335,7 @@ class CheckoutPaymentScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => context.push('/profile/payment-methods'),
+            onPressed: () => context.push('/add-payment-method'),
             icon: const Icon(Icons.add),
             label: const Text('Add Payment Method'),
           ),

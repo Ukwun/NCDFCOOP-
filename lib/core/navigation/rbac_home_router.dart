@@ -27,16 +27,9 @@ class RBACHomeRouter extends ConsumerWidget {
           return const _UnauthorizedScreen();
         }
 
-        return highestRoleAsync.when(
-          data: (highestRole) {
-            return _buildRoleScreen(highestRole);
-          },
-          loading: () => const _LoadingScreen(),
-          error: (error, st) => _ErrorScreen(
-            error: error.toString(),
-            stackTrace: st.toString(),
-          ),
-        );
+        // highestRoleAsync is a regular Provider, not async
+        final highestRole = highestRoleAsync;
+        return _buildRoleScreen(highestRole);
       },
       // User is still loading
       loading: () => const _LoadingScreen(),

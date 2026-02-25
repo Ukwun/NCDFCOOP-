@@ -10,6 +10,10 @@ class User {
   final String? token;
   final List<UserRole> roles;
   final Map<UserRole, UserContext> contexts;
+  final String membershipTier; // 'free', 'basic', 'gold', 'platinum'
+  final DateTime? membershipExpiryDate;
+  final String? franchiseId;
+  final bool roleSelectionCompleted; // Has user gone through role selection?
 
   const User({
     required this.id,
@@ -19,6 +23,10 @@ class User {
     this.token,
     this.roles = const [UserRole.consumer],
     this.contexts = const {},
+    this.membershipTier = 'free',
+    this.membershipExpiryDate,
+    this.franchiseId,
+    this.roleSelectionCompleted = false,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -50,6 +58,12 @@ class User {
       token: json['token'],
       roles: rolesList,
       contexts: contextsMap,
+      membershipTier: json['membershipTier'] ?? 'free',
+      membershipExpiryDate: json['membershipExpiryDate'] != null
+          ? DateTime.parse(json['membershipExpiryDate'])
+          : null,
+      franchiseId: json['franchiseId'],
+      roleSelectionCompleted: json['roleSelectionCompleted'] ?? false,
     );
   }
 
@@ -64,6 +78,10 @@ class User {
           for (final entry in contexts.entries)
             entry.key.name: entry.value.toJson(),
         },
+        'membershipTier': membershipTier,
+        'membershipExpiryDate': membershipExpiryDate?.toIso8601String(),
+        'franchiseId': franchiseId,
+        'roleSelectionCompleted': roleSelectionCompleted,
       };
 
   User copyWith({
@@ -74,6 +92,10 @@ class User {
     String? token,
     List<UserRole>? roles,
     Map<UserRole, UserContext>? contexts,
+    String? membershipTier,
+    DateTime? membershipExpiryDate,
+    String? franchiseId,
+    bool? roleSelectionCompleted,
   }) {
     return User(
       id: id ?? this.id,
@@ -83,8 +105,16 @@ class User {
       token: token ?? this.token,
       roles: roles ?? this.roles,
       contexts: contexts ?? this.contexts,
+      membershipTier: membershipTier ?? this.membershipTier,
+      membershipExpiryDate: membershipExpiryDate ?? this.membershipExpiryDate,
+      franchiseId: franchiseId ?? this.franchiseId,
+      roleSelectionCompleted:
+          roleSelectionCompleted ?? this.roleSelectionCompleted,
     );
   }
+
+  /// Alias for phone number (for compatibility)
+  String get phoneNumber => '';
 
   /// Get permissions for a specific role
   Set<Permission> getPermissions(UserRole role) {

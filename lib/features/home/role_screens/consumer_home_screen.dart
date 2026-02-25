@@ -1,37 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
+import 'package:coop_commerce/models/product.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
-import 'package:coop_commerce/core/providers/order_providers.dart';
+import 'package:coop_commerce/core/providers/home_providers.dart';
 
+/// CONSUMER HOME SCREEN - REDESIGNED
+/// Individual retail buyers - Personal shopping experience
+/// Focus: Simple browsing, impulse buying, quick checkout, flash deals
+/// NOT loyalty focused (see MemberHomeScreen for that)
 class ConsumerHomeScreen extends ConsumerWidget {
   const ConsumerHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final recentOrders = ref.watch(userOrdersProvider(user?.id ?? ''));
+    // Get role-specific featured products for consumer
+    final userRole = 'consumer';
+    final featuredAsync =
+        ref.watch(roleAwareFeaturedProductsProvider(userRole));
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              _buildHeader(context, user?.name ?? 'Guest'),
+              // DEBUG: Clear role identifier
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                color: Colors.blue[800],
+                child: Text(
+                  '🛍️ CONSUMER HOME (Retail Pricing)',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              // Personalized Header
+              _buildPersonalizedBanner(user),
 
-              // Hero Banner - Featured Deal
-              _buildHeroBanner(),
+              // Search Bar
+              _buildSearchBar(context),
 
-              // Quick Actions
-              _buildQuickActions(context),
+              // Flash Deals (Time-limited offers for consumers)
+              _buildFlashDealsSection(context, featuredAsync),
 
-              // Recent Orders
-              _buildRecentOrders(context, recentOrders),
+              // Browse by Category
+              _buildQuickCategoryGrid(context),
 
-              // Featured Products
-              _buildFeaturedProducts(context, ref),
+              // Recommended for You
+              _buildRecommendedProducts(context, featuredAsync),
+
+              // Member Benefits CTA (Upgrade to member)
+              _buildMemberUpgradeCTA(context),
 
               const SizedBox(height: 24),
             ],
@@ -41,338 +68,203 @@ class ConsumerHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String userName) {
+  Widget _buildPersonalizedBanner(dynamic user) {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back!',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                userName,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          Text(
+            'Welcome back, ${user?.name?.split(' ').first ?? "Guest"}!',
+            style: AppTextStyles.h2.copyWith(color: AppColors.primary),
           ),
-          CircleAvatar(
-            backgroundColor: AppColors.primary,
-            child: const Icon(Icons.person, color: Colors.white),
+          const SizedBox(height: 8),
+          Text(
+            'Shop quality products at great retail prices',
+            style:
+                AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeroBanner() {
+  Widget _buildSearchBar(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.gold],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: GestureDetector(
+        onTap: () => context.pushNamed('search'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.search, color: AppColors.textLight),
+              const SizedBox(width: 12),
+              Text(
+                'Search products...',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textLight),
+              ),
+            ],
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Save up to 30%',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'on member exclusives',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Shop Now',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.local_offer,
-            color: Colors.white.withValues(alpha: 0.3),
-            size: 80,
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Quick Actions', style: AppTextStyles.h2),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _QuickActionCard(
-                icon: Icons.shopping_cart_outlined,
-                label: 'Shop',
-                color: AppColors.primary,
-                onTap: () {},
-              ),
-              _QuickActionCard(
-                icon: Icons.bolt,
-                label: 'Deals',
-                color: AppColors.gold,
-                onTap: () {},
-              ),
-              _QuickActionCard(
-                icon: Icons.favorite_outline,
-                label: 'Wishlist',
-                color: Colors.red,
-                onTap: () {},
-              ),
-              _QuickActionCard(
-                icon: Icons.track_changes,
-                label: 'Orders',
-                color: Colors.blue,
-                onTap: () {},
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentOrders(
-      BuildContext context, AsyncValue<List<dynamic>> orders) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Recent Orders', style: AppTextStyles.h2),
-              Text(
-                'View All',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          orders.when(
-            data: (orderList) {
-              if (orderList.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      'No orders yet',
-                      style: TextStyle(color: Colors.grey[400]),
-                    ),
-                  ),
-                );
-              }
-              return Column(
-                children: orderList.take(3).map<Widget>((order) {
-                  return _buildOrderCard(order);
-                }).toList(),
-              );
-            },
-            loading: () => const SizedBox(
-              height: 100,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (err, stack) => Center(
-              child: Text('Error loading orders'),
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderCard(dynamic order) {
+  Widget _buildFlashDealsSection(
+    BuildContext context,
+    AsyncValue<List<Product>> featured,
+  ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Order #${order.id?.substring(0, 8) ?? 'N/A'}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  '⚡ Flash Deals',
+                  style: AppTextStyles.h3.copyWith(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Placed on date',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 11,
+                GestureDetector(
+                  onTap: () => context.pushNamed('flash-sales'),
+                  child: Text(
+                    'View All',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: _getStatusColor(order.status),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              order.status ?? 'Pending',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeaturedProducts(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Featured for You', style: AppTextStyles.h2),
           const SizedBox(height: 12),
           SizedBox(
             height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Container(
-                  width: 140,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 4,
+            child: featured.when(
+              data: (products) {
+                final retailProducts =
+                    products.where((p) => p.visibleToRetail).toList();
+                if (retailProducts.isEmpty) {
+                  return Center(
+                    child: Text('No deals available',
+                        style: AppTextStyles.bodyMedium),
+                  );
+                }
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: retailProducts.take(5).length,
+                  itemBuilder: (context, index) {
+                    final product = retailProducts[index];
+                    return GestureDetector(
+                      onTap: () => context.goNamed(
+                        'product-detail',
+                        pathParameters: {'productId': product.id},
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(8),
-                              topRight: Radius.circular(8),
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.image,
-                            color: Colors.grey[400],
-                          ),
+                      child: Container(
+                        width: 160,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.border),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Stack(
                           children: [
-                            Text(
-                              'Product ${index + 1}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(8),
+                                    ),
+                                    color: AppColors.background,
+                                    image: product.imageUrl != null
+                                        ? DecorationImage(
+                                            image: product.imageUrl!
+                                                    .startsWith('assets/')
+                                                ? AssetImage(product.imageUrl!)
+                                                : NetworkImage(
+                                                    product.imageUrl!,
+                                                  ) as ImageProvider,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product.name,
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '₦${product.retailPrice.toStringAsFixed(0)}',
+                                        style: AppTextStyles.h4.copyWith(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '₦1,250',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '-20%',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('Error: $error')),
             ),
           ),
         ],
@@ -380,59 +272,197 @@ class ConsumerHomeScreen extends ConsumerWidget {
     );
   }
 
-  Color _getStatusColor(String? status) {
-    return switch (status?.toLowerCase()) {
-      'pending' => Colors.orange,
-      'confirmed' => Colors.blue,
-      'picking' => Colors.purple,
-      'packing' => Colors.indigo,
-      'dispatched' => Colors.cyan,
-      'delivered' => Colors.green,
-      'cancelled' => Colors.red,
-      _ => Colors.grey,
-    };
-  }
-}
+  Widget _buildQuickCategoryGrid(BuildContext context) {
+    final categories = [
+      ('🥘 Grains', 'grains'),
+      ('🌾 Vegetables', 'vegetables'),
+      ('🥛 Dairy', 'dairy'),
+      ('🍖 Proteins', 'proteins'),
+      ('🧈 Oils', 'oils'),
+      ('🛒 More', 'all'),
+    ];
 
-class _QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: GridView.count(
+        crossAxisCount: 3,
+        childAspectRatio: 1.1,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: categories.map((category) {
+          return GestureDetector(
+            onTap: () => context.pushNamed(
+              'category-products',
+              pathParameters: {
+                'categoryName': Uri.encodeComponent(category.$2)
+              },
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      category.$1.split(' ')[0],
+                      style: const TextStyle(fontSize: 28),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      category.$1.split(' ').skip(1).join(' '),
+                      style: AppTextStyles.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildRecommendedProducts(
+    BuildContext context,
+    AsyncValue<List<Product>> featured,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recommended for You',
+            style: AppTextStyles.h3,
+          ),
+          const SizedBox(height: 12),
+          featured.when(
+            data: (products) {
+              return GridView.count(
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: products.take(4).map((product) {
+                  return _buildProductCard(context, product);
+                }).toList(),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(child: Text('Error: $error')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductCard(BuildContext context, Product product) {
+    return GestureDetector(
+      onTap: () => context
+          .goNamed('product-detail', pathParameters: {'productId': product.id}),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(8),
+                ),
+                color: AppColors.background,
+                image: product.imageUrl != null
+                    ? DecorationImage(
+                        image: product.imageUrl!.startsWith('assets/')
+                            ? AssetImage(product.imageUrl!)
+                            : NetworkImage(product.imageUrl!) as ImageProvider,
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    Text(
+                      '₦${product.retailPrice.toStringAsFixed(0)}',
+                      style: AppTextStyles.h4.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemberUpgradeCTA(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '💎 Become a Member',
+            style: AppTextStyles.h4
+                .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+            'Get exclusive member prices, loyalty rewards, and early access to sales',
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () => context.pushNamed('membership'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            child: Text(
+              'Learn More',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

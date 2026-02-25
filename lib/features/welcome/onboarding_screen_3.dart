@@ -28,7 +28,7 @@ class OnboardingScreen3 extends StatelessWidget {
             bottom: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.5, // Occupy bottom half
+            height: size.height * 0.55,
             child: Container(
               decoration: BoxDecoration(
                 color: const Color(0xFFD9D9D9).withValues(alpha: 0.15),
@@ -57,43 +57,83 @@ class OnboardingScreen3 extends StatelessWidget {
                   // Main Text
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'You’re part of something much ',
-                            style: TextStyle(
-                              color: Color(0xFFFAFAFA),
-                              fontSize: 32,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
+                    child: Column(
+                      children: [
+                        RichText(
+                          textAlign: TextAlign.center,
+                          text: const TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Multiple Ways to ',
+                                style: TextStyle(
+                                  color: Color(0xFFFAFAFA),
+                                  fontSize: 32,
+                                  fontFamily: 'Libre Baskerville',
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'grow',
+                                style: TextStyle(
+                                  color: Color(0xFFF3951A),
+                                  fontSize: 32,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Libre Baskerville',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFFFFFFF).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFF3951A)
+                                  .withValues(alpha: 0.3),
+                              width: 1,
                             ),
                           ),
-                          TextSpan(
-                            text: 'bigger',
-                            style: TextStyle(
-                              color: Color(0xFFF3951A),
-                              fontSize: 32,
-                              fontStyle: FontStyle.italic,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w400,
-                              height: 1.2,
-                            ),
+                          padding: const EdgeInsets.all(12),
+                          child: const Column(
+                            children: [
+                              _RoleOption(
+                                icon: Icons.shopping_bag,
+                                title: 'Shop Retail',
+                                subtitle: 'Find great deals as a consumer',
+                              ),
+                              SizedBox(height: 10),
+                              _RoleOption(
+                                icon: Icons.store,
+                                title: 'Be a Franchisee',
+                                subtitle: 'Own your own store with our support',
+                              ),
+                              SizedBox(height: 10),
+                              _RoleOption(
+                                icon: Icons.business,
+                                title: 'Institutional Buying',
+                                subtitle: 'Bulk orders for organizations',
+                              ),
+                            ],
                           ),
-                          TextSpan(
-                            text: '.',
-                            style: TextStyle(
-                              color: Color(0xFFFAFAFA),
-                              fontSize: 32,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                            ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Join a community of entrepreneurs and smart shoppers',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFFCCCCCC),
+                            fontSize: 12,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -211,6 +251,59 @@ class OnboardingScreen3 extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RoleOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _RoleOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3951A).withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: const Color(0xFFF3951A), size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFFFAFAFA),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: Color(0xFFCCCCCC),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

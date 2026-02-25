@@ -97,7 +97,8 @@ final markAllAsReadProvider = FutureProvider<void>((ref) async {
   final user = authState.value;
   if (user != null) {
     await service.markAllAsRead(user.id);
-    // Refresh unread notifications
+    // Refresh unread notifications - ignore unused result, refreshing for UI update
+    // ignore: unused_result
     ref.refresh(unreadNotificationsProvider);
   }
 });
@@ -111,8 +112,10 @@ final markNotificationAsReadProvider =
   final user = authState.value;
   if (user != null) {
     await service.markAsRead(notificationId);
-    // Refresh notifications
+    // Refresh notifications - ignore unused result, refreshing for UI update
+    // ignore: unused_result
     ref.refresh(unreadNotificationsProvider);
+    // ignore: unused_result
     ref.refresh(allNotificationsProvider);
   }
 });
@@ -126,8 +129,10 @@ final deleteNotificationProvider =
   final user = authState.value;
   if (user != null) {
     await service.deleteNotification(notificationId);
-    // Refresh notifications
+    // Refresh notifications - ignore unused result, refreshing for UI update
+    // ignore: unused_result
     ref.refresh(allNotificationsProvider);
+    // ignore: unused_result
     ref.refresh(unreadNotificationsProvider);
   }
 });
@@ -141,7 +146,8 @@ final toggleNotificationTypeProvider =
   final user = authState.value;
   if (user != null) {
     await service.toggleNotificationType(user.id, params.$1, params.$2);
-    // Refresh preferences
+    // Refresh preferences - ignore unused result, refreshing for UI update
+    // ignore: unused_result
     ref.refresh(notificationPreferencesProvider);
   }
 });
@@ -155,7 +161,8 @@ final togglePushNotificationsProvider =
   final user = authState.value;
   if (user != null) {
     await service.togglePushNotifications(user.id, enabled);
-    // Refresh preferences
+    // Refresh preferences - ignore unused result, refreshing for UI update
+    // ignore: unused_result
     ref.refresh(notificationPreferencesProvider);
   }
 });
@@ -169,7 +176,8 @@ final toggleInAppNotificationsProvider =
   final user = authState.value;
   if (user != null) {
     await service.toggleInAppNotifications(user.id, enabled);
-    // Refresh preferences
+    // Refresh preferences - ignore unused result, refreshing for UI update
+    // ignore: unused_result
     ref.refresh(notificationPreferencesProvider);
   }
 });
@@ -183,7 +191,8 @@ final toggleEmailNotificationsProvider =
   final user = authState.value;
   if (user != null) {
     await service.toggleEmailNotifications(user.id, enabled);
-    // Refresh preferences
+    // Refresh preferences - ignore unused result, refreshing for UI update
+    // ignore: unused_result
     ref.refresh(notificationPreferencesProvider);
   }
 });

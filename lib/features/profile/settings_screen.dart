@@ -1,46 +1,245 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/app_settings_provider.dart';
+import '../welcome/auth_provider.dart' as auth_controller;
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(appSettingsProvider);
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  Map<String, bool> settings = {
-    'Push Notifications': true,
-    'Email Notifications': true,
-    'Marketing Emails': false,
-    'Location Services': true,
-    'Biometric Authentication': false,
-    'Dark Mode': false,
-  };
-
-  void _toggleSetting(String key) {
-    setState(() {
-      settings[key] = !settings[key]!;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$key ${settings[key]! ? 'enabled' : 'disabled'}'),
-        duration: const Duration(seconds: 2),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: settingsAsync.when(
+        data: (settings) => _buildSettingsUI(context, ref, settings),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) =>
+            Center(child: Text('Error loading settings: $err')),
       ),
     );
   }
 
-  void _changeLanguage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Change language - Coming soon'),
-        duration: Duration(seconds: 2),
+  Widget _buildSettingsUI(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // NOTIFICATIONS
+          _buildSectionHeader(context, 'Notifications'),
+          _buildSettingTile(
+            context,
+            'Push Notifications',
+            'Receive push notifications for orders & updates',
+            settings.pushNotifications,
+            (val) async {
+              await ref
+                  .read(appSettingsProvider.notifier)
+                  .setPushNotifications(val);
+              if (context.mounted) {
+                _showSavedFeedback(context,
+                    'Push notifications ${val ? 'enabled' : 'disabled'}');
+              }
+            },
+          ),
+          _buildSettingTile(
+            context,
+            'Email Notifications',
+            'Receive email updates about your account',
+            settings.emailNotifications,
+            (val) async {
+              await ref
+                  .read(appSettingsProvider.notifier)
+                  .setEmailNotifications(val);
+              if (context.mounted) {
+                _showSavedFeedback(context,
+                    'Email notifications ${val ? 'enabled' : 'disabled'}');
+              }
+            },
+          ),
+          _buildSettingTile(
+            context,
+            'Marketing Emails',
+            'Get exclusive offers and promotions',
+            settings.marketingEmails,
+            (val) async {
+              await ref
+                  .read(appSettingsProvider.notifier)
+                  .setMarketingEmails(val);
+              if (context.mounted) {
+                _showSavedFeedback(context,
+                    'Marketing emails ${val ? 'enabled' : 'disabled'}');
+              }
+            },
+          ),
+          const Divider(),
+
+          // PREFERENCES
+          _buildSectionHeader(context, 'Preferences'),
+          _buildSettingTile(
+            context,
+            'Dark Mode',
+            'Use dark theme for the entire app',
+            settings.darkMode,
+            (val) async {
+              // Update the setting globally which triggers app-wide theme change
+              // The darkModeProvider watches appSettingsProvider and will automatically
+              // trigger a MaterialApp rebuild with the new theme
+              await ref.read(appSettingsProvider.notifier).setDarkMode(val);
+              if (context.mounted) {
+                _showSavedFeedback(
+                    context, 'Dark mode ${val ? 'enabled' : 'disabled'}');
+              }
+            },
+          ),
+          _buildSettingTile(
+            context,
+            'Location Services',
+            'Allow location access for better service',
+            settings.locationServices,
+            (val) async {
+              await ref
+                  .read(appSettingsProvider.notifier)
+                  .setLocationServices(val);
+              if (context.mounted) {
+                _showSavedFeedback(context,
+                    'Location services ${val ? 'enabled' : 'disabled'}');
+              }
+            },
+          ),
+          _buildSettingTile(
+            context,
+            'Biometric Authentication',
+            'Use fingerprint or face unlock',
+            settings.biometricAuth,
+            (val) async {
+              await ref
+                  .read(appSettingsProvider.notifier)
+                  .setBiometricAuth(val);
+              if (context.mounted) {
+                _showSavedFeedback(
+                    context, 'Biometric auth ${val ? 'enabled' : 'disabled'}');
+              }
+            },
+          ),
+          const Divider(),
+
+          // ACCOUNT
+          _buildSectionHeader(context, 'Account'),
+          _buildActionTile(
+            context,
+            'Change Password',
+            'Update your password',
+            Icons.lock_outline,
+            () => _changePassword(context),
+          ),
+          _buildActionTile(
+            context,
+            'Change Language',
+            'Select your preferred language',
+            Icons.language,
+            () => _changeLanguage(context),
+          ),
+          const Divider(),
+
+          // DANGER ZONE
+          _buildSectionHeader(context, 'Danger Zone'),
+          _buildActionTile(
+            context,
+            'Delete Account',
+            'Permanently delete your account',
+            Icons.delete_outline,
+            () => _deleteAccount(context),
+            isDestructive: true,
+          ),
+          _buildActionTile(
+            context,
+            'Logout',
+            'Sign out of your account',
+            Icons.logout,
+            () => _logout(context, ref),
+            isDestructive: true,
+          ),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }
 
-  void _changePassword() {
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingTile(
+    BuildContext context,
+    String title,
+    String subtitle,
+    bool value,
+    Function(bool) onChanged,
+  ) {
+    return ListTile(
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: Switch(
+        value: value,
+        onChanged: (newValue) {
+          onChanged(newValue).then((_) {
+            print('✅ Setting updated: $title = $newValue');
+          }).catchError((e) {
+            print('❌ Error updating $title: $e');
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildActionTile(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isDestructive ? Colors.red : Theme.of(context).primaryColor,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isDestructive ? Colors.red : null,
+        ),
+      ),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
+    );
+  }
+
+  void _changePassword(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Change password - Coming soon'),
@@ -49,7 +248,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _deleteAccount() {
+  void _changeLanguage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Change language - Coming soon'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _deleteAccount(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -65,24 +273,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () {
               context.pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account deletion initiated'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              _showSavedFeedback(context, 'Account deletion initiated');
             },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
-  void _logout() {
+  void _logout(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -94,442 +294,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               context.pop();
-              context.go('/welcome');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Logged out successfully'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              await ref
+                  .read(auth_controller.authControllerProvider.notifier)
+                  .signOut();
+              if (context.mounted) {
+                _showSavedFeedback(context, 'Logged out successfully');
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  context.go('/welcome');
+                });
+              }
             },
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Logout'),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        child: Column(
+  void _showSavedFeedback(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
           children: [
-            _buildHeader(context),
-            _buildAppSettingsSection(),
-            _buildAccountSection(),
-            _buildDangerZoneSection(),
-            const SizedBox(height: 24),
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(message),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '9:45',
-                style: AppTextStyles.h4.copyWith(color: AppColors.surface),
-              ),
-              Row(
-                spacing: 6,
-                children: [
-                  _buildStatusIcon('assets/icons/signal.png'),
-                  _buildStatusIcon('assets/icons/wifi.png'),
-                  _buildStatusIcon('assets/icons/battery.png'),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Settings',
-                style: AppTextStyles.h2.copyWith(color: AppColors.surface),
-              ),
-              GestureDetector(
-                onTap: () => context.pop(),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    color: AppColors.surface,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusIcon(String assetPath) {
-    return SizedBox(
-      width: 16,
-      height: 16,
-      child: Image.asset(
-        assetPath,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.muted, width: 0.5),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildAppSettingsSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'App Settings',
-            style: AppTextStyles.h3.copyWith(color: AppColors.text),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              boxShadow: AppShadows.smList,
-            ),
-            child: Column(
-              children: settings.entries
-                  .take(6)
-                  .toList()
-                  .asMap()
-                  .entries
-                  .map((entry) {
-                int index = entry.key;
-                MapEntry<String, bool> item = entry.value;
-                bool isLast = index == 5;
-
-                return Column(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _toggleSetting(item.key),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              item.key,
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.text,
-                              ),
-                            ),
-                            Container(
-                              width: 50,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: item.value
-                                    ? AppColors.primary
-                                    : AppColors.muted.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  AnimatedPositioned(
-                                    right: item.value ? 2 : null,
-                                    left: item.value ? null : 2,
-                                    duration: const Duration(milliseconds: 200),
-                                    child: Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (!isLast)
-                      Divider(
-                        color: AppColors.border,
-                        height: 1,
-                        thickness: 1,
-                      ),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAccountSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Account',
-            style: AppTextStyles.h3.copyWith(color: AppColors.text),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              boxShadow: AppShadows.smList,
-            ),
-            child: Column(
-              children: [
-                _buildAccountMenuItem(
-                  icon: Icons.language,
-                  label: 'Language',
-                  value: 'English',
-                  onTap: _changeLanguage,
-                ),
-                Divider(color: AppColors.border, height: 1),
-                _buildAccountMenuItem(
-                  icon: Icons.lock_outline,
-                  label: 'Change Password',
-                  value: 'Secure your account',
-                  onTap: _changePassword,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAccountMenuItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              child: Icon(
-                icon,
-                color: AppColors.primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: AppColors.muted,
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDangerZoneSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Danger Zone',
-            style: AppTextStyles.h3.copyWith(color: Colors.red),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-              boxShadow: AppShadows.smList,
-            ),
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTap: _logout,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                          ),
-                          child: Icon(
-                            Icons.logout,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Logout',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Sign out of your account',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.muted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          color: AppColors.muted,
-                          size: 16,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Divider(color: Colors.red.withValues(alpha: 0.2), height: 1),
-                GestureDetector(
-                  onTap: _deleteAccount,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                          ),
-                          child: Icon(
-                            Icons.delete_forever,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Delete Account',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Permanently delete your account',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.muted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          color: AppColors.muted,
-                          size: 16,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
       ),
     );
   }

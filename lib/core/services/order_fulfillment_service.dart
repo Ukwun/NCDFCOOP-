@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
+import 'package:coop_commerce/models/order.dart' as order_model;
 
 enum OrderStatus {
   draft,
@@ -391,6 +392,9 @@ class OrderItem {
         'sku': sku,
         'subtotal': price * quantity,
       };
+
+  /// Placeholder for image URL (could be fetched from product details)
+  String? get imageUrl => null;
 }
 
 /// Order data model
@@ -477,4 +481,55 @@ class OrderData {
       notes: data['notes'] as String?,
     );
   }
+
+  /// Getters for compatibility with screen expectations
+  String get id => orderId;
+
+  String? get trackingNumber => null; // Could be added to OrderData in future
+
+  DateTime? get estimatedDeliveryAt =>
+      null; // Could be calculated from createdAt + delivery days
+
+  /// Address object (could be enhanced with Address model)
+  Map<String, dynamic> get address => {
+        'fullName': 'Delivery Address',
+        'fullAddress': shippingAddress,
+        'phoneNumber': '',
+      };
+
+  double get deliveryFee => shippingCost;
+
+  double get totalSavings => 0.0;
+
+  double get total => totalAmount;
+
+  /// Parse status string to OrderStatus enum (from models)
+  order_model.OrderStatus get orderStatus {
+    // Map from internal OrderStatus enum to models.OrderStatus
+    try {
+      return switch (status) {
+        'pending' ||
+        'submitted' ||
+        'approved' =>
+          order_model.OrderStatus.pending,
+        'processing' || 'packed' => order_model.OrderStatus.processing,
+        'shipped' => order_model.OrderStatus.dispatched,
+        'delivered' => order_model.OrderStatus.delivered,
+        'cancelled' => order_model.OrderStatus.cancelled,
+        'returned' => order_model.OrderStatus.failed,
+        _ => order_model.OrderStatus.pending,
+      };
+    } catch (_) {
+      return order_model.OrderStatus.pending;
+    }
+  }
+
+  /// Driver-related getters (for compatibility)
+  String? get driverImage => null; // Could be fetched from driver collection
+
+  String? get driverName => null; // Could be fetched from driver collection
+
+  double? get driverRating => null; // Could be fetched from driver collection
+
+  String? get driverPhone => null; // Could be fetched from driver collection
 }

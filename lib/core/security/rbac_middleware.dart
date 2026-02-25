@@ -6,11 +6,9 @@ import 'permission_service.dart';
 /// Intercepts all API calls and validates JWT token + permissions
 /// before allowing request to proceed
 class RBACMiddleware extends Interceptor {
-  final PermissionService _permissionService;
   final List<String> _publicEndpoints; // Endpoints that don't require auth
 
-  RBACMiddleware(
-    this._permissionService, {
+  RBACMiddleware({
     List<String>? publicEndpoints,
   }) : _publicEndpoints = publicEndpoints ??
             [
@@ -188,10 +186,6 @@ class RBACMiddleware extends Interceptor {
 /// Response Interceptor for permission-based response filtering
 /// Prevents leaking sensitive data to unauthorized users
 class ResponsePermissionInterceptor extends Interceptor {
-  final PermissionService _permissionService;
-
-  ResponsePermissionInterceptor(this._permissionService);
-
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     try {

@@ -4,8 +4,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart' as gmf;
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/models/order.dart';
 import 'package:coop_commerce/core/providers/order_providers.dart';
+import 'package:coop_commerce/core/providers/real_time_providers.dart';
 import 'package:coop_commerce/core/widgets/order_notification_listener.dart';
 import 'package:coop_commerce/core/services/map_service.dart';
+import 'package:coop_commerce/core/services/order_fulfillment_service.dart'
+    as ofs;
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -53,6 +56,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
   Widget build(BuildContext context) {
     final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
 
+    // Real-time order fulfillment status updates
+    final fulfillmentUpdateAsync =
+        ref.watch(orderFulfillmentUpdateProvider(widget.orderId));
+
+    // Real-time warehouse progress
+    final warehouseProgressAsync =
+        ref.watch(warehouseOperationsProgressProvider(widget.orderId));
+
     return OrderNotificationListener(
       orderId: widget.orderId,
       child: Scaffold(
@@ -62,38 +73,187 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           elevation: 0,
         ),
         body: orderAsync.when(
-          data: (order) => SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                children: [
-                  // Order ID and Status
-                  _buildOrderHeader(order),
-                  const SizedBox(height: AppSpacing.lg),
+          data: (orderData) {
+            if (orderData == null) {
+              return Center(
+                child: Text('Order not found', style: AppTextStyles.bodyMedium),
+              );
+            }
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    // Order ID and Status
+                    _buildOrderHeader(orderData),
+                    const SizedBox(height: AppSpacing.lg),
 
-                  // Timeline
-                  _buildStatusTimeline(order),
-                  const SizedBox(height: AppSpacing.lg),
+                    // Timeline
+                    _buildStatusTimeline(orderData),
+                    const SizedBox(height: AppSpacing.lg),
 
-                  // Driver Info
-                  if (order.orderStatus.index >= OrderStatus.dispatched.index)
-                    _buildDriverInfo(order),
-
-                  if (order.orderStatus.index >= OrderStatus.outForDelivery.index)
-                    Column(
-                      children: [
-                        const SizedBox(height: AppSpacing.lg),
-                        _buildMapPlaceholder(),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
+                    // Real-time Fulfillment Status Updates
+                    fulfillmentUpdateAsync.when(
+                      data: (fulfillmentUpdate) {
+                        // Only show banner if status changed
+                        if (fulfillmentUpdate.previousStatus != null &&
+                            fulfillmentUpdate.previousStatus !=
+                                fulfillmentUpdate.status) {
+                          return Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.green[300]!,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green[700],
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Order Status Updated',
+                                            style: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green[700],
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                            height: AppSpacing.xs,
+                                          ),
+                                          Text(
+                                            'Status: ${fulfillmentUpdate.status.toUpperCase()}',
+                                            style: AppTextStyles.bodySmall
+                                                .copyWith(
+                                              color: Colors.green[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                      error: (error, stackTrace) {
+                        return const SizedBox.shrink();
+                      },
+                      loading: () => const SizedBox.shrink(),
                     ),
 
-                  // Order Details
-                  _buildOrderItems(order),
-                ],
+                    // Live Warehouse Progress (Real-Time)
+                    warehouseProgressAsync.when(
+                      data: (progress) {
+                        return Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue[200]!),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Warehouse Progress',
+                                        style:
+                                            AppTextStyles.bodyMedium.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue[700],
+                                        ),
+                                      ),
+                                      Text(
+                                        '${progress.percentComplete.toInt()}%',
+                                        style: AppTextStyles.h4.copyWith(
+                                          color: Colors.blue[700],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: LinearProgressIndicator(
+                                      value: progress.percentComplete / 100,
+                                      minHeight: 6,
+                                      backgroundColor: Colors.blue[200],
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.blue[700]!,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Current: ${progress.currentStep}',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: Colors.blue[600],
+                                    ),
+                                  ),
+                                  if (progress.estimatedCompletionTime != null)
+                                    Text(
+                                      'Est. completion: ${progress.estimatedCompletionTime!.difference(DateTime.now()).inMinutes} min',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: Colors.blue[600],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                          ],
+                        );
+                      },
+                      loading: () => const SizedBox(),
+                      error: (_, __) => const SizedBox(),
+                    ),
+
+                    // Driver Info
+                    if (orderData.orderStatus.index >=
+                        OrderStatus.dispatched.index)
+                      _buildDriverInfo(orderData),
+
+                    if (orderData.orderStatus.index >=
+                        OrderStatus.outForDelivery.index)
+                      Column(
+                        children: [
+                          const SizedBox(height: AppSpacing.lg),
+                          _buildMapPlaceholder(),
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+                      ),
+
+                    // Order Details
+                    _buildOrderItems(orderData),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
           loading: () => const Center(
             child: CircularProgressIndicator(),
           ),
@@ -124,12 +284,35 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
       ),
     );
   }
+
+  Widget _buildMapPlaceholder() {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.location_on,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Live tracking map',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildOrderHeader(Order order) {
+  Widget _buildOrderHeader(ofs.OrderData order) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -193,7 +376,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     );
   }
 
-  Widget _buildStatusTimeline(Order order) {
+  Widget _buildStatusTimeline(ofs.OrderData order) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -299,7 +482,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     );
   }
 
-  Widget _buildDriverInfo(Order order) {
+  Widget _buildDriverInfo(ofs.OrderData order) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -404,103 +587,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           ),
         ],
       ),
-  Widget _buildMapPlaceholder() {
-    final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
-
-    return orderAsync.when(
-      data: (order) {
-        // Convert delivery address to LatLng
-        final deliveryLatLng = order.address.latitude != null && order.address.longitude != null
-            ? gmf.LatLng(order.address.latitude!, order.address.longitude!)
-            : null;
-
-        // Use warehouse location if delivery location unavailable
-        final initialLocation = deliveryLatLng ?? MapService.getWarehouseLocation();
-
-        return Container(
-          width: double.infinity,
-          height: 300,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.2),
-            ),
-          ),
-          child: Stack(
-            children: [
-              // Google Maps Widget
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: gmf.GoogleMap(
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                    _updateMapCamera(initialLocation);
-                  },
-                  initialCameraPosition: gmf.CameraPosition(
-                    target: initialLocation,
-                    zoom: 15,
-                  ),
-                  markers: _buildMapMarkers(order, initialLocation),
-                  polylines: _buildMapPolylines(initialLocation),
-                  circles: _buildMapCircles(order, initialLocation),
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                  mapToolbarEnabled: false,
-                ),
-              ),
-              // Delivery location card overlay
-              Positioned(
-                bottom: 12,
-                left: 12,
-                right: 12,
-                child: _buildDeliveryLocationCard(),
-              ),
-            ],
-          ),
-        );
-      },
-      loading: () => Container(
-        width: double.infinity,
-        height: 300,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Loading map...',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      error: (error, stackTrace) => Container(
-        width: double.infinity,
-        height: 300,
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red),
-        ),
-        child: Center(
-          child: Text(
-            'Map unavailable',
-            style: AppTextStyles.bodySmall.copyWith(color: Colors.red),
-          ),
-        ),
-      ),
     );
   }
 
-  Set<gmf.Marker> _buildMapMarkers(Order order, gmf.LatLng deliveryLocation) {
+  Set<gmf.Marker> _buildMapMarkers(
+      ofs.OrderData order, gmf.LatLng deliveryLocation) {
     final markers = <gmf.Marker>{};
 
     // Warehouse marker
@@ -508,8 +599,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
       gmf.Marker(
         markerId: const gmf.MarkerId('warehouse'),
         position: MapService.getWarehouseLocation(),
-        title: 'Warehouse',
-        snippet: 'Distribution Hub',
         infoWindow: const gmf.InfoWindow(
           title: 'Warehouse',
           snippet: 'Order Distribution Hub',
@@ -522,11 +611,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
       gmf.Marker(
         markerId: const gmf.MarkerId('delivery'),
         position: deliveryLocation,
-        title: 'Delivery Location',
-        snippet: order.address.fullAddress,
         infoWindow: gmf.InfoWindow(
           title: 'Delivery Location',
-          snippet: order.address.fullAddress,
+          snippet:
+              order.address['fullAddress'] as String? ?? 'Delivery Address',
         ),
       ),
     );
@@ -549,7 +637,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     };
   }
 
-  Set<gmf.Circle> _buildMapCircles(Order order, gmf.LatLng deliveryLocation) {
+  Set<gmf.Circle> _buildMapCircles(
+      ofs.OrderData order, gmf.LatLng deliveryLocation) {
     return {
       // Delivery area radius (500m)
       gmf.Circle(
@@ -580,85 +669,98 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
 
     return orderAsync.when(
-      data: (order) => Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+      data: (order) {
+        if (order == null) {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Delivery Location',
-                        style: AppTextStyles.labelSmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        order.address.fullAddress,
-                        style: AppTextStyles.bodySmall,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (order.estimatedDeliveryAt != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Divider(color: AppColors.border, height: 1),
-              const SizedBox(height: AppSpacing.sm),
+            child: const Text('Order not found'),
+          );
+        }
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.schedule,
-                        color: AppColors.accent,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Est. Delivery',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    ],
+                  Icon(
+                    Icons.location_on,
+                    color: AppColors.primary,
+                    size: 20,
                   ),
-                  Text(
-                    _formatDeliveryTime(order.estimatedDeliveryAt!),
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.accent,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Delivery Location',
+                          style: AppTextStyles.labelSmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          order.address['fullAddress'] as String? ??
+                              'Delivery Address',
+                          style: AppTextStyles.bodySmall,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+              if (order.estimatedDeliveryAt != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Divider(color: AppColors.border, height: 1),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          color: AppColors.accent,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Est. Delivery',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ],
+                    ),
+                    Text(
+                      _formatDeliveryTime(order.estimatedDeliveryAt!),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
       loading: () => Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
@@ -699,11 +801,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
       return 'In $days day${days > 1 ? 's' : ''}';
     }
   }
-      ),
-    )
-  }
 
-  Widget _buildOrderItems(Order order) {
+  Widget _buildOrderItems(ofs.OrderData order) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -730,7 +829,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         image: DecorationImage(
-                          image: NetworkImage(item.imageUrl!),
+                          image: item.imageUrl!.startsWith('assets/')
+                              ? AssetImage(item.imageUrl!)
+                              : NetworkImage(item.imageUrl!) as ImageProvider,
                           fit: BoxFit.cover,
                         ),
                       ),

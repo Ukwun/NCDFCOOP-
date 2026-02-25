@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/warehouse_providers.dart';
+import 'package:coop_commerce/core/services/warehouse_service.dart';
 
 class WarehouseHomeScreen extends ConsumerWidget {
   const WarehouseHomeScreen({super.key});

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/core/providers/rbac_providers.dart';
 import 'package:coop_commerce/features/home/role_screens/consumer_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/member_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/franchise_owner_home_screen_v2.dart';
@@ -16,19 +17,23 @@ class RoleAwareHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final currentRole = ref.watch(currentRoleProvider);
+    final highestRole = ref.watch(highestUserRoleProvider);
 
-    // If not authenticated, show a loading/error screen
+    // If not authenticated, show a login prompt
     if (user == null) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child: Text('Please log in'),
         ),
       );
     }
 
-    // Route to home screen based on role
-    switch (currentRole) {
+    // Route to home screen based on highest role
+    return _buildHomeScreenForRole(highestRole);
+  }
+
+  Widget _buildHomeScreenForRole(UserRole role) {
+    switch (role) {
       case UserRole.consumer:
         return const ConsumerHomeScreen();
 

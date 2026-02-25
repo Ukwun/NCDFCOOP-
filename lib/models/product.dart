@@ -13,6 +13,9 @@ class Product {
   final bool visibleToRetail;
   final bool visibleToWholesale;
   final bool visibleToInstitutions;
+  final String franchiseId;
+  final String uploadedBy;
+  final List<String> colors;
 
   const Product({
     required this.id,
@@ -29,7 +32,64 @@ class Product {
     this.visibleToRetail = true,
     this.visibleToWholesale = false,
     this.visibleToInstitutions = false,
+    this.franchiseId = '',
+    this.uploadedBy = '',
+    this.colors = const [],
   });
+
+  /// Get the default display price (retail price for consumers)
+  double get price => retailPrice;
+
+  /// Get the price appropriate for a specific user role
+  /// Consumer → Retail price
+  /// Member → Wholesale price
+  /// Institutional → Contract price
+  double getPriceForRole(String userRole) {
+    if (userRole.contains('consumer') || userRole == 'consumer') {
+      return retailPrice;
+    } else if (userRole.contains('member') ||
+        userRole.contains('cooperative') ||
+        userRole == 'coopMember') {
+      return wholesalePrice > 0 ? wholesalePrice : retailPrice;
+    } else if (userRole.contains('institutional') ||
+        userRole.contains('buyer') ||
+        userRole == 'institutionalBuyer' ||
+        userRole == 'institutionalApprover') {
+      return contractPrice > 0 ? contractPrice : wholesalePrice;
+    }
+    return retailPrice; // Default to retail
+  }
+
+  /// Check if product is visible to a specific role
+  bool isVisibleToRole(String userRole) {
+    if (userRole.contains('consumer') || userRole == 'consumer') {
+      return visibleToRetail;
+    } else if (userRole.contains('member') ||
+        userRole.contains('cooperative') ||
+        userRole == 'coopMember') {
+      return visibleToWholesale;
+    } else if (userRole.contains('institutional') ||
+        userRole.contains('buyer') ||
+        userRole == 'institutionalBuyer' ||
+        userRole == 'institutionalApprover') {
+      return visibleToInstitutions;
+    }
+    return visibleToRetail; // Default to retail visibility
+  }
+
+  /// Get minimum order quantity for a specific role
+  /// Override minimumOrderQuantity if needed per role
+  int getMinimumOrderQtyForRole(String userRole) {
+    // Could be extended in future to have role-specific min quantities
+    // For now, use the standard minimumOrderQuantity
+    return minimumOrderQuantity;
+  }
+
+  /// Calculate savings percentage for member vs retail price
+  double getMemberSavingsPercent() {
+    if (retailPrice <= 0) return 0;
+    return ((retailPrice - wholesalePrice) / retailPrice * 100).clamp(0, 100);
+  }
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
@@ -47,7 +107,16 @@ class Product {
       visibleToRetail: json['visibleToRetail'] ?? true,
       visibleToWholesale: json['visibleToWholesale'] ?? false,
       visibleToInstitutions: json['visibleToInstitutions'] ?? false,
+      franchiseId: json['franchiseId'] ?? '',
+      uploadedBy: json['uploadedBy'] ?? '',
+      colors: (json['colors'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
     );
+  }
+
+  /// Create Product from Firestore document
+  factory Product.fromFirestore(Map<String, dynamic> data) {
+    return Product.fromJson(data);
   }
 
   Map<String, dynamic> toJson() => {
@@ -65,6 +134,9 @@ class Product {
         'visibleToRetail': visibleToRetail,
         'visibleToWholesale': visibleToWholesale,
         'visibleToInstitutions': visibleToInstitutions,
+        'franchiseId': franchiseId,
+        'uploadedBy': uploadedBy,
+        'colors': colors,
       };
 
   Product copyWith({
@@ -82,6 +154,9 @@ class Product {
     bool? visibleToRetail,
     bool? visibleToWholesale,
     bool? visibleToInstitutions,
+    String? franchiseId,
+    String? uploadedBy,
+    List<String>? colors,
   }) {
     return Product(
       id: id ?? this.id,
@@ -99,6 +174,9 @@ class Product {
       visibleToWholesale: visibleToWholesale ?? this.visibleToWholesale,
       visibleToInstitutions:
           visibleToInstitutions ?? this.visibleToInstitutions,
+      franchiseId: franchiseId ?? this.franchiseId,
+      uploadedBy: uploadedBy ?? this.uploadedBy,
+      colors: colors ?? this.colors,
     );
   }
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:coop_commerce/core/providers/order_providers.dart';
-import 'package:coop_commerce/core/services/fcm_service.dart';
+import 'package:coop_commerce/core/services/fcm_service.dart' as fcm;
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// OrderNotificationListener - Monitors order status changes and displays toast notifications
@@ -173,8 +173,8 @@ class OrderNotificationListener extends ConsumerWidget {
 
   /// Handle incoming FCM message in foreground
   void _handleFCMMessage(BuildContext context, RemoteMessage message) {
-    if (FCMService.isOrderNotification(message)) {
-      final notification = FCMService.parseOrderNotification(message);
+    if (fcm.FCMService.isOrderNotification(message)) {
+      final notification = fcm.FCMService.parseOrderNotification(message);
       if (notification != null) {
         _showFCMNotificationToast(context, notification);
       }
@@ -183,8 +183,8 @@ class OrderNotificationListener extends ConsumerWidget {
 
   /// Handle FCM message when user taps notification from background
   void _handleFCMMessageOpened(BuildContext context, RemoteMessage message) {
-    if (FCMService.isOrderNotification(message)) {
-      final notification = FCMService.parseOrderNotification(message);
+    if (fcm.FCMService.isOrderNotification(message)) {
+      final notification = fcm.FCMService.parseOrderNotification(message);
       if (notification != null) {
         // Could navigate to order tracking screen here
         debugPrint('Order notification opened: ${notification.orderId}');

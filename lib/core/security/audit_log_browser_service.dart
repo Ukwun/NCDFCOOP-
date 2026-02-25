@@ -6,11 +6,10 @@ import 'audit_log_service.dart';
 /// for compliance and investigation purposes
 class AuditLogBrowserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final AuditLogService _auditLogService;
 
   static const String _auditLogsCollection = 'audit_logs';
 
-  AuditLogBrowserService(this._auditLogService);
+  AuditLogBrowserService();
 
   /// Get audit logs with flexible filtering
   Future<List<AuditLogEntry>> getFilteredAuditLogs({

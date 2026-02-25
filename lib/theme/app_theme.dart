@@ -1,22 +1,9 @@
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
+import 'app_text_styles.dart';
 
-class AppColors {
-  static const primary = Color(0xFF1E7F4E);
-  static const primaryDark = Color(0xFF1A4F00);
-  static const accent = Color(0xFFF3951A);
-  static const gold = Color(0xFFC9A227);
-  static const secondary = Color(0xFFE8F5E9); // Light green
-  static const tertiary = Color(0xFF757575); // Gray
-  static const background = Color(0xFFFAFAFA);
-  static const surface = Color(0xFFFFFFFF);
-  static const text = Color(0xFF1C1C1C);
-  static const textLight = Color(0xFF9C9C9C);
-  static const muted = Color(0xFF8A8A8A);
-  static const border = Color(0xFFE0E0E0);
-  static const error = Color(0xFFD32F2F);
-  static const success = Color(0xFF388E3C);
-  static const warning = Color(0xFFFFA726);
-}
+export 'app_colors.dart';
+export 'app_text_styles.dart';
 
 class AppSpacing {
   // Base unit: 4px
@@ -75,89 +62,6 @@ class AppShadows {
   static List<BoxShadow> get mdList => [md];
   static List<BoxShadow> get lgList => [lg];
   static List<BoxShadow> get xlList => [xl];
-}
-
-class AppTextStyles {
-  // Headlines
-  static const h1 = TextStyle(
-    fontSize: 32,
-    fontWeight: FontWeight.w700,
-    height: 1.2,
-    color: AppColors.text,
-  );
-
-  static const h2 = TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
-    height: 1.3,
-    color: AppColors.text,
-  );
-
-  static const h3 = TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w600,
-    height: 1.3,
-    color: AppColors.text,
-  );
-
-  static const h4 = TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    height: 1.4,
-    color: AppColors.text,
-  );
-
-  // Body
-  static const bodyLarge = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
-    height: 1.5,
-    color: AppColors.text,
-  );
-
-  static const bodyMedium = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    height: 1.5,
-    color: AppColors.text,
-  );
-
-  static const bodySmall = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    height: 1.5,
-    color: AppColors.muted,
-  );
-
-  // Labels & Buttons
-  static const labelLarge = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    height: 1.4,
-    color: AppColors.text,
-  );
-
-  static const labelMedium = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    height: 1.4,
-    color: AppColors.text,
-  );
-
-  static const labelSmall = TextStyle(
-    fontSize: 11,
-    fontWeight: FontWeight.w600,
-    height: 1.3,
-    color: AppColors.muted,
-  );
-
-  // Special
-  static const caption = TextStyle(
-    fontSize: 11,
-    fontWeight: FontWeight.w400,
-    height: 1.4,
-    color: AppColors.textLight,
-  );
 }
 
 class AppTheme {

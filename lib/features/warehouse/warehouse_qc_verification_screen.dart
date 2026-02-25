@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/providers/warehouse_providers.dart';
-import 'package:coop_commerce/theme/app_theme.dart';
 
 class WarehouseQCVerificationScreen extends ConsumerStatefulWidget {
   final String pickListId;
 
   const WarehouseQCVerificationScreen({
-    Key? key,
+    super.key,
     required this.pickListId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<WarehouseQCVerificationScreen> createState() =>

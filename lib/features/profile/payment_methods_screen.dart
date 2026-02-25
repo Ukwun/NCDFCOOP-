@@ -18,6 +18,23 @@ class PaymentMethod {
   }) : _isDefault = isDefault;
 
   bool get isDefault => _isDefault;
+
+  /// Create a copy with modified properties
+  PaymentMethod copyWith({
+    String? id,
+    String? type,
+    String? lastFourDigits,
+    String? cardName,
+    bool? isDefault,
+  }) {
+    return PaymentMethod(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      lastFourDigits: lastFourDigits ?? this.lastFourDigits,
+      cardName: cardName ?? this.cardName,
+      isDefault: isDefault ?? _isDefault,
+    );
+  }
 }
 
 class PaymentMethodsScreen extends StatefulWidget {
@@ -64,10 +81,14 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
 
   void _setAsDefault(String id) {
     setState(() {
-      for (var method in paymentMethods) {
-        method.isDefault ? method.isDefault = false : null;
-      }
-      paymentMethods.firstWhere((m) => m.id == id).isDefault = true;
+      paymentMethods = paymentMethods.map((method) {
+        if (method.id == id) {
+          return method.copyWith(isDefault: true);
+        } else if (method.isDefault) {
+          return method.copyWith(isDefault: false);
+        }
+        return method;
+      }).toList();
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -147,7 +168,13 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 style: AppTextStyles.h2.copyWith(color: AppColors.surface),
               ),
               GestureDetector(
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 child: Container(
                   width: 40,
                   height: 40,

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/b2b_models.dart';
-import '../../models/product.dart';
 import '../../core/providers/b2b_providers.dart';
-import '../../core/services/b2b_service.dart';
-import '../../core/utils/error_handler.dart';
 
 // INSTITUTIONAL DASHBOARD
 class InstitutionalDashboardScreen extends ConsumerWidget {
@@ -125,14 +122,11 @@ class InstitutionalDashboardScreen extends ConsumerWidget {
             ),
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(
-            child: Text('Error: ${err.toString()}'),
-          ),
+          error: (err, stack) =>
+              Center(child: Text('Error: ${err.toString()}')),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Text('Error: ${err.toString()}'),
-        ),
+        error: (err, stack) => Center(child: Text('Error: ${err.toString()}')),
       ),
     );
   }
@@ -165,10 +159,7 @@ class _StatCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 4),
                 Text(
                   value,
@@ -216,21 +207,17 @@ class _ActionButton extends StatelessWidget {
 class PurchaseOrderListScreen extends ConsumerWidget {
   final String institutionId;
 
-  const PurchaseOrderListScreen({
-    super.key,
-    required this.institutionId,
-  });
+  const PurchaseOrderListScreen({super.key, required this.institutionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final posAsync =
-        ref.watch(institutionPurchaseOrdersProvider(institutionId));
+    final posAsync = ref.watch(
+      institutionPurchaseOrdersProvider(institutionId),
+    );
     final selectedStatus = ref.watch(_selectedStatusProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Purchase Orders'),
-      ),
+      appBar: AppBar(title: const Text('Purchase Orders')),
       body: Column(
         children: [
           // Status filter
@@ -239,8 +226,9 @@ class PurchaseOrderListScreen extends ConsumerWidget {
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              children: ['All', 'Draft', 'Pending', 'Approved', 'Shipped']
-                  .map((status) {
+              children: ['All', 'Draft', 'Pending', 'Approved', 'Shipped'].map((
+                status,
+              ) {
                 final isSelected = selectedStatus == status;
                 return Padding(
                   padding: const EdgeInsets.all(4),
@@ -248,7 +236,9 @@ class PurchaseOrderListScreen extends ConsumerWidget {
                     label: Text(status),
                     selected: isSelected,
                     onSelected: (value) {
-                      ref.read(_selectedStatusProvider.notifier).state = status;
+                      ref
+                          .read(_selectedStatusProvider.notifier)
+                          .setStatus(status);
                     },
                   ),
                 );
@@ -262,9 +252,11 @@ class PurchaseOrderListScreen extends ConsumerWidget {
                 final filtered = selectedStatus == 'All'
                     ? pos
                     : pos
-                        .where((p) =>
-                            p.status.toLowerCase() ==
-                            selectedStatus.toLowerCase())
+                        .where(
+                          (p) =>
+                              p.status.toLowerCase() ==
+                              selectedStatus.toLowerCase(),
+                        )
                         .toList();
 
                 if (filtered.isEmpty) {
@@ -326,14 +318,12 @@ class _PurchaseOrderCard extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-                '${po.lineItems.length} items • \$${po.totalAmount.toStringAsFixed(2)}'),
+              '${po.lineItems.length} items • \$${po.totalAmount.toStringAsFixed(2)}',
+            ),
             const SizedBox(height: 4),
             Text(
               po.status.toUpperCase(),
-              style: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -367,10 +357,7 @@ class _PurchaseOrderCard extends StatelessWidget {
 class PurchaseOrderCreationScreen extends ConsumerStatefulWidget {
   final String institutionId;
 
-  const PurchaseOrderCreationScreen({
-    super.key,
-    required this.institutionId,
-  });
+  const PurchaseOrderCreationScreen({super.key, required this.institutionId});
 
   @override
   ConsumerState<PurchaseOrderCreationScreen> createState() =>
@@ -388,9 +375,7 @@ class _PurchaseOrderCreationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Purchase Order'),
-      ),
+      appBar: AppBar(title: const Text('Create Purchase Order')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -414,7 +399,8 @@ class _PurchaseOrderCreationScreenState
             const SizedBox(height: 16),
             ListTile(
               title: Text(
-                  'Expected Delivery: ${_formatDate(_expectedDeliveryDate)}'),
+                'Expected Delivery: ${_formatDate(_expectedDeliveryDate)}',
+              ),
               trailing: const Icon(Icons.calendar_today),
               onTap: () async {
                 final date = await showDatePicker(
@@ -505,7 +491,8 @@ class _PurchaseOrderCreationScreenState
                     children: [
                       const Text('Tax (10%):'),
                       Text(
-                          '\$${(_calculateSubtotal() * 0.1).toStringAsFixed(2)}'),
+                        '\$${(_calculateSubtotal() * 0.1).toStringAsFixed(2)}',
+                      ),
                     ],
                   ),
                   const Divider(),
@@ -579,9 +566,9 @@ class _PurchaseOrderCreationScreenState
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -603,10 +590,7 @@ class _LineItemCard extends StatelessWidget {
   final PurchaseOrderLineItem item;
   final VoidCallback onRemove;
 
-  const _LineItemCard({
-    required this.item,
-    required this.onRemove,
-  });
+  const _LineItemCard({required this.item, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -654,4 +638,16 @@ class _LineItemCard extends StatelessWidget {
 }
 
 // Provider for selected status filter
-final _selectedStatusProvider = StateProvider<String>((ref) => 'All');
+class _SelectedStatusNotifier extends Notifier<String> {
+  @override
+  String build() => 'All';
+
+  void setStatus(String status) {
+    state = status;
+  }
+}
+
+final _selectedStatusProvider =
+    NotifierProvider<_SelectedStatusNotifier, String>(() {
+  return _SelectedStatusNotifier();
+});

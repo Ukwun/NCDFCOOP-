@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
+import '../../core/animations/app_animations.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
   final String categoryName;
@@ -24,115 +26,177 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     _initializeProducts();
   }
 
+  List<Map<String, dynamic>> _getFilteredProducts() {
+    List<Map<String, dynamic>> filtered = products;
+
+    // Apply filter based on selectedFilter
+    switch (selectedFilter) {
+      case 'Member only':
+        // Show only products with high discounts (member benefits)
+        filtered =
+            products.where((p) => (p['original'] - p['price']) > 2000).toList();
+        break;
+      case 'Fast delivery':
+        // Show products from popular companies (assume fast delivery)
+        filtered = products
+            .where((p) => ['Premium Foods', 'Fresh Poultry', 'Veggie Plus']
+                .contains(p['company']))
+            .toList();
+        break;
+      case 'Bulk':
+        // Show larger size products
+        filtered = products
+            .where((p) =>
+                (int.tryParse(p['size'].replaceAll(RegExp(r'[^0-9]'), '')) ??
+                    0) >
+                3)
+            .toList();
+        break;
+      case 'New':
+        // Show first 5 products as "new"
+        filtered = products.take(5).toList();
+        break;
+      case 'Best deals':
+        // Show products with highest savings
+        filtered = products
+            .where((p) => (p['original'] - p['price']) / p['original'] > 0.15)
+            .toList();
+        break;
+      case 'Popular':
+      default:
+        filtered = products;
+    }
+
+    return filtered;
+  }
+
+  Widget _buildProductImage(String? imagePath) {
+    return Image(
+      image: imagePath != null && imagePath.startsWith('assets/')
+          ? AssetImage(imagePath)
+          : imagePath != null
+              ? NetworkImage(imagePath)
+              : AssetImage('assets/images/Groceries1.png') as ImageProvider,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: const Color(0xFFE0E0E0),
+          child:
+              const Icon(Icons.image_not_supported, color: Color(0xFF999999)),
+        );
+      },
+    );
+  }
+
   void _initializeProducts() {
     products = [
       {
+        'id': 'product_001',
         'name': 'Palm oil',
         'size': '5 ltrs',
         'price': 12000.0,
         'original': 14800.0,
         'company': 'Premium Oils',
-        'image':
-            'https://images.unsplash.com/photo-1587049352584-5374c67271f1?w=200&h=150&fit=crop',
+        'image': 'assets/images/Groundnut oil1.png',
       },
       {
+        'id': 'product_002',
         'name': 'Golden morn',
         'size': '900g x2',
         'price': 9500.0,
         'original': 12000.0,
         'company': 'Golden Foods',
-        'image':
-            'https://images.unsplash.com/photo-1599599810694-5c5c3b1c1e2e?w=200&h=150&fit=crop',
+        'image': 'assets/images/Golden flax seeds1.png',
       },
       {
+        'id': 'product_003',
         'name': 'Sunflower oil',
         'size': '5 ltrs',
         'price': 25000.0,
         'original': 25800.0,
         'company': 'Oil Processors',
-        'image':
-            'https://images.unsplash.com/photo-1609780576341-38297e50d90f?w=200&h=150&fit=crop',
+        'image': 'assets/images/Groundnut oil1.png',
       },
       {
+        'id': 'product_004',
         'name': 'Chicken pack',
         'size': '1.5kg',
         'price': 7500.0,
         'original': 8500.0,
         'company': 'Fresh Poultry',
-        'image':
-            'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=200&h=150&fit=crop',
+        'image': 'assets/images/Full size chicken1.png',
       },
       {
+        'id': 'product_005',
         'name': 'Full sized chicken',
         'size': '2.5kg',
         'price': 18000.0,
         'original': 27500.0,
         'company': 'Premium Chicken',
-        'image':
-            'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=200&h=150&fit=crop',
+        'image': 'assets/images/Full size chicken1.png',
       },
       {
+        'id': 'product_006',
         'name': 'Long grain rice',
         'size': '50kg',
         'price': 53000.0,
         'original': 56000.0,
         'company': 'Rice Masters',
-        'image':
-            'https://images.unsplash.com/photo-1586080872057-aae4e5baa7d9?w=200&h=150&fit=crop',
+        'image': 'assets/images/Ijebu 1.png',
       },
       {
+        'id': 'product_007',
         'name': 'Frozen drumsticks',
         'size': '3kg',
         'price': 8500.0,
         'original': 10600.0,
         'company': 'Fresh Poultry',
-        'image':
-            'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=200&h=150&fit=crop',
+        'image': 'assets/images/Meat1.png',
       },
       {
+        'id': 'product_008',
         'name': 'Fresh beef',
         'size': '5kg',
         'price': 18000.0,
         'original': 22500.0,
         'company': 'Meat Processors',
-        'image':
-            'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=200&h=150&fit=crop',
+        'image': 'assets/images/Beef1.png',
       },
       {
+        'id': 'product_009',
         'name': 'Tomatoes',
         'size': '5kg basket',
         'price': 5000.0,
         'original': 6500.0,
         'company': 'Farm Fresh',
-        'image':
-            'https://images.unsplash.com/photo-1592924568900-0ff02b6b8225?w=200&h=150&fit=crop',
+        'image': 'assets/images/Tomatoes1.png',
       },
       {
+        'id': 'product_010',
         'name': 'Onions',
         'size': '10kg bag',
         'price': 8000.0,
         'original': 10000.0,
         'company': 'Veggie Plus',
-        'image':
-            'https://images.unsplash.com/photo-1587049352584-5374c67271f1?w=200&h=150&fit=crop',
+        'image': 'assets/images/Groceries1.png',
       },
       {
+        'id': 'product_011',
         'name': 'Bell peppers',
         'size': '2kg',
         'price': 3500.0,
         'original': 4500.0,
         'company': 'Fresh Farms',
-        'image':
-            'https://images.unsplash.com/photo-1599599810694-5c5c3b1c1e2e?w=200&h=150&fit=crop',
+        'image': 'assets/images/Groceries1.png',
       },
       {
+        'id': 'product_012',
         'name': 'Carrots',
         'size': '3kg',
         'price': 2800.0,
         'original': 3500.0,
         'company': 'Veggie Plus',
-        'image':
-            'https://images.unsplash.com/photo-1605027981618-8b9f88fb8b6b?w=200&h=150&fit=crop',
+        'image': 'assets/images/Groceries1.png',
       },
     ];
   }
@@ -264,20 +328,25 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'View savings',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: const Color(0xFFFAFAFA),
-                fontSize: 11,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
+          GestureDetector(
+            onTap: () {
+              context.pushNamed('member-savings');
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'View savings',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFFFAFAFA),
+                  fontSize: 11,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ),
           ),
@@ -305,7 +374,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           children: filters.map((filter) {
             final isSelected = selectedFilter == filter;
             return GestureDetector(
-              onTap: () {
+              onTap: () async {
+                await AppAnimations.lightTap();
                 setState(() {
                   selectedFilter = filter;
                 });
@@ -641,7 +711,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           child: Wrap(
             spacing: 16,
             runSpacing: 16,
-            children: products.map((product) {
+            children: _getFilteredProducts().map((product) {
               return _buildProductCard(product);
             }).toList(),
           ),
@@ -653,146 +723,156 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   Widget _buildProductCard(Map<String, dynamic> product) {
     final savings = product['original'] - product['price'];
 
-    return Container(
-      width: (MediaQuery.of(context).size.width - 56) / 2,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: ShapeDecoration(
-        color: const Color(0xFFE9E6E6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
+    return GestureDetector(
+      onTap: () async {
+        await AppAnimations.lightTap();
+        // Navigate to product detail screen with ACTUAL product data
+        if (mounted) {
+          context.pushNamed(
+            'product-detail',
+            pathParameters: {'productId': product['id'] as String},
+            extra: product, // Pass the entire product object
+          );
+        }
+      },
+      child: Container(
+        width: (MediaQuery.of(context).size.width - 56) / 2,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: ShapeDecoration(
+          color: const Color(0xFFE9E6E6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            height: 140,
-            padding: const EdgeInsets.all(10),
-            child: Container(
-              decoration: ShapeDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(
-                      product['image'] ?? "https://placehold.co/255x200"),
-                  fit: BoxFit.cover,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              height: 140,
+              padding: const EdgeInsets.all(10),
+              child: Container(
+                decoration: ShapeDecoration(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  color: const Color(0xFFF5F5F5),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                child: _buildProductImage(product['image']),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product['name'],
-                  style: TextStyle(
-                    color: const Color(0xFF0A0A0A),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product['name'],
+                    style: TextStyle(
+                      color: const Color(0xFF0A0A0A),
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product['size'],
-                  style: TextStyle(
-                    color: const Color(0x99949494),
-                    fontSize: 12,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
+                  const SizedBox(height: 4),
+                  Text(
+                    product['size'],
+                    style: TextStyle(
+                      color: const Color(0x99949494),
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '₦',
-                        style: TextStyle(
-                          color: AppColors.accent.withValues(alpha: 0.5),
-                          fontSize: 11,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                      TextSpan(
-                        text: product['original'].toStringAsFixed(0),
-                        style: TextStyle(
-                          color: AppColors.accent.withValues(alpha: 0.5),
-                          fontSize: 11,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 8),
+                  RichText(
+                    text: TextSpan(
                       children: [
-                        Text(
-                          '₦${product['price'].toStringAsFixed(0)}',
+                        TextSpan(
+                          text: '₦',
                           style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 14,
+                            color: AppColors.accent.withValues(alpha: 0.5),
+                            fontSize: 11,
                             fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.lineThrough,
                           ),
                         ),
-                        Text(
-                          'Save ₦${savings.toStringAsFixed(0)}',
+                        TextSpan(
+                          text: product['original'].toStringAsFixed(0),
                           style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 9,
+                            color: AppColors.accent.withValues(alpha: 0.5),
+                            fontSize: 11,
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w400,
+                            decoration: TextDecoration.lineThrough,
                           ),
                         ),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        context.pushNamed('cart');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product['name']} added to cart'),
-                            duration: const Duration(seconds: 2),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '₦${product['price'].toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 14,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        );
-                      },
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Icon(
-                          Icons.add,
-                          color: AppColors.surface,
-                          size: 16,
+                          Text(
+                            'Save ₦${savings.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 9,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          context.pushNamed('cart');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${product['name']} added to cart'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            color: AppColors.surface,
+                            size: 16,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

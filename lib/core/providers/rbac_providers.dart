@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/rbac/rbac_service.dart';
 import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
 
 /// RBAC Service Provider
 final rbacServiceProvider = Provider<RBACService>((ref) {
@@ -177,15 +178,12 @@ final resourcePermissionProvider = FutureProvider.family<PermissionLevel,
 });
 
 /// Get the highest role for the user
-final highestUserRoleProvider = FutureProvider<UserRole>((ref) async {
-  final authState = ref.watch(authStateProvider);
+/// Uses currentUserProvider which is updated immediately after role selection
+final highestUserRoleProvider = Provider<UserRole>((ref) {
+  final user = ref.watch(currentUserProvider);
 
-  return authState.when(
-    data: (user) {
-      if (user == null) return UserRole.consumer;
-      return RBACService.getHighestRole(user.roles);
-    },
-    loading: () => UserRole.consumer,
-    error: (_, __) => UserRole.consumer,
-  );
+  if (user == null) return UserRole.consumer;
+  if (user.roles.isEmpty) return UserRole.consumer;
+
+  return RBACService.getHighestRole(user.roles);
 });

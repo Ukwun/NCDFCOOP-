@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
@@ -265,7 +264,6 @@ class DriverLocationUpdate {
 /// - Calculate ETA to next stop
 class DriverService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   StreamSubscription<Position>? _positionStreamSubscription;
 
   /// Initialize location tracking for a driver
@@ -383,24 +381,20 @@ class DriverService {
       final timestamp = DateTime.now();
       final podId = 'POD-$orderId-${timestamp.millisecondsSinceEpoch}';
 
-      // Upload photo to Firebase Storage
-      final photoRef = _storage.ref(
-        'pod/$driverId/$orderId/photo_${timestamp.millisecondsSinceEpoch}.jpg',
-      );
-
+      // Upload photo to Firebase Storage (simulated for now)
+      // final photoRef = _storage.ref(
+      //   'pod/$driverId/$orderId/photo_${timestamp.millisecondsSinceEpoch}.jpg',
+      // );
       // In real implementation: await photoRef.putFile(File(photoPath));
-      // For now, simulate with a dummy URL
       final photoUrl =
           'gs://coop-commerce.appspot.com/pod/$driverId/$orderId/photo.jpg';
       print('DEBUG: Simulated photo upload to $photoUrl');
 
-      // Upload signature to Firebase Storage
-      final signatureRef = _storage.ref(
-        'pod/$driverId/$orderId/signature_${timestamp.millisecondsSinceEpoch}.png',
-      );
-
+      // Upload signature to Firebase Storage (simulated for now)
+      // final signatureRef = _storage.ref(
+      //   'pod/$driverId/$orderId/signature_${timestamp.millisecondsSinceEpoch}.png',
+      // );
       // In real implementation: await signatureRef.putFile(File(signaturePath));
-      // For now, simulate with a dummy URL
       final signatureUrl =
           'gs://coop-commerce.appspot.com/pod/$driverId/$orderId/signature.png';
       print('DEBUG: Simulated signature upload to $signatureUrl');

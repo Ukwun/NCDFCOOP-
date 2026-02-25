@@ -1,17 +1,40 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:coop_commerce/features/welcome/user_model.dart';
 import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/core/auth/permission.dart';
 import 'package:coop_commerce/core/auth/user_context.dart';
+import 'package:coop_commerce/services/auth/firebase_auth_service.dart';
 
 // ============================================================================
-// SIMPLE PROVIDERS - NO STATENOTIFIER (avoiding import issues)
+// STATE NOTIFIER FOR MANAGING CURRENT USER
 // ============================================================================
 
-/// Current authenticated user (null when not logged in)
-final currentUserProvider = Provider<User?>((ref) {
-  // This will be overridden by actual auth logic
-  return null;
+/// Notifier that manages the currently authenticated user
+class UserNotifier extends Notifier<User?> {
+  @override
+  User? build() {
+    return null;
+  }
+
+  /// Update the current user (called when login/signup completes)
+  void setUser(User? user) {
+    state = user;
+  }
+
+  /// Clear the user (called on logout)
+  void clearUser() {
+    state = null;
+  }
+}
+
+// ============================================================================
+// USER AND ROLE PROVIDERS
+// ============================================================================
+
+/// Current authenticated user - synchronous, managed state
+final currentUserProvider = NotifierProvider<UserNotifier, User?>(() {
+  return UserNotifier();
 });
 
 /// Currently active role (for multi-role users)
@@ -117,4 +140,36 @@ final isAdminProvider = Provider<bool>((ref) {
 final isSuperAdminProvider = Provider<bool>((ref) {
   final user = ref.watch(currentUserProvider);
   return user?.roles.contains(UserRole.superAdmin) == true;
+});
+
+// ============================================================================
+// FIREBASE AUTH SERVICE PROVIDERS
+// ============================================================================
+
+/// Firebase auth service provider
+final firebaseAuthServiceProvider = Provider<FirebaseAuthService>((ref) {
+  return FirebaseAuthService();
+});
+
+/// Firebase auth state stream
+final firebaseAuthStateProvider = StreamProvider<firebase_auth.User?>((ref) {
+  return ref.watch(firebaseAuthServiceProvider).authStateChanges;
+});
+
+/// Firebase current user provider
+final firebaseCurrentUserProvider = Provider<firebase_auth.User?>((ref) {
+  final authService = ref.watch(firebaseAuthServiceProvider);
+  return authService.currentUser;
+});
+
+/// Firebase user ID provider
+final firebaseUserIdProvider = Provider<String?>((ref) {
+  final authService = ref.watch(firebaseAuthServiceProvider);
+  return authService.currentUserId;
+});
+
+/// Firebase user email provider
+final firebaseUserEmailProvider = Provider<String?>((ref) {
+  final authService = ref.watch(firebaseAuthServiceProvider);
+  return authService.currentUserEmail;
 });

@@ -1,11 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../email/email_service.dart';
 
 /// B2B Invoice payment service
 class B2BInvoicePaymentService {
   final FirebaseFirestore _firestore;
+  final EmailService _emailService;
 
-  B2BInvoicePaymentService({required FirebaseFirestore firestore})
-      : _firestore = firestore;
+  B2BInvoicePaymentService({
+    required FirebaseFirestore firestore,
+    EmailService? emailService,
+  })  : _firestore = firestore,
+        _emailService = emailService ?? createEmailService();
 
   /// Create invoice for order
   Future<Invoice> createInvoice({
@@ -82,8 +87,30 @@ class B2BInvoicePaymentService {
         throw InvoiceException('Invoice not found: $invoiceId');
       }
 
-      // TODO: Integrate email service to send invoice
-      // For now, mark as sent in database
+      final data = invoiceDoc.data() as Map<String, dynamic>;
+      final invoiceNumber = data['invoice_number'] as String;
+      final amount = (data['amount'] as num).toDouble();
+      final currency = data['currency'] as String? ?? 'NGN';
+      final dueDate = (data['due_date'] as Timestamp).toDate();
+      final notes = data['notes'] as String?;
+
+      // Send invoice email
+      final emailSent = await _emailService.sendInvoiceEmail(
+        to: customerEmail,
+        customerName: customerName ?? 'Valued Customer',
+        invoiceNumber: invoiceNumber,
+        amount: amount,
+        currency: currency,
+        dueDate: dueDate,
+        notes: notes,
+      );
+
+      if (!emailSent) {
+        throw InvoiceException(
+            'Failed to send invoice email to $customerEmail');
+      }
+
+      // Mark as sent in database
       await _firestore.collection('invoices').doc(invoiceId).update({
         'sent_at': FieldValue.serverTimestamp(),
         'sent_to': customerEmail,

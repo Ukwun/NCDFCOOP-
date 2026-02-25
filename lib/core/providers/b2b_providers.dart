@@ -22,7 +22,6 @@ final invoiceServiceProvider = Provider((ref) {
 /// Get all POs for current institution
 final institutionPurchaseOrdersProvider =
     StreamProvider.family<List<PurchaseOrder>, String>((ref, institutionId) {
-  final service = ref.watch(purchaseOrderServiceProvider);
   final firestore = FirebaseFirestore.instance;
 
   return firestore
@@ -155,7 +154,6 @@ final invoiceProvider =
 final overdueInvoicesProvider =
     StreamProvider.family<List<Invoice>, String>((ref, institutionId) {
   final firestore = FirebaseFirestore.instance;
-  final now = DateTime.now();
 
   return firestore
       .collection('invoices')

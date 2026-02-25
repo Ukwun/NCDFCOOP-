@@ -281,3 +281,118 @@ class FranchiseDashboardMetrics {
     required this.violations,
   });
 }
+
+/// Get franchise analytics data
+final franchiseAnalyticsProvider =
+    FutureProvider.family<FranchiseAnalyticsData, String>((ref, storeId) async {
+  final dailySalesAsync = await ref.watch(franchiseDailySalesProvider((
+    storeId,
+    DateTime.now().subtract(const Duration(days: 30)),
+    DateTime.now()
+  )).future);
+
+  final totalMonthlyRevenue =
+      dailySalesAsync.fold<double>(0, (sum, metric) => sum + metric.dailySales);
+  final dailyOrders =
+      dailySalesAsync.map((metric) => metric.transactionCount).toList();
+  final monthlyGrowth = dailySalesAsync.isNotEmpty
+      ? ((dailySalesAsync.last.dailySales - dailySalesAsync.first.dailySales) /
+          (dailySalesAsync.first.dailySales == 0
+              ? 1
+              : dailySalesAsync.first.dailySales) *
+          100)
+      : 0.0;
+
+  // Mock category data for now
+  final categories = ['Electronics', 'Groceries', 'Textiles', 'Home Goods'];
+  final categoryRevenue = [
+    totalMonthlyRevenue * 0.4,
+    totalMonthlyRevenue * 0.3,
+    totalMonthlyRevenue * 0.2,
+    totalMonthlyRevenue * 0.1
+  ];
+
+  return FranchiseAnalyticsData(
+    totalMonthlyRevenue: totalMonthlyRevenue,
+    dailyOrders: dailyOrders,
+    monthlyGrowth: monthlyGrowth,
+    categories: categories,
+    categoryRevenue: categoryRevenue,
+  );
+});
+
+/// Get franchise inventory sync status
+final franchiseInventorySyncProvider =
+    StreamProvider.family<List<FranchiseInventoryItem>, String>((ref, storeId) {
+  final firestore = FirebaseFirestore.instance;
+  return firestore
+      .collection('franchise_inventory')
+      .where('storeId', isEqualTo: storeId)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs
+        .map((doc) => FranchiseInventoryItem.fromFirestore(doc))
+        .toList();
+  });
+});
+
+/// Get count of items needing reorder
+final franchiseReorderCountProvider =
+    FutureProvider.family<int, String>((ref, storeId) async {
+  final service = ref.watch(franchiseInventoryServiceProvider);
+  final reorderItems = await service.getReorderItems(storeId);
+  return reorderItems.length;
+});
+
+/// Get franchise store inventory (alternative to franchiseStoreInventoryProvider)
+final franchiseInventoryProvider =
+    StreamProvider.family<List<FranchiseInventoryItem>, String>((ref, storeId) {
+  final firestore = FirebaseFirestore.instance;
+  return firestore
+      .collection('franchise_inventory')
+      .where('storeId', isEqualTo: storeId)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs
+        .map((doc) => FranchiseInventoryItem.fromFirestore(doc))
+        .toList();
+  });
+});
+
+/// Get low stock items (alternative name for lowStockItemsProvider)
+final franchiseLowStockProvider =
+    FutureProvider.family<List<FranchiseInventoryItem>, String>(
+        (ref, storeId) async {
+  final service = ref.watch(franchiseInventoryServiceProvider);
+  return service.getLowStockItems(storeId);
+});
+
+/// Get franchise staff members
+final franchiseStaffProvider =
+    StreamProvider.family<List<StaffMember>, String>((ref, storeId) {
+  final firestore = FirebaseFirestore.instance;
+  return firestore
+      .collection('franchise_staff')
+      .where('storeId', isEqualTo: storeId)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) => StaffMember.fromFirestore(doc)).toList();
+  });
+});
+
+/// Analytics data for franchise dashboard
+class FranchiseAnalyticsData {
+  final double totalMonthlyRevenue;
+  final List<int> dailyOrders;
+  final double monthlyGrowth;
+  final List<String> categories;
+  final List<double> categoryRevenue;
+
+  FranchiseAnalyticsData({
+    required this.totalMonthlyRevenue,
+    required this.dailyOrders,
+    required this.monthlyGrowth,
+    required this.categories,
+    required this.categoryRevenue,
+  });
+}

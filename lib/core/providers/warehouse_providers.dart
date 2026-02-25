@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coop_commerce/core/services/warehouse_service.dart';
 
 // Warehouse Service Provider
-final warehouseServiceProvider = Provider((ref) => WarehouseService());
+final warehouseServiceProvider = Provider((ref) => WarehouseService(
+      firestore: FirebaseFirestore.instance,
+    ));
 
 // ===================== PICK LIST PROVIDERS =====================
 
@@ -196,8 +198,8 @@ final inventoryStatsProvider = FutureProvider<InventoryStats>((ref) async {
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      final quantity = data['quantity'] ?? 0;
-      final reserved = data['reserved_quantity'] ?? 0;
+      final quantity = (data['quantity'] as num?)?.toInt() ?? 0;
+      final reserved = (data['reserved_quantity'] as num?)?.toInt() ?? 0;
       final minimum = data['minimum_level'] ?? 0;
 
       totalItems += quantity;

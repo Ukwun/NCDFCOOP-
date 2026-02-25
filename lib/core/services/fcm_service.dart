@@ -1,5 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:coop_commerce/core/providers/order_providers.dart'
+    show OrderStatusNotification;
 
 /// Firebase Cloud Messaging service for push notifications
 class FCMService {
@@ -28,7 +30,6 @@ class FCMService {
         alert: true,
         announcement: false,
         badge: true,
-        carryForward: true,
         criticalAlert: false,
         provisional: false,
         sound: true,
@@ -210,46 +211,5 @@ extension OrderStatusNotificationFCM on OrderStatusNotification {
       'message': message,
       'timestamp': timestamp.toIso8601String(),
     };
-  }
-}
-
-/// Order status notification class
-class OrderStatusNotification {
-  final String orderId;
-  final String previousStatus;
-  final String currentStatus;
-  final String title;
-  final String message;
-  final DateTime timestamp;
-
-  OrderStatusNotification({
-    required this.orderId,
-    required this.previousStatus,
-    required this.currentStatus,
-    required this.title,
-    required this.message,
-    required this.timestamp,
-  });
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'orderId': orderId,
-      'previousStatus': previousStatus,
-      'currentStatus': currentStatus,
-      'title': title,
-      'message': message,
-      'timestamp': timestamp,
-    };
-  }
-
-  factory OrderStatusNotification.fromFirestore(Map<String, dynamic> data) {
-    return OrderStatusNotification(
-      orderId: data['orderId'] as String,
-      previousStatus: data['previousStatus'] as String,
-      currentStatus: data['currentStatus'] as String,
-      title: data['title'] as String,
-      message: data['message'] as String,
-      timestamp: (data['timestamp'] as dynamic)?.toDate() ?? DateTime.now(),
-    );
   }
 }

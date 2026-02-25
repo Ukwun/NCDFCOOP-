@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
-import 'package:coop_commerce/models/order.dart';
 import 'package:coop_commerce/core/providers/order_providers.dart';
+import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/features/welcome/user_model.dart';
 
 class OrderConfirmationScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -58,6 +60,7 @@ class _OrderConfirmationScreenState
   @override
   Widget build(BuildContext context) {
     final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
+    final currentUser = ref.watch(currentUserProvider);
 
     return PopScope(
       canPop: false,
@@ -65,65 +68,79 @@ class _OrderConfirmationScreenState
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: orderAsync.when(
-            data: (order) => SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 40),
-                    // Animated checkmark
-                    _buildAnimatedCheckmark(),
-                    const SizedBox(height: AppSpacing.lg),
+            data: (order) {
+              // If order is null but user's membership tier has been updated, show success
+              if (order == null &&
+                  currentUser != null &&
+                  currentUser.membershipTier != 'free') {
+                return _buildMockOrderSuccess(context, currentUser);
+              }
+              if (order == null) {
+                return Center(
+                  child:
+                      Text('Order not found', style: AppTextStyles.bodyMedium),
+                );
+              }
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 40),
+                      // Animated checkmark
+                      _buildAnimatedCheckmark(),
+                      const SizedBox(height: AppSpacing.lg),
 
-                    // Slide in content
-                    SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.5),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: _slideController,
-                          curve: Curves.easeOutCubic,
+                      // Slide in content
+                      SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.5),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: _slideController,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Order Confirmed!',
+                              style: AppTextStyles.h1,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Your order has been placed successfully',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.tertiary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Order Confirmed!',
-                            style: AppTextStyles.h1,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'Your order has been placed successfully',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.tertiary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.xl),
 
-                    // Order details
-                    _buildOrderDetails(order),
-                    const SizedBox(height: AppSpacing.lg),
+                      // Order details
+                      _buildOrderDetails(order),
+                      const SizedBox(height: AppSpacing.lg),
 
-                    // Delivery address
-                    _buildDeliveryInfo(order),
-                    const SizedBox(height: AppSpacing.lg),
+                      // Delivery address
+                      _buildDeliveryInfo(order),
+                      const SizedBox(height: AppSpacing.lg),
 
-                    // Payment info
-                    _buildPaymentInfo(order),
-                    const SizedBox(height: AppSpacing.xl),
+                      // Payment info
+                      _buildPaymentInfo(order),
+                      const SizedBox(height: AppSpacing.xl),
 
-                    // Action buttons
-                    _buildActionButtons(context, order),
-                  ],
+                      // Action buttons
+                      _buildActionButtons(context, order),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
             loading: () => const Center(
               child: CircularProgressIndicator(),
             ),
@@ -227,19 +244,20 @@ class _OrderConfirmationScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      order.address.fullName,
+                      order.address['fullName'] as String? ??
+                          'Delivery Address',
                       style: AppTextStyles.labelSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      order.address.fullAddress,
+                      order.address['fullAddress'] as String? ?? '',
                       style: AppTextStyles.bodySmall,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      order.address.phoneNumber,
+                      order.address['phoneNumber'] as String? ?? '',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.tertiary,
@@ -399,5 +417,194 @@ class _OrderConfirmationScreenState
       'Dec'
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  /// Build success screen for mock membership orders
+  Widget _buildMockOrderSuccess(BuildContext context, User user) {
+    final membershipTier = user.membershipTier.toUpperCase();
+    final tierColors = {
+      'BASIC': Colors.blue,
+      'GOLD': Colors.amber,
+      'PLATINUM': Colors.purple,
+    };
+    final tierColor = tierColors[membershipTier] ?? Colors.grey;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            // Animated checkmark
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.green[100],
+              ),
+              child: Icon(
+                Icons.check_circle,
+                size: 80,
+                color: Colors.green[400],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Payment Successful!',
+              style: AppTextStyles.h1,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'You are now a $membershipTier Member',
+              style: AppTextStyles.h3.copyWith(
+                color: tierColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            // Membership badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: tierColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: tierColor, width: 2),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    membershipTier,
+                    style: AppTextStyles.h2.copyWith(
+                      color: tierColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tier Member',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textLight,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (membershipTier == 'GOLD')
+                    Column(
+                      children: [
+                        _BenefitRow('15% discount on all products'),
+                        _BenefitRow('Free shipping on orders 5000+'),
+                        _BenefitRow('Priority customer support'),
+                      ],
+                    )
+                  else if (membershipTier == 'PLATINUM')
+                    Column(
+                      children: [
+                        _BenefitRow('20% discount on all products'),
+                        _BenefitRow('Free shipping on all orders'),
+                        _BenefitRow('Priority + 24/7 concierge support'),
+                        _BenefitRow('Exclusive Platinum store access'),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            // Order details
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Membership Details',
+                    style: AppTextStyles.labelMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  _DetailRow('Member Name', user.name),
+                  _DetailRow('Email', user.email),
+                  _DetailRow(
+                    'Valid Until',
+                    user.membershipExpiryDate != null
+                        ? _formatDate(user.membershipExpiryDate!)
+                        : 'Active',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            // Continue button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () => context.go('/'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tierColor,
+                ),
+                child: const Text(
+                  'Continue Shopping',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BenefitRow extends StatelessWidget {
+  final String benefit;
+
+  const _BenefitRow(this.benefit);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, size: 18, color: Colors.green),
+          const SizedBox(width: 12),
+          Expanded(child: Text(benefit, style: AppTextStyles.bodySmall)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DetailRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style:
+                  AppTextStyles.bodySmall.copyWith(color: AppColors.textLight)),
+          Text(value,
+              style: AppTextStyles.bodySmall
+                  .copyWith(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
   }
 }

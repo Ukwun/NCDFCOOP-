@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
+import 'package:coop_commerce/widgets/product_image.dart';
 
 /// Cart item model
 class CartItem {
@@ -269,17 +270,9 @@ class _CartDisplayScreenState extends State<CartDisplayScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                item.imageUrl,
+              child: ProductImage(
+                imageUrl: item.imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Icon(
-                      Icons.image_not_supported,
-                      color: Colors.grey[400],
-                    ),
-                  );
-                },
               ),
             ),
           ),

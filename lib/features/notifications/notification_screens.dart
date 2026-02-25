@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/notification_providers.dart';
 import '../../core/providers/notification_providers.dart' as providers;
+import '../../core/providers/real_time_providers.dart';
+import '../../features/welcome/auth_provider.dart';
 import '../../models/notification_models.dart';
 
 // ============================================================================
@@ -14,6 +16,14 @@ class NotificationCenterScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifications = ref.watch(allNotificationsProvider);
+
+    // Real-time unread count
+    final authState = ref.watch(authStateProvider);
+    final userId = authState.value?.id ?? '';
+
+    final unreadCountAsync = ref.watch(
+      unreadNotificationCountProvider(userId),
+    );
 
     return DefaultTabController(
       length: 4,
@@ -34,6 +44,40 @@ class NotificationCenterScreen extends ConsumerWidget {
             ],
           ),
           actions: [
+            // Unread count badge (Real-Time)
+            unreadCountAsync.when(
+              data: (count) {
+                if (count > 0) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$count unread',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox();
+              },
+              loading: () => const SizedBox(),
+              error: (_, __) => const SizedBox(),
+            ),
+
             // Mark all as read button
             Padding(
               padding: const EdgeInsets.all(8.0),

@@ -57,33 +57,58 @@ class OnboardingScreen extends StatelessWidget {
                   // Main Text
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Best deals on local and global ',
-                            style: TextStyle(
-                              color: Color(0xFFFAFAFA),
-                              fontSize: 32,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                            ),
+                    child: Column(
+                      children: [
+                        RichText(
+                          textAlign: TextAlign.center,
+                          text: const TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Welcome to ',
+                                style: TextStyle(
+                                  color: Color(0xFFFAFAFA),
+                                  fontSize: 32,
+                                  fontFamily: 'Libre Baskerville',
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Cooperative',
+                                style: TextStyle(
+                                  color: Color(0xFFF3951A),
+                                  fontSize: 32,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Libre Baskerville',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.2,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' Commerce',
+                                style: TextStyle(
+                                  color: Color(0xFFFAFAFA),
+                                  fontSize: 32,
+                                  fontFamily: 'Libre Baskerville',
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
                           ),
-                          TextSpan(
-                            text: 'brands',
-                            style: TextStyle(
-                              color: Color(0xFFF3951A),
-                              fontSize: 32,
-                              fontStyle: FontStyle.italic,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w400,
-                              height: 1.2,
-                            ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Shop smarter, save more, grow together',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFFCCCCCC),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
 

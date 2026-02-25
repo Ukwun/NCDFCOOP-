@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Role-based permission definitions
@@ -228,11 +227,6 @@ class UserContext {
 /// Permission Service - Core RBAC logic
 /// Handles all permission checking across the application
 class PermissionService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  static const String _permissionsCollection = 'permissions';
-  static const String _rolePermissionsCache = 'role_permissions_cache';
-
   /// Check if user has permission to perform action
   Future<bool> hasPermission(UserContext user, Permission permission) async {
     try {
@@ -439,4 +433,4 @@ class PermissionService {
 final permissionServiceProvider = Provider((ref) => PermissionService());
 
 /// Provider for current user context (to be filled during auth)
-final userContextProvider = StateProvider<UserContext?>((ref) => null);
+final userContextProvider = Provider<UserContext?>((ref) => null);

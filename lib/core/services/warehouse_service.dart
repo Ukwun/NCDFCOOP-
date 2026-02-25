@@ -228,6 +228,18 @@ class WarehouseMetrics {
         'qc_pass_rate': qcPassRate,
         'issue_log': issueLog.map((issue) => issue.toMap()).toList(),
       };
+
+  /// Alias for ordersPicked
+  int get itemsPicked => ordersPicked;
+
+  /// Alias for ordersPacked
+  int get itemsPacked => ordersPacked;
+
+  /// Alias for ordersReadyForDispatch (QC complete)
+  int get qcComplete => ordersReadyForDispatch;
+
+  /// Alias for ordersReadyForDispatch
+  int get readyToShip => ordersReadyForDispatch;
 }
 
 /// A warehouse issue (damage, discrepancy, etc.)

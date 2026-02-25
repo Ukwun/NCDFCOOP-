@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coop_commerce/models/address.dart';
 import 'package:coop_commerce/core/audit/audit_service.dart';
-import 'package:coop_commerce/core/security/audit_log_service.dart';
+import 'package:coop_commerce/core/auth/role.dart';
 
 /// Service for managing customer addresses
 class AddressService {
@@ -62,12 +62,14 @@ class AddressService {
 
       // Log audit
       await _auditLogService.logAction(
-        userId,
-        'consumer',
-        AuditAction.DATA_ACCESSED,
-        'address',
+        userId: userId,
+        userName: userId,
+        userRoles: [UserRole.consumer],
+        eventType: AuditEventType.dataExported,
+        resource: 'address',
         resourceId: docId,
-        severity: AuditSeverity.INFO,
+        action: 'create',
+        result: 'success',
         details: {'action': 'created', 'address_type': type},
       );
 
@@ -93,7 +95,12 @@ class AddressService {
         return null;
       }
 
-      final address = Address.fromMap(doc.data(), doc.id);
+      final data = doc.data();
+      if (data == null) {
+        return null;
+      }
+
+      final address = Address.fromMap(data, doc.id);
 
       // Verify ownership
       if (address.userId != userId) {
@@ -212,12 +219,14 @@ class AddressService {
 
       // Log audit
       await _auditLogService.logAction(
-        userId,
-        'consumer',
-        AuditAction.DATA_ACCESSED,
-        'address',
+        userId: userId,
+        userName: userId,
+        userRoles: [UserRole.consumer],
+        eventType: AuditEventType.dataExported,
+        resource: 'address',
         resourceId: addressId,
-        severity: AuditSeverity.INFO,
+        action: 'update',
+        result: 'success',
         details: {'action': 'updated'},
       );
 
@@ -263,12 +272,14 @@ class AddressService {
 
       // Log audit
       await _auditLogService.logAction(
-        userId,
-        'consumer',
-        AuditAction.DATA_ACCESSED,
-        'address',
+        userId: userId,
+        userName: userId,
+        userRoles: [UserRole.consumer],
+        eventType: AuditEventType.dataExported,
+        resource: 'address',
         resourceId: addressId,
-        severity: AuditSeverity.INFO,
+        action: 'delete',
+        result: 'success',
         details: {'action': 'deleted'},
       );
     } catch (e) {
@@ -314,12 +325,14 @@ class AddressService {
 
       // Log audit
       await _auditLogService.logAction(
-        userId,
-        'consumer',
-        AuditAction.DATA_ACCESSED,
-        'address',
+        userId: userId,
+        userName: userId,
+        userRoles: [UserRole.consumer],
+        eventType: AuditEventType.dataExported,
+        resource: 'address',
         resourceId: addressId,
-        severity: AuditSeverity.INFO,
+        action: 'update',
+        result: 'success',
         details: {'action': 'set_default'},
       );
     } catch (e) {

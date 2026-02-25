@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
-import 'package:coop_commerce/models/b2b_models.dart';
 import 'package:coop_commerce/core/providers/b2b_providers.dart';
 
 /// Purchase Order creation form screen
@@ -42,7 +41,7 @@ class _POCreationScreenState
   @override
   Widget build(BuildContext context) {
     final contractsAsync =
-        ref.watch(institutionalContractsProvider('institution_id'));
+        ref.watch(institutionContractPricesProvider('institution_id'));
 
     return Scaffold(
       appBar: AppBar(
@@ -125,9 +124,9 @@ class _POCreationScreenState
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _selectedContractId,
+          initialValue: _selectedContractId,
           items: contracts
-              .map((c) => DropdownMenuItem(
+              .map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
                     value: c.id,
                     child: Text(c.name ?? 'Unnamed Contract'),
                   ))
@@ -192,7 +191,7 @@ class _POCreationScreenState
                     setState(() => _lineItems.removeAt(index));
                   },
                 );
-              }).toList(),
+              }),
             ],
           ),
       ],

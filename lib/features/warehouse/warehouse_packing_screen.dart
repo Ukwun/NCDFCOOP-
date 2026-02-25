@@ -7,9 +7,9 @@ class WarehousePackingScreen extends ConsumerStatefulWidget {
   final String pickListId;
 
   const WarehousePackingScreen({
-    Key? key,
+    super.key,
     required this.pickListId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<WarehousePackingScreen> createState() =>
@@ -507,7 +507,7 @@ class _WarehousePackingScreenState extends ConsumerState<WarehousePackingScreen>
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryGreen,
+                color: AppColors.primaryGreen,
               ),
             ),
           ],
@@ -650,9 +650,9 @@ class WarehouseQCVerificationScreen extends StatelessWidget {
   final String pickListId;
 
   const WarehouseQCVerificationScreen({
-    Key? key,
+    super.key,
     required this.pickListId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

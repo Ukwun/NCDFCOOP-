@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/providers/franchise_providers.dart';
+import 'package:coop_commerce/models/franchise_models.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// Franchise staff management and performance tracking screen
@@ -159,7 +160,9 @@ class _FranchiseStaffScreenState extends ConsumerState<FranchiseStaffScreen>
                   _PerformanceMetric(
                     label: 'Avg Orders',
                     value:
-                        '${(staff.fold<int>(0, (a, b) => a + b.ordersProcessed) / (staff.isNotEmpty ? staff.length : 1)).toStringAsFixed(0)}',
+                        (staff.fold<int>(0, (a, b) => a + b.ordersProcessed) /
+                                (staff.isNotEmpty ? staff.length : 1))
+                            .toStringAsFixed(0),
                   ),
                   _PerformanceMetric(
                     label: 'Total Sales',
@@ -323,7 +326,7 @@ class _FranchiseStaffScreenState extends ConsumerState<FranchiseStaffScreen>
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedPosition,
+                initialValue: selectedPosition,
                 items: ['Staff Member', 'Team Lead', 'Manager']
                     .map((role) =>
                         DropdownMenuItem(value: role, child: Text(role)))
@@ -478,12 +481,12 @@ class _StaffCard extends StatelessWidget {
         trailing: PopupMenuButton(
           itemBuilder: (context) => [
             PopupMenuItem(
-              child: const Text('View Details'),
               onTap: onTap,
+              child: const Text('View Details'),
             ),
             PopupMenuItem(
-              child: const Text('Edit'),
               onTap: onEdit,
+              child: const Text('Edit'),
             ),
           ],
         ),

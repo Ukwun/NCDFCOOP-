@@ -1,6 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+class _MembershipTierBadge extends StatelessWidget {
+  final String name;
+  final String discount;
+  final Color color;
+
+  const _MembershipTierBadge({
+    required this.name,
+    required this.discount,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Center(
+            child: Text(
+              discount,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          name,
+          style: const TextStyle(
+            color: Color(0xFFFAFAFA),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class OnboardingScreen2 extends StatelessWidget {
   const OnboardingScreen2({super.key});
 
@@ -57,43 +105,82 @@ class OnboardingScreen2 extends StatelessWidget {
                   // Main Text
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Focus on ',
-                            style: TextStyle(
-                              color: Color(0xFFFAFAFA),
-                              fontSize: 32,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
+                    child: Column(
+                      children: [
+                        RichText(
+                          textAlign: TextAlign.center,
+                          text: const TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Become a Member & ',
+                                style: TextStyle(
+                                  color: Color(0xFFFAFAFA),
+                                  fontSize: 32,
+                                  fontFamily: 'Libre Baskerville',
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'save more',
+                                style: TextStyle(
+                                  color: Color(0xFFF3951A),
+                                  fontSize: 32,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Libre Baskerville',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFFFFFFF).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFF3951A)
+                                  .withValues(alpha: 0.3),
+                              width: 1,
                             ),
                           ),
-                          TextSpan(
-                            text: 'growth',
-                            style: TextStyle(
-                              color: Color(0xFFF3951A),
-                              fontSize: 32,
-                              fontStyle: FontStyle.italic,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w400,
-                              height: 1.2,
-                            ),
+                          padding: const EdgeInsets.all(12),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _MembershipTierBadge(
+                                name: 'Basic',
+                                discount: '10%',
+                                color: Color(0xFF98D32A),
+                              ),
+                              _MembershipTierBadge(
+                                name: 'Gold',
+                                discount: '15%',
+                                color: Color(0xFFFFC107),
+                              ),
+                              _MembershipTierBadge(
+                                name: 'Platinum',
+                                discount: '20%',
+                                color: Color(0xFF9C27B0),
+                              ),
+                            ],
                           ),
-                          TextSpan(
-                            text: ' — we’ll handle the rest.',
-                            style: TextStyle(
-                              color: Color(0xFFFAFAFA),
-                              fontSize: 32,
-                              fontFamily: 'Libre Baskerville',
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                            ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Plus: Exclusive deals, loyalty rewards, and priority support',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFFCCCCCC),
+                            fontSize: 13,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
 

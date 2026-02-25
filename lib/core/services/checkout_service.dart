@@ -239,9 +239,8 @@ class CheckoutService {
 
       if (!doc.exists) return null;
 
-      final data = doc.data() as Map<String, dynamic>;
-      // Parse and return order (implementation based on data structure)
-      return null; // TODO: Implement deserialization
+      // TODO: Parse and deserialize order from Firestore document
+      return null;
     } catch (e) {
       print('Error getting checkout order: $e');
       rethrow;

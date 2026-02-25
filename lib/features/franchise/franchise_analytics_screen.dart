@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:coop_commerce/core/providers/franchise_providers.dart';
+import 'package:coop_commerce/core/providers/franchise_providers.dart'
+    as franchise;
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// Franchise analytics and reporting screen
@@ -22,7 +23,6 @@ class _FranchiseAnalyticsScreenState
     extends ConsumerState<FranchiseAnalyticsScreen> {
   late DateTime _selectedStartDate;
   late DateTime _selectedEndDate;
-  String _selectedMetric = 'revenue'; // revenue, orders, profit
 
   @override
   void initState() {
@@ -49,12 +49,18 @@ class _FranchiseAnalyticsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final dailySalesAsync = ref.watch(franchiseDailySalesProvider(
+    final dailySalesAsync = ref.watch(franchise.franchiseDailySalesProvider(
       (widget.storeId, _selectedStartDate, _selectedEndDate),
     ));
 
     final analyticsAsync =
-        ref.watch(franchiseAnalyticsProvider(widget.storeId));
+        ref.watch(franchise.franchiseAnalyticsProvider(widget.storeId));
+
+    // Real-time inventory sync
+    final inventorySyncAsync =
+        ref.watch(franchise.franchiseInventorySyncProvider(widget.storeId));
+    final reorderCountAsync =
+        ref.watch(franchise.franchiseReorderCountProvider(widget.storeId));
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -84,6 +90,129 @@ class _FranchiseAnalyticsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Live Inventory Alert Banner (Real-Time)
+            reorderCountAsync.when(
+              data: (reorderCount) {
+                if (reorderCount > 0) {
+                  return Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange[300]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                color: Colors.orange[700], size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Low Stock Alert',
+                                    style: TextStyle(
+                                      color: Colors.orange[700],
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '$reorderCount items need reorder (Live)',
+                                    style: TextStyle(
+                                      color: Colors.orange[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Reorder initiated'),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[700],
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                              ),
+                              child: const Text('Reorder',
+                                  style: TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                }
+                return const SizedBox();
+              },
+              loading: () => const SizedBox(),
+              error: (_, __) => const SizedBox(),
+            ),
+
+            // Live Inventory Status (Real-Time)
+            inventorySyncAsync.when(
+              data: (inventoryItems) {
+                final outOfStockCount =
+                    inventoryItems.where((item) => item.quantity <= 0).length;
+                final lowStockCount = inventoryItems
+                    .where((item) =>
+                        item.quantity > 0 && item.quantity <= item.safetyStock)
+                    .length;
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.inventory_2,
+                              color: Colors.blue[700], size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Inventory Status (Live)',
+                                  style: TextStyle(
+                                    color: Colors.blue[700],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '$outOfStockCount out of stock • $lowStockCount low stock',
+                                  style: TextStyle(
+                                    color: Colors.blue[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
+              loading: () => const SizedBox(),
+              error: (_, __) => const SizedBox(),
+            ),
+
             // Date Range Display
             Container(
               padding: const EdgeInsets.all(12),

@@ -8,7 +8,7 @@ class Notification {
   final String message;
   final String type;
   final DateTime timestamp;
-  final bool _isRead;
+  bool isRead; // Made mutable for marking as read
 
   Notification({
     required this.id,
@@ -16,10 +16,27 @@ class Notification {
     required this.message,
     required this.type,
     required this.timestamp,
-    required bool isRead,
-  }) : _isRead = isRead;
+    required this.isRead,
+  });
 
-  bool get isRead => _isRead;
+  /// Create a copy with modified fields
+  Notification copyWith({
+    String? id,
+    String? title,
+    String? message,
+    String? type,
+    DateTime? timestamp,
+    bool? isRead,
+  }) {
+    return Notification(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      type: type ?? this.type,
+      timestamp: timestamp ?? this.timestamp,
+      isRead: isRead ?? this.isRead,
+    );
+  }
 }
 
 class NotificationsScreen extends StatefulWidget {
@@ -196,7 +213,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 style: AppTextStyles.h2.copyWith(color: AppColors.surface),
               ),
               GestureDetector(
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 child: Container(
                   width: 40,
                   height: 40,

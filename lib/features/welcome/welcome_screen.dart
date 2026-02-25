@@ -54,10 +54,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       _selectedType = type;
     });
 
-    // Navigate to home after brief delay
-    Future.delayed(const Duration(milliseconds: 600), () {
+    // Navigate to sign-up with membership type
+    String memberTypeString = '';
+    if (type == MemberType.member) {
+      memberTypeString = 'member';
+    } else if (type == MemberType.wholesale) {
+      memberTypeString = 'wholesale';
+    } else if (type == MemberType.cooperative) {
+      memberTypeString = 'cooperative';
+    }
+
+    // Navigate with path parameter
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
-        context.go('/home');
+        context.go('/signup/$memberTypeString');
       }
     });
   }

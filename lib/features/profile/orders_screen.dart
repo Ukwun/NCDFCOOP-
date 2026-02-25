@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
-import 'package:coop_commerce/models/order.dart';
 import 'package:coop_commerce/core/providers/order_providers.dart';
+import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -16,42 +16,20 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   String selectedFilter = 'All';
   int currentPage = 1;
   final int pageSize = 10;
-      ),
-      Order(
-        id = 'ORD-004',
-        date = DateTime.now().subtract(const Duration(days: 20)),
-        items = [
-          OrderItem(
-            name: 'Organic Honey',
-            quantity: 1,
-            price: 5500,
-            image: 'assets/images/product_honey.png',
-          ),
-        ],
-        total = 5500,
-        status = 'Delivered',
-      ),
-    ];
-  }
 
-  List<Order> get filteredOrders {
-    if (selectedFilter == 'All') return orders;
-    return orders.where((order) => order.status == selectedFilter).toList();
-  }
-
-  Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.delivered:
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
         return AppColors.primary;
-      case OrderStatus.outForDelivery:
-      case OrderStatus.dispatched:
+      case 'in transit':
+      case 'dispatched':
         return AppColors.accent;
-      case OrderStatus.cancelled:
-      case OrderStatus.failed:
+      case 'cancelled':
+      case 'failed':
         return Colors.red;
-      case OrderStatus.pending:
-      case OrderStatus.confirmed:
-      case OrderStatus.processing:
+      case 'pending':
+      case 'confirmed':
+      case 'processing':
       default:
         return AppColors.muted;
     }
@@ -152,7 +130,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 style: AppTextStyles.h2.copyWith(color: AppColors.surface),
               ),
               GestureDetector(
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 child: Container(
                   width: 40,
                   height: 40,
@@ -309,13 +293,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(order.orderStatus).withValues(alpha: 0.1),
+                    color: _getStatusColor(order.status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
-                    order.orderStatus.displayName,
+                    order.status,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: _getStatusColor(order.orderStatus),
+                      color: _getStatusColor(order.status),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -353,90 +337,99 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.text,
+                        children: [
+                          Text(
+                            item.name,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.text,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '₦${item.price.toStringAsFixed(0)}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.muted,
+                          Text(
+                            '₦${item.price.toStringAsFixed(0)}',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.muted,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    '₦${(item.price * item.quantity).toStringAsFixed(0)}',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w600,
+                    Text(
+                      '₦${(item.price * item.quantity).toStringAsFixed(0)}',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 16),
+            Divider(color: AppColors.border, height: 1),
+            const SizedBox(height: 12),
+
+            // Total
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Amount',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.muted,
                   ),
-                ],
-              ),
-            );
-          }),
-
-          const SizedBox(height: 16),
-          Divider(color: AppColors.border, height: 1),
-          const SizedBox(height: 12),
-
-          // Total
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total Amount',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.muted,
                 ),
-              ),
-              Text(
-                '₦${order.total.toStringAsFixed(0)}',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Action Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Viewing order #${order.id}...'),
-                    duration: const Duration(seconds: 2),
+                Text(
+                  '₦${order.total.toStringAsFixed(0)}',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-              ),
-              child: Text(
-                'View Details',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.surface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              ],
             ),
-          ),
+
+            const SizedBox(height: 12),
+
+            // Action Buttons - Track and View Invoice
+            Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.pushNamed('order-tracking', pathParameters: {
+                        'orderId': order.id,
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Track Order'),
+                  ),
+                ),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      context.pushNamed('order-invoice', pathParameters: {
+                        'orderId': order.id,
+                      }, queryParameters: {
+                        'orderType':
+                            'retail', // Determine dynamically based on order type
+                      });
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Invoice'),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

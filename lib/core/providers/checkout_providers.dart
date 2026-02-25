@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/audit/audit_service.dart';
 import 'package:coop_commerce/core/services/address_service.dart';
-import 'package:coop_commerce/core/services/pricing_engine_service.dart';
-import 'package:coop_commerce/core/services/cart_service.dart';
 import 'package:coop_commerce/models/address.dart';
 
 // ==================== SERVICE PROVIDERS ====================
@@ -107,8 +105,9 @@ class CheckoutState {
 }
 
 // State notifier for checkout
-class CheckoutStateNotifier extends StateNotifier<CheckoutState> {
-  CheckoutStateNotifier() : super(CheckoutState());
+class CheckoutNotifier extends Notifier<CheckoutState> {
+  @override
+  CheckoutState build() => CheckoutState();
 
   void selectAddress(Address address) {
     state = state.copyWith(selectedAddress: address);
@@ -144,7 +143,6 @@ class CheckoutStateNotifier extends StateNotifier<CheckoutState> {
 }
 
 // Checkout state provider
-final checkoutStateProvider =
-    StateNotifierProvider<CheckoutStateNotifier, CheckoutState>(
-  (ref) => CheckoutStateNotifier(),
+final checkoutStateProvider = NotifierProvider<CheckoutNotifier, CheckoutState>(
+  () => CheckoutNotifier(),
 );

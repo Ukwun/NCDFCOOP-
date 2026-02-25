@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+// import 'package:latlong2/latlong2.dart'; // TODO: Fix latlong2 package dependency
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/services/driver_service.dart';
+import 'package:coop_commerce/core/services/location_service.dart';
 import 'package:coop_commerce/providers/logistics_providers.dart';
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
+import 'package:coop_commerce/features/driver/signature_canvas_screen.dart';
+import 'package:coop_commerce/features/driver/driver_route_map_screen.dart';
 
 /// Driver App Screen - Shows today's deliveries
 /// Accessed by: Drivers
@@ -24,13 +28,35 @@ class DriverAppScreen extends ConsumerStatefulWidget {
 
 class _DriverAppScreenState extends ConsumerState<DriverAppScreen> {
   int _currentStopIndex = 0;
+  String? _photoPath;
+  List<Offset?>? _signaturePoints;
+  Position? _currentPosition;
+  String _notes = '';
+  bool _isSubmittingPOD = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeLocation();
+  }
+
+  Future<void> _initializeLocation() async {
+    final locationService = LocationService();
+    try {
+      final position = await locationService.getCurrentPosition();
+      if (position != null) {
+        setState(() => _currentPosition = position);
+      }
+    } catch (e) {
+      debugPrint('Error initializing location: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     // Load today's deliveries from provider
     final deliveriesAsync = ref.watch(todayDeliveriesProvider);
     final authState = ref.watch(authStateProvider);
-    final currentUser = authState.value;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -42,6 +68,17 @@ class _DriverAppScreenState extends ConsumerState<DriverAppScreen> {
           style: TextStyle(color: Colors.black87, fontSize: 18),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.map, color: Colors.blue),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const DriverRouteMapScreen(),
+                ),
+              );
+            },
+            tooltip: 'View Route Map',
+          ),
           IconButton(
             icon: const Icon(Icons.phone_enabled, color: Colors.green),
             onPressed: () {
@@ -323,29 +360,90 @@ class _DriverAppScreenState extends ConsumerState<DriverAppScreen> {
                   value: '+1234567890',
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DeliveryChecklistScreen(
-                            stop: stop,
-                            onDeliveryComplete: () {
-                              setState(() {
-                                _currentStopIndex++;
-                              });
-                              Navigator.pop(context);
-                            },
+                // POD Capture Section
+                if (_photoPath == null || _signaturePoints == null)
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _capturePhoto(context, stop),
+                          icon: const Icon(Icons.camera_alt),
+                          label: Text(_photoPath == null
+                              ? 'Capture Photo'
+                              : '✓ Photo Captured'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _photoPath != null ? Colors.green : null,
+                            foregroundColor:
+                                _photoPath != null ? Colors.white : null,
                           ),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Start Delivery'),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _captureSignature(context, stop),
+                          icon: const Icon(Icons.edit),
+                          label: Text(_signaturePoints == null
+                              ? 'Get Signature'
+                              : '✓ Signature Captured'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _signaturePoints != null ? Colors.green : null,
+                            foregroundColor:
+                                _signaturePoints != null ? Colors.white : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Delivery notes (optional)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          prefixIcon: const Icon(Icons.note),
+                        ),
+                        onChanged: (value) => setState(() => _notes = value),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: (_photoPath != null &&
+                                  _signaturePoints != null &&
+                                  !_isSubmittingPOD)
+                              ? () => _submitPOD(context, stop)
+                              : null,
+                          icon: _isSubmittingPOD
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle),
+                          label: const Text('Complete Delivery'),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 48),
+                        const SizedBox(height: 8),
+                        const Text('POD Submitted Successfully'),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -406,15 +504,130 @@ class _DriverAppScreenState extends ConsumerState<DriverAppScreen> {
                 stop.address,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12),
               ),
               trailing: Icon(Icons.arrow_forward_ios,
                   size: 16, color: Colors.grey[400]),
+              onTap: () {
+                setState(
+                    () => _currentStopIndex = _currentStopIndex + 1 + index);
+              },
             ),
           ),
         );
       },
     );
+  }
+
+  Future<void> _capturePhoto(BuildContext context, DeliveryStop stop) async {
+    final imagePicker = ImagePicker();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Capture Photo'),
+        content: const Text('Choose photo source'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final pickedFile =
+                  await imagePicker.pickImage(source: ImageSource.camera);
+              if (pickedFile != null) {
+                setState(() => _photoPath = pickedFile.path);
+              }
+            },
+            child: const Text('Camera'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final pickedFile =
+                  await imagePicker.pickImage(source: ImageSource.gallery);
+              if (pickedFile != null) {
+                setState(() => _photoPath = pickedFile.path);
+              }
+            },
+            child: const Text('Gallery'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _captureSignature(
+      BuildContext context, DeliveryStop stop) async {
+    final signature = await Navigator.push<List<Offset?>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SignatureCanvasScreen(
+          deliveryId: stop.id,
+          customerName: stop.customerName,
+        ),
+      ),
+    );
+
+    if (signature != null) {
+      setState(() => _signaturePoints = signature);
+    }
+  }
+
+  Future<void> _submitPOD(BuildContext context, DeliveryStop stop) async {
+    if (_photoPath == null ||
+        _signaturePoints == null ||
+        _currentPosition == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Missing required POD information')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmittingPOD = true);
+
+    try {
+      final driverService = ref.read(driverServiceProvider);
+      final authState = ref.read(authStateProvider).value;
+      final driverId = authState?.id ?? 'unknown';
+
+      // Convert signature to file path (simplified)
+      final signatureFile =
+          '/tmp/signature_${DateTime.now().millisecondsSinceEpoch}.png';
+
+      final podId = await driverService.capturePOD(
+        deliveryId: stop.id,
+        driverId: driverId,
+        orderId: stop.orderId,
+        photoPath: _photoPath!,
+        signaturePath: signatureFile,
+        coordinates:
+            LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        customerName: stop.customerName,
+        notes: _notes,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Delivery completed! POD: $podId')),
+        );
+
+        setState(() {
+          _currentStopIndex++;
+          _photoPath = null;
+          _signaturePoints = null;
+          _notes = '';
+          _isSubmittingPOD = false;
+        });
+
+        // Refresh delivery list
+        ref.refresh(todayDeliveriesProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting POD: $e')),
+        );
+        setState(() => _isSubmittingPOD = false);
+      }
+    }
   }
 }
 
@@ -434,7 +647,7 @@ class _InfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.primary, size: 20),
+        Icon(icon, size: 20, color: Colors.grey[600]),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -443,9 +656,8 @@ class _InfoRow extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: Colors.grey[600],
-                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 2),
@@ -460,392 +672,6 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Delivery Checklist Screen - Captures proof of delivery
-/// Accessed by: Drivers
-/// Responsibilities:
-/// - Scan/verify order barcode
-/// - Verify customer name and details
-/// - Capture delivery photo
-/// - Capture signature
-/// - Record GPS coordinates
-/// - Submit POD to system
-class DeliveryChecklistScreen extends ConsumerStatefulWidget {
-  final DeliveryStop stop;
-  final VoidCallback onDeliveryComplete;
-
-  const DeliveryChecklistScreen({
-    super.key,
-    required this.stop,
-    required this.onDeliveryComplete,
-  });
-
-  @override
-  ConsumerState<DeliveryChecklistScreen> createState() =>
-      _DeliveryChecklistScreenState();
-}
-
-class _DeliveryChecklistScreenState
-    extends ConsumerState<DeliveryChecklistScreen> {
-  bool _barcodeScanned = false;
-  bool _customerVerified = false;
-  bool _photoTaken = false;
-  bool _signatureCaptured = false;
-  bool _isSubmitting = false;
-  String? _photoPath;
-
-  @override
-  Widget build(BuildContext context) {
-    final allChecked = _barcodeScanned &&
-        _customerVerified &&
-        _photoTaken &&
-        _signatureCaptured;
-
-    return WillPopScope(
-      onWillPop: () async {
-        if (!allChecked) {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Discard Delivery?'),
-              content: const Text(
-                  'You haven\'t completed the delivery checklist. Discard?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Continue'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Discard'),
-                ),
-              ],
-            ),
-          );
-          return confirm ?? false;
-        }
-        return true;
-      },
-      child: Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          title: Text(
-            'POD: ${widget.stop.customerName}',
-            style: const TextStyle(color: Colors.black87, fontSize: 16),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black87),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Delivery Checklist',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _ChecklistItem(
-                        number: 1,
-                        title: 'Scan Order Barcode',
-                        description: 'Verify order number matches delivery',
-                        completed: _barcodeScanned,
-                        onTap: () {
-                          setState(() => _barcodeScanned = !_barcodeScanned);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Order ORD-001 barcode scanned successfully'),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      _ChecklistItem(
-                        number: 2,
-                        title: 'Verify Customer',
-                        description: 'Confirm customer identity and address',
-                        completed: _customerVerified,
-                        onTap: () {
-                          setState(
-                              () => _customerVerified = !_customerVerified);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Customer John Okafor verified at 123 Ikoyi Lane'),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      _ChecklistItem(
-                        number: 3,
-                        title: 'Take Delivery Photo',
-                        description: 'Proof of package delivery',
-                        completed: _photoTaken,
-                        onTap: _takePhoto,
-                      ),
-                      const SizedBox(height: 12),
-                      _ChecklistItem(
-                        number: 4,
-                        title: 'Capture Signature',
-                        description: 'Customer signature or thumbprint',
-                        completed: _signatureCaptured,
-                        onTap: () {
-                          setState(
-                              () => _signatureCaptured = !_signatureCaptured);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Signature captured successfully'),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    if (!allChecked)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.orange,
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline,
-                                color: Colors.orange, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Complete all steps to submit delivery',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange[800],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: allChecked && !_isSubmitting
-                            ? () async {
-                                setState(() => _isSubmitting = true);
-                                try {
-                                  final driverService =
-                                      ref.read(driverServiceProvider);
-                                  final authState = ref.read(authStateProvider);
-                                  final currentUser = authState.value;
-
-                                  // Get current location
-                                  final position =
-                                      await Geolocator.getCurrentPosition();
-
-                                  await driverService.capturePOD(
-                                    deliveryId: widget.stop.id,
-                                    driverId: currentUser?.id ?? 'unknown',
-                                    orderId: widget.stop.orderId,
-                                    photoPath: _photoPath ?? '',
-                                    signaturePath: '', // Not implemented yet
-                                    coordinates: LatLng(
-                                        position.latitude, position.longitude),
-                                    customerName: widget.stop.customerName,
-                                    notes: 'Delivered via app',
-                                  );
-
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content:
-                                            Text('POD submitted successfully'),
-                                      ),
-                                    );
-                                    widget.onDeliveryComplete();
-                                  }
-                                } catch (e) {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
-                                    setState(() => _isSubmitting = false);
-                                  }
-                                }
-                              }
-                            : null,
-                        icon: _isSubmitting
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Icon(Icons.check_circle),
-                        label: Text(
-                          _isSubmitting ? 'Submitting...' : 'Submit Delivery',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _takePhoto() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? photo = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 70,
-      );
-
-      if (photo != null) {
-        setState(() {
-          _photoPath = photo.path;
-          _photoTaken = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error taking photo: $e')),
-        );
-      }
-    }
-  }
-}
-
-class _ChecklistItem extends StatelessWidget {
-  final int number;
-  final String title;
-  final String description;
-  final bool completed;
-  final VoidCallback onTap;
-
-  const _ChecklistItem({
-    required this.number,
-    required this.title,
-    required this.description,
-    required this.completed,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color:
-              completed ? Colors.green.withValues(alpha: 0.05) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: completed ? Colors.green : Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: completed ? Colors.green : Colors.grey[300],
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: completed
-                    ? const Icon(Icons.check, color: Colors.white, size: 20)
-                    : Text(
-                        '$number',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (completed)
-              Icon(Icons.check_circle, color: Colors.green, size: 24),
-          ],
-        ),
-      ),
     );
   }
 }

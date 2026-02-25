@@ -17,11 +17,11 @@ class PaymentConfig {
   static const String flutterwaveBaseUrl = 'https://api.flutterwave.com/v3';
   static const String flutterwavePublicKey = String.fromEnvironment(
     'FLUTTERWAVE_PUBLIC_KEY',
-    defaultValue: 'pk_test_your_public_key',
+    defaultValue: 'FLWPUBK_TEST-d3eeb3cd989d9969d1e06972967ac059-X',
   );
   static const String flutterwaveSecretKey = String.fromEnvironment(
     'FLUTTERWAVE_SECRET_KEY',
-    defaultValue: 'sk_test_your_secret_key',
+    defaultValue: 'FLWSECK_TEST-6f9bc4d562c29ff6c60e0e856f80e3ca-X',
   );
 
   // General Payment Configuration
@@ -98,6 +98,20 @@ class PaymentConfig {
   /// Check if running in production
   static bool isProduction() {
     return getEnvironment() == 'production';
+  }
+
+  // Firebase Cloud Functions Configuration
+  static const String firebaseBaseUrl =
+      'https://us-central1-coop-commerce.cloudfunctions.net/payments';
+  static const String firebaseInitializePaymentEndpoint = '/initiatePayment';
+  static const String firebaseVerifyPaymentEndpoint = '/verifyPayment';
+  static const String firebaseRefundEndpoint = '/processRefund';
+  static const String firebaseWebhookEndpoint = '/webhooks/paystack';
+  static const String firebaseHealthEndpoint = '/health';
+
+  /// Get Firebase base URL
+  static String getFirebaseUrl() {
+    return firebaseBaseUrl;
   }
 
   /// Get API key based on provider

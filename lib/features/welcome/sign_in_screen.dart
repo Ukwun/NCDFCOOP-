@@ -19,15 +19,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     // Listen to auth state changes for error handling or navigation
     ref.listen(authControllerProvider, (previous, next) {
       if (next is AsyncError) {
+        final errorMessage = next.error.toString();
+        print('❌ SIGN IN ERROR: $errorMessage');
+        print('Stack trace: ${next.stackTrace}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.error.toString()),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
           ),
         );
       } else if (next is AsyncData && !next.isLoading) {
         // On success, navigate to home
-        // Note: In a real app, the router might listen to authStateProvider directly
+        print('✅ SIGN IN SUCCESS - Navigating to home');
         context.go('/');
       }
     });
@@ -57,7 +61,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           Icons.arrow_back,
                           color: AppColors.text,
                         ),
-                        onPressed: () => context.pop(),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/welcome');
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -171,7 +181,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       // Navigate to password sign in form
-                      // context.push('/login-form');
+                      context.push('/login-form');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,

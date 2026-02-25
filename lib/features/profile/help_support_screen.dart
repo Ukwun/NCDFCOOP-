@@ -190,7 +190,13 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 style: AppTextStyles.h2.copyWith(color: AppColors.surface),
               ),
               GestureDetector(
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 child: Container(
                   width: 40,
                   height: 40,

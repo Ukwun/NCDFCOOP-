@@ -5,7 +5,8 @@ import 'package:coop_commerce/theme/app_theme.dart';
 import 'auth_provider.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
-  const SignUpScreen({super.key});
+  final String membershipType;
+  const SignUpScreen({super.key, this.membershipType = 'member'});
 
   @override
   ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
@@ -27,11 +28,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   void _handleSignUp() {
     if (_formKey.currentState!.validate()) {
-      ref
-          .read(authControllerProvider.notifier)
-          .signUp(
+      ref.read(authControllerProvider.notifier).signUpWithMembership(
             _emailController.text.trim(),
             _passwordController.text,
+            membershipType: widget.membershipType,
             rememberMe: _rememberMe,
           );
     }
@@ -44,14 +44,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
     ref.listen(authControllerProvider, (previous, next) {
       if (next is AsyncError) {
+        final errorMessage = next.error.toString();
+        print('❌ SIGN UP ERROR: $errorMessage');
+        print('Stack trace: ${next.stackTrace}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.error.toString()),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
           ),
         );
       } else if (next is AsyncData && !next.isLoading) {
-        context.go('/'); // Navigate to home on success
+        print('✅ SIGN UP SUCCESS - Navigating to role selection');
+        // Navigate to role selection screen instead of home
+        context.go(
+          '/role-selection',
+          extra: {
+            'userId': next.value?.id ?? 'unknown',
+            'userEmail': _emailController.text.trim(),
+            'userName': _emailController.text.split('@')[0],
+          },
+        );
       }
     });
 
@@ -75,7 +88,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: AppColors.text),
-                      onPressed: () => context.pop(),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/welcome');
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(height: 40),

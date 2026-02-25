@@ -10,16 +10,27 @@ class ProductService {
   ProductService(this._apiClient);
 
   /// Fetch all products
-  Future<List<Product>> getAllProducts({int page = 1, int limit = 20}) async {
+  Future<ProductResult> getAllProducts({
+    int page = 1,
+    int limit = 20,
+    int offset = 0,
+    String sortBy = 'popularity',
+  }) async {
     try {
       final response = await _apiClient.client.get(
         '/products',
-        queryParameters: {'page': page, 'limit': limit},
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          'offset': offset,
+          'sortBy': sortBy,
+        },
       );
       final products = (response.data['products'] as List)
           .map((p) => Product.fromJson(p))
           .toList();
-      return products;
+      return ProductResult(
+          products: products, total: response.data['total'] ?? 0);
     } catch (e) {
       rethrow;
     }
@@ -36,40 +47,55 @@ class ProductService {
   }
 
   /// Fetch products by category
-  Future<List<Product>> getProductsByCategory(
-    String categoryId, {
+  Future<ProductResult> getProductsByCategory({
+    required String category,
     int page = 1,
     int limit = 20,
+    int offset = 0,
+    String sortBy = 'popularity',
   }) async {
     try {
       final response = await _apiClient.client.get(
-        '/categories/$categoryId/products',
-        queryParameters: {'page': page, 'limit': limit},
+        '/categories/$category/products',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          'offset': offset,
+          'sortBy': sortBy,
+        },
       );
       final products = (response.data['products'] as List)
           .map((p) => Product.fromJson(p))
           .toList();
-      return products;
+      return ProductResult(
+          products: products, total: response.data['total'] ?? 0);
     } catch (e) {
       rethrow;
     }
   }
 
   /// Search products
-  Future<List<Product>> searchProducts(
-    String query, {
+  Future<ProductResult> searchProducts({
+    required String searchQuery,
     int page = 1,
     int limit = 20,
+    int offset = 0,
   }) async {
     try {
       final response = await _apiClient.client.get(
         '/products/search',
-        queryParameters: {'q': query, 'page': page, 'limit': limit},
+        queryParameters: {
+          'q': searchQuery,
+          'page': page,
+          'limit': limit,
+          'offset': offset,
+        },
       );
       final products = (response.data['products'] as List)
           .map((p) => Product.fromJson(p))
           .toList();
-      return products;
+      return ProductResult(
+          products: products, total: response.data['total'] ?? 0);
     } catch (e) {
       rethrow;
     }
@@ -100,10 +126,10 @@ class ProductService {
   }) async {
     try {
       // Get all products
-      final allProducts = await getAllProducts(page: page, limit: limit);
+      final allProductsResult = await getAllProducts(page: page, limit: limit);
 
       // Filter based on role visibility
-      return allProducts.where((product) {
+      return allProductsResult.products.where((product) {
         return _isProductVisibleToRole(product, role);
       }).toList();
     } catch (e) {
@@ -121,10 +147,14 @@ class ProductService {
   }) async {
     try {
       // Search all products
-      final results = await searchProducts(query, page: page, limit: limit);
+      final result = await searchProducts(
+        searchQuery: query,
+        page: page,
+        limit: limit,
+      );
 
       // Filter by role
-      return results.where((product) {
+      return result.products.where((product) {
         return _isProductVisibleToRole(product, role);
       }).toList();
     } catch (e) {
@@ -149,4 +179,15 @@ class ProductService {
     // Consumers and members see retail
     return product.visibleToRetail;
   }
+}
+
+/// Result wrapper for product queries
+class ProductResult {
+  final List<Product> products;
+  final int total;
+
+  ProductResult({
+    required this.products,
+    required this.total,
+  });
 }

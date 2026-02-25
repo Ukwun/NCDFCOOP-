@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/providers/warehouse_providers.dart';
-import 'package:coop_commerce/core/services/warehouse_service.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 
 class WarehousePickListDetailScreen extends ConsumerStatefulWidget {
   final String pickListId;
 
   const WarehousePickListDetailScreen({
-    Key? key,
+    super.key,
     required this.pickListId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<WarehousePickListDetailScreen> createState() =>
@@ -42,7 +41,7 @@ class _WarehousePickListDetailScreenState
       appBar: AppBar(
         title: const Text('Pick List Details'),
         elevation: 0,
-        backgroundColor: AppTheme.primaryGreen,
+        backgroundColor: AppColors.primaryGreen,
         actions: [
           if (!isMarkedComplete)
             Padding(
@@ -83,7 +82,7 @@ class _WarehousePickListDetailScreenState
                 icon: const Icon(Icons.check_circle),
                 label: const Text('Mark as Complete'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryGreen,
+                  backgroundColor: AppColors.primaryGreen,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -162,7 +161,7 @@ class _WarehousePickListDetailScreenState
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryGreen,
+                          color: AppColors.primaryGreen,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -222,7 +221,7 @@ class _WarehousePickListDetailScreenState
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: AppTheme.primaryGreen, size: 20),
+        Icon(icon, color: AppColors.primaryGreen, size: 20),
         const SizedBox(height: 4),
         Text(
           value,
@@ -480,7 +479,8 @@ class _WarehousePickListDetailScreenState
     totalPicked = pickedQuantities.values.fold<int>(0, (sum, val) => sum + val);
 
     final isComplete = totalPicked >= totalRequired;
-    final progressPercent = totalRequired > 0 ? totalPicked / totalRequired : 0;
+    final progressPercent =
+        (totalRequired > 0 ? totalPicked / totalRequired : 0).toDouble();
 
     return Card(
       elevation: 2,
@@ -599,9 +599,9 @@ class WarehousePackingScreen extends StatelessWidget {
   final String pickListId;
 
   const WarehousePackingScreen({
-    Key? key,
+    super.key,
     required this.pickListId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

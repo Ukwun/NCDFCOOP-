@@ -318,6 +318,32 @@ class FranchiseOwnerHomeScreenV2 extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.upload_file,
+                  label: 'Upload Product',
+                  color: Colors.teal,
+                  onTap: (context) {
+                    context.go('/franchisee/products/upload');
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.inventory,
+                  label: 'My Products',
+                  color: Colors.amber,
+                  onTap: (context) {
+                    context.go('/franchisee/products');
+                  },
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

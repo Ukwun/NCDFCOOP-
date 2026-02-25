@@ -16,7 +16,8 @@ final warehouseServiceProvider = Provider((ref) {
 
 /// Watch all active pick lists for the warehouse
 final activePickListsProvider = FutureProvider<List<PickList>>((ref) async {
-  final warehouseService = ref.watch(warehouseServiceProvider);
+  // ignore: unused_local_variable
+  final _warehouseService = ref.watch(warehouseServiceProvider);
   final pickLists = <PickList>[];
 
   // For now, we'd fetch from Firestore
@@ -31,7 +32,7 @@ final pickingQueueProvider = StreamProvider<List<PickList>>((ref) {
 });
 
 /// Watch real-time packing queue (items being packed)
-final packingQueueProvider = StreamProvider<List<PackingLog>>((ref) {
+final packingQueueProvider = StreamProvider<List<PickList>>((ref) {
   final warehouseService = ref.watch(warehouseServiceProvider);
   return warehouseService.watchPackingQueue();
 });
@@ -45,7 +46,8 @@ final todayMetricsProvider = FutureProvider<WarehouseMetrics>((ref) async {
 /// Get specific pick list details
 final pickListDetailProvider =
     FutureProvider.family<PickList?, String>((ref, pickListId) async {
-  final warehouseService = ref.watch(warehouseServiceProvider);
+  // ignore: unused_local_variable
+  final _warehouseService = ref.watch(warehouseServiceProvider);
   // TODO: Implement fetch from Firestore
   return null;
 });
@@ -53,7 +55,8 @@ final pickListDetailProvider =
 /// Get packing task for a pick list
 final packingTaskProvider =
     FutureProvider.family<PackingLog?, String>((ref, pickListId) async {
-  final warehouseService = ref.watch(warehouseServiceProvider);
+  // ignore: unused_local_variable
+  final _warehouseService = ref.watch(warehouseServiceProvider);
   // TODO: Implement fetch from Firestore
   return null;
 });
@@ -107,7 +110,8 @@ final routeDetailProvider =
 final driverPerformanceProvider =
     FutureProvider.family<dispatch.DriverPerformance?, String>(
         (ref, driverId) async {
-  final dispatchService = ref.watch(dispatchServiceProvider);
+  // ignore: unused_local_variable
+  final _dispatchService = ref.watch(dispatchServiceProvider);
   // TODO: Implement fetch driver performance
   return null;
 });
@@ -163,7 +167,7 @@ final driverStatsProvider =
 
 /// All warehouse activity (pick + pack combined)
 final warehouseActivityProvider =
-    FutureProvider<({List<PickList> picking, List<PackingLog> packing})>(
+    FutureProvider<({List<PickList> picking, List<PickList> packing})>(
         (ref) async {
   final picking = await ref.watch(activePickListsProvider.future);
   final packing = await ref.watch(packingQueueProvider.future);

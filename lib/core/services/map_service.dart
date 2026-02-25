@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
-import 'package:coop_commerce/models/notification_models.dart' hide LatLng;
 
 /// Service for handling Google Maps operations and route calculations
 class MapService {

@@ -86,7 +86,13 @@ class _CreateNewPasswordScreenState
                             Icons.arrow_back,
                             color: AppColors.text,
                           ),
-                          onPressed: () => context.pop(),
+                          onPressed: () {
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go('/sign-in');
+                            }
+                          },
                         ),
                       ),
                     ],

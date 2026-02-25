@@ -98,7 +98,7 @@ class AppAsyncScreen<T> extends ConsumerWidget {
       child: asyncValue.when(
         data: (data) {
           // Check if data is empty
-          if (data == null || (data is List && (data as List).isEmpty)) {
+          if (data == null || (data is List && (data).isEmpty)) {
             return emptyWidget ??
                 AppEmptyState(
                   icon: Icons.inbox_outlined,

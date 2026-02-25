@@ -1,20 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
-
-/// User roles available in the system
-enum UserRole {
-  consumer('Consumer'),
-  member('Member'),
-  franchisee('Franchisee'),
-  institutionalBuyer('Institutional Buyer'),
-  warehouseStaff('Warehouse Staff'),
-  driver('Driver'),
-  admin('Admin');
-
-  final String displayName;
-  const UserRole(this.displayName);
-}
+import 'package:coop_commerce/core/auth/role.dart';
 
 /// Data model for user
 class UserAccount {
@@ -49,7 +36,7 @@ final userListProvider = FutureProvider<List<UserAccount>>((ref) async {
       name: 'John Doe',
       email: 'john@coop.com',
       phone: '08012345678',
-      roles: [UserRole.consumer, UserRole.member],
+      roles: [UserRole.consumer, UserRole.coopMember],
       isActive: true,
       createdAt: DateTime(2025, 6, 15),
       lastLogin: DateTime.now().subtract(const Duration(days: 2)),
@@ -59,7 +46,7 @@ final userListProvider = FutureProvider<List<UserAccount>>((ref) async {
       name: 'Jane Smith',
       email: 'jane@franchise.com',
       phone: '08087654321',
-      roles: [UserRole.franchisee],
+      roles: [UserRole.franchiseOwner],
       isActive: true,
       createdAt: DateTime(2025, 7, 1),
       lastLogin: DateTime.now().subtract(const Duration(hours: 3)),

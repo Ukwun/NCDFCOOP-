@@ -6,24 +6,45 @@ import 'package:coop_commerce/core/error/exception_handler.dart';
 import 'package:coop_commerce/core/services/fcm_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/features/notifications/notification_screens.dart';
+import 'package:coop_commerce/features/welcome/auth_provider.dart';
+import 'package:coop_commerce/providers/app_settings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  print('📱 App starting...');
 
   // Setup global exception handler
   ExceptionHandler.setupGlobalExceptionHandler();
 
-  // Initialize Firebase
+  // Initialize Firebase - with error handling
   try {
+    print('🔥 Initializing Firebase...');
     await Firebase.initializeApp();
+    print('✅ Firebase initialized successfully');
     // Initialize FCM after Firebase is ready
-    final fcmService = FCMService();
-    await fcmService.initialize();
+    try {
+      final fcmService = FCMService();
+      await fcmService.initialize();
+      print('✅ FCM initialized');
+    } catch (e) {
+      debugPrint('FCM initialization warning: $e');
+      // FCM optional - continue without it
+    }
   } catch (e) {
-    debugPrint('Firebase initialization error: $e');
+    debugPrint('⚠️ Firebase initialization failed: $e');
+    print('⚠️ Firebase initialization failed - app will run with reduced functionality');
+    // Don't crash - let the app run anyway
   }
 
-  serviceLocator.initialize();
+  // Initialize service locator (optional Firebase)
+  try {
+    print('🔧 Initializing service locator...');
+    serviceLocator.initialize();
+    print('✅ Service locator initialized');
+  } catch (e) {
+    debugPrint('Service locator initialization error: $e');
+  }
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -32,16 +53,69 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Initialize persisted user on app startup
+    ref.watch(initializePersistedUserProvider);
+    
+    // Watch dark mode setting
+    final isDarkMode = ref.watch(darkModeProvider);
+    
     final router = AppRouter.createRouter(ref);
 
-    return InAppNotificationBanner(
-      child: MaterialApp.router(
-        title: 'Coop Commerce',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        ),
-        routerConfig: router,
+    // Define light theme - comprehensive with all UI elements
+    final lightTheme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.deepPurple,
+        brightness: Brightness.light,
       ),
+      useMaterial3: true,
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: Colors.white,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.grey[50],
+      ),
+    );
+
+    // Define dark theme - comprehensive with all UI elements
+    final darkTheme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.deepPurple,
+        brightness: Brightness.dark,
+      ),
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: Colors.grey[900],
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.grey[900],
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: Colors.grey[850],
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.grey[800],
+      ),
+    );
+
+    return MaterialApp.router(
+      title: 'Coop Commerce',
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      routerConfig: router,
+      builder: (context, child) {
+        return InAppNotificationBanner(
+          child: child!,
+        );
+      },
     );
   }
 }

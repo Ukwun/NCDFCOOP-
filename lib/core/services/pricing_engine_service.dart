@@ -22,10 +22,6 @@ class PricingEngineService {
   static const String _priceOverridesCollection = 'price_overrides';
   static const String _priceAuditLogCollection = 'price_audit_log';
 
-  // Cache for frequently accessed data
-  final Map<String, PricingRule> _pricingRuleCache = {};
-  final Map<String, Promotion> _promotionCache = {};
-
   /// Calculate retail price for a product in a specific store
   ///
   /// Returns: PriceCalculationResult with breakdown
@@ -435,7 +431,7 @@ class PricingEngineService {
           .doc(promotion.id)
           .set(promotion.toMap());
 
-      _promotionCache.clear(); // Invalidate cache
+      // Cache invalidated - refresh on next fetch
     } catch (e) {
       print('Error creating promotion: $e');
       rethrow;
@@ -565,7 +561,6 @@ class PricingEngineService {
   Future<PriceOverride?> _getValidPriceOverride(
       String productId, String customerId) async {
     try {
-      final now = DateTime.now();
       final query = await _firestore
           .collection(_priceOverridesCollection)
           .where('productId', isEqualTo: productId)

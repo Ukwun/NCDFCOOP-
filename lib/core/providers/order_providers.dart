@@ -489,7 +489,7 @@ class OrderFulfillmentData {
 
 /// Get a single order by ID with real-time updates
 final orderDetailProvider =
-    FutureProvider.autoDispose.family<OrderData, String>((ref, orderId) async {
+    FutureProvider.autoDispose.family<OrderData?, String>((ref, orderId) async {
   final service = ref.watch(orderManagementServiceProvider);
 
   try {
@@ -575,14 +575,14 @@ final orderHistoryPaginationProvider = Provider<OrderHistoryPaginationNotifier>(
 final isOrderDeliveredProvider =
     FutureProvider.autoDispose.family<bool, String>((ref, orderId) async {
   final order = await ref.watch(orderDetailProvider(orderId).future);
-  return order.status.toLowerCase() == 'delivered';
+  return order?.status.toLowerCase() == 'delivered';
 });
 
 /// Check if specific order is active
 final isOrderActiveProvider =
     FutureProvider.autoDispose.family<bool, String>((ref, orderId) async {
   final order = await ref.watch(orderDetailProvider(orderId).future);
-  final status = order.status.toLowerCase();
+  final status = order?.status.toLowerCase() ?? '';
   return status != 'delivered' && status != 'cancelled' && status != 'failed';
 });
 
@@ -590,9 +590,9 @@ final isOrderActiveProvider =
 final deliveryTimeRemainingProvider =
     FutureProvider.autoDispose.family<Duration?, String>((ref, orderId) async {
   final order = await ref.watch(orderDetailProvider(orderId).future);
-  if (order.estimatedDeliveryAt == null) return null;
+  if (order?.deliveredAt == null) return null;
 
-  final remaining = order.estimatedDeliveryAt!.difference(DateTime.now());
+  final remaining = order!.deliveredAt!.difference(DateTime.now());
   return remaining.isNegative ? Duration.zero : remaining;
 });
 
@@ -785,8 +785,6 @@ final fcmServiceProvider = Provider((ref) => FCMService());
 
 /// Stream of incoming FCM messages
 final fcmMessageStreamProvider = StreamProvider<RemoteMessage>((ref) {
-  final firebaseMessaging = FirebaseMessaging.instance;
-
   return FirebaseMessaging.onMessage;
 });
 
@@ -801,7 +799,8 @@ final fcmOrderNotificationProvider =
     FutureProvider.family<OrderStatusNotification?, RemoteMessage>(
         (ref, message) async {
   if (FCMService.isOrderNotification(message)) {
-    return FCMService.parseOrderNotification(message);
+    final notification = FCMService.parseOrderNotification(message);
+    return notification;
   }
   return null;
 });

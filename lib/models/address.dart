@@ -44,6 +44,20 @@ class Address {
     return parts.join(', ');
   }
 
+  /// Alias for addressLine1 (for compatibility)
+  String get street => addressLine1;
+
+  /// Alias for postalCode (for compatibility)
+  String get zipCode => postalCode;
+
+  /// User-friendly label for this address
+  String get label {
+    return '$type - $addressLine1, $city';
+  }
+
+  /// Alias for phoneNumber (for compatibility)
+  String get phone => phoneNumber;
+
   /// Convert to JSON for Firestore
   Map<String, dynamic> toMap() => {
         'id': id,

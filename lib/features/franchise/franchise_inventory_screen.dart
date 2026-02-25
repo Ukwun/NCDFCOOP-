@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/providers/franchise_providers.dart';
+import 'package:coop_commerce/models/franchise_models.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// Franchise inventory management screen
@@ -154,7 +155,7 @@ class _FranchiseInventoryScreenState
   }
 
   Widget _buildLowStockTab(List<FranchiseInventoryItem> inventory) {
-    final lowStockItems = inventory.where((item) => item.isLowStock).toList();
+    final lowStockItems = inventory.where((item) => item.isLowStock()).toList();
 
     if (lowStockItems.isEmpty) {
       return Center(
@@ -287,7 +288,7 @@ class _FranchiseInventoryScreenState
 
   Widget _buildSummaryCards(List<FranchiseInventoryItem> inventory) {
     final totalValue = inventory.fold<double>(0, (a, b) => a + b.profit);
-    final lowStockCount = inventory.where((item) => item.isLowStock).length;
+    final lowStockCount = inventory.where((item) => item.isLowStock()).length;
     final totalItems = inventory.fold<int>(0, (a, b) => a + b.quantity);
 
     return Row(
@@ -494,7 +495,11 @@ class _InventoryItemCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: highlighted ? Colors.red[50] : null,
-      border: highlighted ? Border.all(color: Colors.red[200]!) : null,
+      shape: highlighted
+          ? RoundedRectangleBorder(
+              side: BorderSide(color: Colors.red[200]!),
+            )
+          : null,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -518,7 +523,7 @@ class _InventoryItemCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (item.isLowStock)
+                if (item.isLowStock())
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

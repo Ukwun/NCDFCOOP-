@@ -19,7 +19,7 @@ class _InvoiceScreenState extends ConsumerState<InstitutionalInvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     final invoicesAsync =
-        ref.watch(institutionalInvoicesProvider('institution_id'));
+        ref.watch(institutionInvoicesProvider('institution_id'));
 
     return Scaffold(
       appBar: AppBar(
@@ -359,7 +359,7 @@ class InstitutionalInvoiceDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final invoiceAsync = ref.watch(invoiceDetailProvider(invoiceId));
+    final invoiceAsync = ref.watch(invoiceProvider(invoiceId));
 
     return Scaffold(
       appBar: AppBar(

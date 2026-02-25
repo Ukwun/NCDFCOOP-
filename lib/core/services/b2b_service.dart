@@ -502,7 +502,6 @@ class InvoiceService {
   /// Get overdue invoices
   Future<List<Invoice>> getOverdueInvoices(String institutionId) async {
     try {
-      final now = DateTime.now();
       final query = await _firestore
           .collection('invoices')
           .where('institutionId', isEqualTo: institutionId)
