@@ -177,7 +177,9 @@ class OnboardingScreen3 extends StatelessWidget {
                   // Get Started Button
                   GestureDetector(
                     onTap: () {
-                      context.go('/signup');
+                      // Navigate to welcome screen (not signup directly)
+                      // Welcome will give user choice between login/signup
+                      context.go('/welcome');
                     },
                     child: Container(
                       width: 280,
