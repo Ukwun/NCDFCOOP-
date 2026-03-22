@@ -14,6 +14,8 @@ enum Permission {
   viewVotingItems,
   participateInVoting,
   viewMemberReports,
+  addMoneyToAccount,
+  saveMoneyOnPlatform,
 
   // Wholesale permissions
   viewWholesaleProducts,
@@ -52,11 +54,12 @@ enum Permission {
 
 /// Maps each role to its permissions
 final rolePermissions = <UserRole, Set<Permission>>{
-  UserRole.consumer: {
+  UserRole.wholesaleBuyer: {
     Permission.viewRetailProducts,
     Permission.viewRetailPrices,
     Permission.createRetailOrder,
     Permission.trackRetailOrder,
+    Permission.addMoneyToAccount,
   },
   UserRole.coopMember: {
     Permission.viewRetailProducts,
@@ -64,6 +67,21 @@ final rolePermissions = <UserRole, Set<Permission>>{
     Permission.createRetailOrder,
     Permission.trackRetailOrder,
     Permission.viewSavings,
+    Permission.addMoneyToAccount,
+    Permission.saveMoneyOnPlatform,
+    Permission.viewMemberBenefits,
+    Permission.viewVotingItems,
+    Permission.participateInVoting,
+    Permission.viewMemberReports,
+  },
+  UserRole.premiumMember: {
+    Permission.viewRetailProducts,
+    Permission.viewRetailPrices,
+    Permission.createRetailOrder,
+    Permission.trackRetailOrder,
+    Permission.viewSavings,
+    Permission.addMoneyToAccount,
+    Permission.saveMoneyOnPlatform,
     Permission.viewMemberBenefits,
     Permission.viewVotingItems,
     Permission.participateInVoting,
@@ -79,6 +97,7 @@ final rolePermissions = <UserRole, Set<Permission>>{
     Permission.viewFranchiseSales,
     Permission.submitComplianceEvidence,
     Permission.reportIncident,
+    Permission.addMoneyToAccount,
   },
   UserRole.storeManager: {
     Permission.viewWholesaleProducts,
@@ -101,6 +120,7 @@ final rolePermissions = <UserRole, Set<Permission>>{
     Permission.viewContractPricing,
     Permission.createPurchaseOrder,
     Permission.viewInvoices,
+    Permission.addMoneyToAccount,
   },
   UserRole.institutionalApprover: {
     Permission.viewInstitutionalProducts,
@@ -146,6 +166,8 @@ extension PermissionX on Permission {
       Permission.createRetailOrder => 'Create retail orders',
       Permission.trackRetailOrder => 'Track retail orders',
       Permission.viewSavings => 'View personal savings',
+      Permission.addMoneyToAccount => 'Add money to platform account',
+      Permission.saveMoneyOnPlatform => 'Save money on platform',
       Permission.viewMemberBenefits => 'View membership benefits',
       Permission.viewVotingItems => 'View voting items',
       Permission.participateInVoting => 'Participate in voting',

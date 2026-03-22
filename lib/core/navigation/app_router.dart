@@ -13,6 +13,11 @@ import 'package:coop_commerce/features/checkout/screens/order_placed_screen.dart
 import 'package:coop_commerce/features/orders/screens/order_history_screen.dart';
 import 'package:coop_commerce/features/profile/screens/user_profile_screen.dart';
 import 'package:coop_commerce/features/member/notifications_center_screen.dart';
+import 'package:coop_commerce/features/wallet/screens/wallet_screen.dart';
+import 'package:coop_commerce/features/wallet/screens/add_money_screen.dart';
+import 'package:coop_commerce/features/wallet/screens/withdraw_money_screen.dart';
+import 'package:coop_commerce/features/wallet/screens/transaction_history_screen.dart';
+import 'package:coop_commerce/features/wallet/screens/wallet_dashboard_screen.dart';
 
 /// Navigation routes for the app
 /// Uses GoRouter for type-safe, deep-linkable routing
@@ -144,6 +149,35 @@ class AppRouter {
           final userId = state.extra as String?;
           return UserProfileScreen(userId: userId);
         },
+      ),
+
+      // ==================== WALLET ====================
+      GoRoute(
+        path: '/wallet',
+        name: 'wallet',
+        builder: (context, state) => const WalletScreen(),
+        routes: [
+          GoRoute(
+            path: 'add-money',
+            name: 'wallet-add-money',
+            builder: (context, state) => const AddMoneyScreen(),
+          ),
+          GoRoute(
+            path: 'withdraw',
+            name: 'wallet-withdraw',
+            builder: (context, state) => const WithdrawMoneyScreen(),
+          ),
+          GoRoute(
+            path: 'transactions',
+            name: 'wallet-transactions',
+            builder: (context, state) => const TransactionHistoryScreen(),
+          ),
+          GoRoute(
+            path: 'dashboard',
+            name: 'wallet-dashboard',
+            builder: (context, state) => const WalletDashboardScreen(),
+          ),
+        ],
       ),
 
       // ==================== ERROR PAGES ====================

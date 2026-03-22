@@ -64,7 +64,7 @@ class AddressService {
       await _auditLogService.logAction(
         userId: userId,
         userName: userId,
-        userRoles: [UserRole.consumer],
+        userRoles: [UserRole.wholesaleBuyer],
         eventType: AuditEventType.dataExported,
         resource: 'address',
         resourceId: docId,
@@ -221,7 +221,7 @@ class AddressService {
       await _auditLogService.logAction(
         userId: userId,
         userName: userId,
-        userRoles: [UserRole.consumer],
+        userRoles: [UserRole.wholesaleBuyer],
         eventType: AuditEventType.dataExported,
         resource: 'address',
         resourceId: addressId,
@@ -274,7 +274,7 @@ class AddressService {
       await _auditLogService.logAction(
         userId: userId,
         userName: userId,
-        userRoles: [UserRole.consumer],
+        userRoles: [UserRole.wholesaleBuyer],
         eventType: AuditEventType.dataExported,
         resource: 'address',
         resourceId: addressId,
@@ -327,7 +327,7 @@ class AddressService {
       await _auditLogService.logAction(
         userId: userId,
         userName: userId,
-        userRoles: [UserRole.consumer],
+        userRoles: [UserRole.wholesaleBuyer],
         eventType: AuditEventType.dataExported,
         resource: 'address',
         resourceId: addressId,

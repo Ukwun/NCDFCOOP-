@@ -25,7 +25,7 @@ class UserContext {
       userId: json['userId'] ?? '',
       role: UserRole.values.firstWhere(
         (r) => r.name == json['role'],
-        orElse: () => UserRole.consumer,
+        orElse: () => UserRole.wholesaleBuyer,
       ),
       franchiseId: json['franchiseId'],
       storeId: json['storeId'],

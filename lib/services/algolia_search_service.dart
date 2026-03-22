@@ -97,7 +97,7 @@ class AlgoliaSearchService {
       final queryTime = DateTime.now().difference(startTime).inMilliseconds;
 
       debugPrint(
-        '✅ Search complete: "${query}" found ${results.length} results in ${queryTime}ms',
+        '✅ Search complete: "$query" found ${results.length} results in ${queryTime}ms',
       );
 
       return AlgoliaSearchResult(

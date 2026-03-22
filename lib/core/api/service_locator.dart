@@ -6,6 +6,8 @@ import 'member_service.dart';
 import 'order_service.dart';
 import 'product_service.dart';
 import 'local_storage.dart';
+import 'wallet_service.dart';
+import 'savings_service.dart';
 
 /// Service locator for dependency injection
 class ServiceLocator {
@@ -18,6 +20,8 @@ class ServiceLocator {
   OrderService? _orderService;
   MemberService? _memberService;
   LocalStorage? _localStorage;
+  WalletService? _walletService;
+  SavingsService? _savingsService;
 
   bool _initialized = false;
 
@@ -46,6 +50,8 @@ class ServiceLocator {
       _categoryService = CategoryService(_apiClient!);
       _orderService = OrderService(_apiClient!);
       _memberService = MemberService(_apiClient!);
+      _walletService = WalletService();
+      _savingsService = SavingsService();
       _initialized = true;
       debugPrint('✅ ServiceLocator initialized successfully');
     } catch (e) {
@@ -92,6 +98,18 @@ class ServiceLocator {
         _memberService ??= MemberService(_apiClient!);
       } catch (e) {
         debugPrint('⚠️ MemberService creation failed: $e');
+      }
+
+      try {
+        _walletService ??= WalletService();
+      } catch (e) {
+        debugPrint('⚠️ WalletService creation failed: $e');
+      }
+
+      try {
+        _savingsService ??= SavingsService();
+      } catch (e) {
+        debugPrint('⚠️ SavingsService creation failed: $e');
       }
 
       _initialized = true;
@@ -141,6 +159,18 @@ class ServiceLocator {
   MemberService get memberService {
     _ensureInitialized();
     return _memberService!;
+  }
+
+  /// Get wallet service
+  WalletService get walletService {
+    _ensureInitialized();
+    return _walletService!;
+  }
+
+  /// Get savings service
+  SavingsService get savingsService {
+    _ensureInitialized();
+    return _savingsService!;
   }
 
   /// Dispose services

@@ -360,10 +360,10 @@ class AuthService {
 
       final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Start all users as consumers
+      // Start all users as wholesale buyers
       // Users will select their actual role/membership type during onboarding
-      // after they see clear explanations of each option
-      final userRoles = [UserRole.consumer];
+      // They can choose between Wholesale Buyer or Member (with Premium upgrade option)
+      final userRoles = [UserRole.wholesaleBuyer];
       final roleNames = userRoles.map((r) => r.name).toList();
 
       final mockToken = _generateMockJWT(
@@ -1016,10 +1016,15 @@ class AuthService {
     final lowerEmail = email.toLowerCase();
 
     // Demo: Assign roles based on email keywords
-    final roles = <UserRole>[UserRole.consumer]; // Everyone starts as consumer
+    final roles = <UserRole>[
+      UserRole.wholesaleBuyer
+    ]; // Everyone starts as wholesale buyer
 
     if (lowerEmail.contains('member')) {
       roles.add(UserRole.coopMember);
+    }
+    if (lowerEmail.contains('premium')) {
+      roles.add(UserRole.premiumMember);
     }
     if (lowerEmail.contains('franchise')) {
       roles.add(UserRole.franchiseOwner);

@@ -18,7 +18,7 @@ class RBACService {
 
   /// Feature access map per role
   static const Map<UserRole, Set<String>> roleFeatures = {
-    UserRole.consumer: {
+    UserRole.wholesaleBuyer: {
       'browse_products',
       'manage_cart',
       'place_orders',
@@ -26,9 +26,9 @@ class RBACService {
       'view_profile',
       'update_profile',
       'manage_addresses',
-      'view_membership_benefits',
       'rate_products',
       'customer_support',
+      'add_money_to_account',
     },
     UserRole.coopMember: {
       'browse_products',
@@ -45,6 +45,27 @@ class RBACService {
       'redeem_rewards',
       'view_member_pricing',
       'member_exclusive_deals',
+      'add_money_to_account',
+      'save_money_on_platform',
+    },
+    UserRole.premiumMember: {
+      'browse_products',
+      'manage_cart',
+      'place_orders',
+      'track_orders',
+      'view_profile',
+      'update_profile',
+      'manage_addresses',
+      'view_membership_benefits',
+      'rate_products',
+      'customer_support',
+      'view_rewards',
+      'redeem_rewards',
+      'view_member_pricing',
+      'member_exclusive_deals',
+      'premium_exclusive_deals',
+      'add_money_to_account',
+      'save_money_on_platform',
     },
     UserRole.franchiseOwner: {
       'manage_franchise',
@@ -192,8 +213,9 @@ class RBACService {
 
   /// Check if role can place orders
   bool canPlaceOrders(List<UserRole> roles) {
-    return roles.contains(UserRole.consumer) ||
+    return roles.contains(UserRole.wholesaleBuyer) ||
         roles.contains(UserRole.coopMember) ||
+        roles.contains(UserRole.premiumMember) ||
         roles.contains(UserRole.franchiseOwner) ||
         roles.contains(UserRole.institutionalBuyer) ||
         roles.contains(UserRole.institutionalApprover);
@@ -270,8 +292,9 @@ class RBACService {
 
   /// Get role hierarchy (for admin purposes)
   static const Map<UserRole, int> roleHierarchy = {
-    UserRole.consumer: 1,
+    UserRole.wholesaleBuyer: 1,
     UserRole.coopMember: 2,
+    UserRole.premiumMember: 3,
     UserRole.deliveryDriver: 3,
     UserRole.storeStaff: 3,
     UserRole.warehouseStaff: 4,
@@ -290,7 +313,7 @@ class RBACService {
 
   /// Get highest role in list
   static UserRole getHighestRole(List<UserRole> roles) {
-    if (roles.isEmpty) return UserRole.consumer;
+    if (roles.isEmpty) return UserRole.wholesaleBuyer;
     return roles.reduce(
         (a, b) => (roleHierarchy[a] ?? 0) >= (roleHierarchy[b] ?? 0) ? a : b);
   }

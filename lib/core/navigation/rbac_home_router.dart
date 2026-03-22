@@ -44,10 +44,12 @@ class RBACHomeRouter extends ConsumerWidget {
   /// Build the appropriate home screen for the user's highest role
   Widget _buildRoleScreen(UserRole highestRole) {
     switch (highestRole) {
-      case UserRole.consumer:
+      case UserRole.wholesaleBuyer:
         return const ConsumerHomeScreen();
       case UserRole.coopMember:
         return const MemberHomeScreen();
+      case UserRole.premiumMember:
+        return const MemberHomeScreen(); // Uses member screen with premium benefits
       case UserRole.franchiseOwner:
         return const FranchiseOwnerHomeScreen();
       case UserRole.storeManager:

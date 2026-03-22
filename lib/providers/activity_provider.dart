@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/auth/user_persistence.dart';
-import 'user_activity_providers.dart' show activityLoggerProvider;
 
 /// Provider for user activity log
 final userActivityLogProvider = FutureProvider<List<ActivityLog>>((ref) async {

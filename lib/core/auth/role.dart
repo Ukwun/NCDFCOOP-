@@ -1,7 +1,8 @@
 /// All user roles in the NCDFCOOP system
 enum UserRole {
-  consumer,
+  wholesaleBuyer,
   coopMember,
+  premiumMember,
   franchiseOwner,
   storeManager,
   storeStaff,
@@ -17,8 +18,9 @@ extension UserRoleX on UserRole {
   /// Display name for UI
   String get displayName {
     return switch (this) {
-      UserRole.consumer => 'Consumer',
-      UserRole.coopMember => 'Co-op Member',
+      UserRole.wholesaleBuyer => 'Wholesale Buyer',
+      UserRole.coopMember => 'Member',
+      UserRole.premiumMember => 'Premium Member',
       UserRole.franchiseOwner => 'Franchise Owner',
       UserRole.storeManager => 'Store Manager',
       UserRole.storeStaff => 'Store Staff',
@@ -34,8 +36,9 @@ extension UserRoleX on UserRole {
   /// Color code for badges
   String get colorCode {
     return switch (this) {
-      UserRole.consumer => '#1E7F4E',
+      UserRole.wholesaleBuyer => '#1E7F4E',
       UserRole.coopMember => '#C9A227',
+      UserRole.premiumMember => '#FFD700',
       UserRole.franchiseOwner => '#F3951A',
       UserRole.storeManager => '#F3951A',
       UserRole.storeStaff => '#F3951A',

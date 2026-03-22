@@ -40,7 +40,9 @@ final currentUserProvider = NotifierProvider<UserNotifier, User?>(() {
 /// Currently active role (for multi-role users)
 final currentRoleProvider = Provider<UserRole>((ref) {
   final user = ref.watch(currentUserProvider);
-  return user?.roles.isNotEmpty == true ? user!.roles.first : UserRole.consumer;
+  return user?.roles.isNotEmpty == true
+      ? user!.roles.first
+      : UserRole.wholesaleBuyer;
 });
 
 /// Current context for the active role
@@ -107,7 +109,7 @@ final canPerformActionProvider = Provider.family<bool, Permission>(
 /// Get current user's available roles
 final availableRolesProvider = Provider<List<UserRole>>((ref) {
   final user = ref.watch(currentUserProvider);
-  return user?.roles ?? [UserRole.consumer];
+  return user?.roles ?? [UserRole.wholesaleBuyer];
 });
 
 /// Get context for a specific role

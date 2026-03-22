@@ -77,10 +77,10 @@ class AuditLog {
       userRoles: (data['userRoles'] as List?)
               ?.map((r) => UserRole.values.firstWhere(
                     (role) => role.name == r,
-                    orElse: () => UserRole.consumer,
+                    orElse: () => UserRole.wholesaleBuyer,
                   ))
               .toList() ??
-          [UserRole.consumer],
+          [UserRole.wholesaleBuyer],
       eventType: AuditEventType.values.firstWhere(
         (e) => e.name == data['eventType'],
         orElse: () => AuditEventType.suspiciousActivity,

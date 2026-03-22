@@ -21,7 +21,7 @@ class User {
     required this.name,
     this.photoUrl,
     this.token,
-    this.roles = const [UserRole.consumer],
+    this.roles = const [UserRole.wholesaleBuyer],
     this.contexts = const {},
     this.membershipTier = 'free',
     this.membershipExpiryDate,
@@ -33,10 +33,10 @@ class User {
     final rolesList = (json['roles'] as List<dynamic>?)
             ?.map((r) => UserRole.values.firstWhere(
                   (role) => role.name == r,
-                  orElse: () => UserRole.consumer,
+                  orElse: () => UserRole.wholesaleBuyer,
                 ))
             .toList() ??
-        [UserRole.consumer];
+        [UserRole.wholesaleBuyer];
 
     final contextsMap = <UserRole, UserContext>{};
     if (json['contexts'] is Map) {

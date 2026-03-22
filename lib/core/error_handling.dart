@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -342,37 +341,33 @@ class AppException implements Exception {
 }
 
 class NetworkException extends AppException {
-  NetworkException({String? message, dynamic error, StackTrace? stackTrace})
+  NetworkException({String? message, dynamic error, super.stackTrace})
       : super(
           message: message ?? 'Network error occurred',
           originalError: error,
-          stackTrace: stackTrace,
         );
 }
 
 class AuthException extends AppException {
-  AuthException({String? message, dynamic error, StackTrace? stackTrace})
+  AuthException({String? message, dynamic error, super.stackTrace})
       : super(
           message: message ?? 'Authentication error occurred',
           originalError: error,
-          stackTrace: stackTrace,
         );
 }
 
 class DataException extends AppException {
-  DataException({String? message, dynamic error, StackTrace? stackTrace})
+  DataException({String? message, dynamic error, super.stackTrace})
       : super(
           message: message ?? 'Data error occurred',
           originalError: error,
-          stackTrace: stackTrace,
         );
 }
 
 class ValidationException extends AppException {
-  ValidationException({String? message, dynamic error, StackTrace? stackTrace})
+  ValidationException({String? message, dynamic error, super.stackTrace})
       : super(
           message: message ?? 'Validation error occurred',
           originalError: error,
-          stackTrace: stackTrace,
         );
 }
