@@ -25,14 +25,12 @@ class CartScreen extends ConsumerWidget {
                   _buildSummary(cartState),
                   const SizedBox(height: 20),
                   _buildCheckoutButton(context),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 80), // Bottom padding for nav bar
                 ],
               ),
             ),
     );
   }
-
-
 
   Widget _buildHeader(BuildContext context, cartState) {
     return Container(
@@ -44,8 +42,7 @@ class CartScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('9:45',
-                  style: AppTextStyles.h4.copyWith(
-                      color: AppColors.surface)),
+                  style: AppTextStyles.h4.copyWith(color: AppColors.surface)),
               Row(spacing: 6, children: [
                 _buildStatusIcon('assets/icons/signal.png'),
                 _buildStatusIcon('assets/icons/wifi.png'),
@@ -77,8 +74,7 @@ class CartScreen extends ConsumerWidget {
                 ),
               ),
               Text('Shopping Cart',
-                  style: AppTextStyles.h3
-                      .copyWith(color: AppColors.surface)),
+                  style: AppTextStyles.h3.copyWith(color: AppColors.surface)),
               Container(
                 width: 40,
                 decoration: BoxDecoration(
@@ -120,8 +116,8 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCartItems(BuildContext context, WidgetRef ref, cartState,
-      cartNotifier) {
+  Widget _buildCartItems(
+      BuildContext context, WidgetRef ref, cartState, cartNotifier) {
     return Container(
       margin: const EdgeInsets.all(16),
       child: Column(
@@ -136,8 +132,8 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCartItemCard(BuildContext context, WidgetRef ref, item,
-      cartNotifier) {
+  Widget _buildCartItemCard(
+      BuildContext context, WidgetRef ref, item, cartNotifier) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -158,18 +154,16 @@ class CartScreen extends ConsumerWidget {
             ),
             child: item.imageUrl != null
                 ? item.imageUrl!.startsWith('assets/')
-                    ? Image.asset(item.imageUrl!,
-                        fit: BoxFit.cover,
+                    ? Image.asset(item.imageUrl!, fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.shopping_basket,
-                              color: AppColors.muted);
-                        })
-                    : Image.network(item.imageUrl!,
-                        fit: BoxFit.cover,
+                        return Icon(Icons.shopping_basket,
+                            color: AppColors.muted);
+                      })
+                    : Image.network(item.imageUrl!, fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.shopping_basket,
-                              color: AppColors.muted);
-                        })
+                        return Icon(Icons.shopping_basket,
+                            color: AppColors.muted);
+                      })
                 : Icon(Icons.shopping_basket, color: AppColors.muted),
           ),
           Expanded(
@@ -212,8 +206,7 @@ class CartScreen extends ConsumerWidget {
                       Container(
                         decoration: BoxDecoration(
                           border: Border.all(color: AppColors.border),
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.sm),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
                         child: Row(
                           children: [
@@ -227,8 +220,7 @@ class CartScreen extends ConsumerWidget {
                                 height: 28,
                                 alignment: Alignment.center,
                                 child: Icon(Icons.remove,
-                                    size: 16,
-                                    color: AppColors.primary),
+                                    size: 16, color: AppColors.primary),
                               ),
                             ),
                             Container(
@@ -251,8 +243,7 @@ class CartScreen extends ConsumerWidget {
                                 height: 28,
                                 alignment: Alignment.center,
                                 child: Icon(Icons.add,
-                                    size: 16,
-                                    color: AppColors.primary),
+                                    size: 16, color: AppColors.primary),
                               ),
                             ),
                           ],
@@ -287,12 +278,11 @@ class CartScreen extends ConsumerWidget {
                 size: 80, color: AppColors.muted),
             const SizedBox(height: 16),
             Text('Your cart is empty',
-                style: AppTextStyles.h3
-                    .copyWith(color: AppColors.text)),
+                style: AppTextStyles.h3.copyWith(color: AppColors.text)),
             const SizedBox(height: 8),
             Text('Add items to get started',
-                style: AppTextStyles.bodySmall
-                    .copyWith(color: AppColors.muted)),
+                style:
+                    AppTextStyles.bodySmall.copyWith(color: AppColors.muted)),
           ],
         ),
       ),
@@ -355,8 +345,8 @@ class CartScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Delivery',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.muted)),
+                  style:
+                      AppTextStyles.bodySmall.copyWith(color: AppColors.muted)),
               Text(
                 cartState.deliveryFee == 0
                     ? 'FREE'
@@ -402,10 +392,7 @@ class CartScreen extends ConsumerWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.8)
-          ],
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [AppShadows.md],
@@ -425,8 +412,7 @@ class CartScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               spacing: 8,
               children: [
-                Icon(Icons.shopping_bag_outlined,
-                    color: AppColors.surface),
+                Icon(Icons.shopping_bag_outlined, color: AppColors.surface),
                 Text(
                   'Proceed to Checkout',
                   style: AppTextStyles.h4.copyWith(

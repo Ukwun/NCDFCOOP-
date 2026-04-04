@@ -132,6 +132,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
             ),
 
             const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 80), // Bottom padding for nav bar
           ],
         ),
       ),

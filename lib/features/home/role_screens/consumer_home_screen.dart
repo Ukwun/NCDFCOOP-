@@ -61,6 +61,7 @@ class ConsumerHomeScreen extends ConsumerWidget {
               _buildMemberUpgradeCTA(context),
 
               const SizedBox(height: 24),
+              const SizedBox(height: 80), // Bottom padding for nav bar
             ],
           ),
         ),

@@ -298,6 +298,7 @@ class MyRewardsScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 80), // Bottom padding for nav bar
           ],
         ),
       ),

@@ -169,6 +169,7 @@ class InstitutionalBuyerHomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 80), // Bottom padding for nav bar
           ],
         ),
       ),

@@ -18,7 +18,6 @@ import 'package:coop_commerce/features/auth/screens/role_selection_screen.dart';
 import 'package:coop_commerce/features/welcome/forgot_password_screen.dart';
 import 'package:coop_commerce/features/welcome/create_new_password_screen.dart';
 import 'package:coop_commerce/features/welcome/membership_screen.dart';
-import 'package:coop_commerce/features/profile/profile_screen.dart';
 import 'package:coop_commerce/features/profile/saved_items_screen.dart';
 import 'package:coop_commerce/features/profile/wishlist_screen.dart';
 import 'package:coop_commerce/features/profile/payment_methods_screen.dart';
@@ -101,6 +100,10 @@ import 'package:coop_commerce/features/education/about_cooperatives_screen.dart'
 import 'package:coop_commerce/features/education/features_guide_screen.dart';
 import 'package:coop_commerce/features/education/app_tour_screen.dart';
 import 'package:coop_commerce/features/selling/start_selling_screen.dart';
+import 'package:coop_commerce/features/selling/seller_onboarding_quick_screen.dart';
+import 'package:coop_commerce/features/offers/offers_screen.dart';
+import 'package:coop_commerce/features/messages/messages_screen.dart';
+import 'package:coop_commerce/features/ncdfcoop/my_ncdfcoop_screen.dart';
 // Phase 4: Search, Review, Inventory, and Logistics imports
 import 'package:coop_commerce/features/inventory/inventory_dashboard_screen.dart';
 import 'package:coop_commerce/features/inventory/warehouse_management_screen.dart';
@@ -111,11 +114,17 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorHomeKey = GlobalKey<NavigatorState>(
   debugLabel: 'shellHome',
 );
+final _shellNavigatorOfferKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellOffer',
+);
+final _shellNavigatorMessageKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellMessage',
+);
 final _shellNavigatorCartKey = GlobalKey<NavigatorState>(
   debugLabel: 'shellCart',
 );
-final _shellNavigatorProfileKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shellProfile',
+final _shellNavigatorMyNCDFCOOPKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellMyNCDFCOOP',
 );
 
 // ============================================================================
@@ -714,7 +723,29 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 2: Cart
+            // Branch 2: Offers
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorOfferKey,
+              routes: [
+                GoRoute(
+                  path: '/offers',
+                  name: 'offers',
+                  builder: (context, state) => const OffersScreen(),
+                ),
+              ],
+            ),
+            // Branch 3: Messages
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorMessageKey,
+              routes: [
+                GoRoute(
+                  path: '/messages',
+                  name: 'messages',
+                  builder: (context, state) => const MessagesScreen(),
+                ),
+              ],
+            ),
+            // Branch 4: Cart
             StatefulShellBranch(
               navigatorKey: _shellNavigatorCartKey,
               routes: [
@@ -725,14 +756,14 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 3: Profile
+            // Branch 5: My NCDFCOOP
             StatefulShellBranch(
-              navigatorKey: _shellNavigatorProfileKey,
+              navigatorKey: _shellNavigatorMyNCDFCOOPKey,
               routes: [
                 GoRoute(
-                  path: '/profile',
-                  name: 'profile',
-                  builder: (context, state) => const ProfileScreen(),
+                  path: '/my-ncdfcoop',
+                  name: 'my-ncdfcoop',
+                  builder: (context, state) => const MyNCDFCOOPScreen(),
                 ),
               ],
             ),
@@ -1793,6 +1824,21 @@ class AppRouter {
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) {
             return const StartSellingScreen();
+          },
+        ),
+        GoRoute(
+          path: '/seller-onboarding',
+          name: 'seller-onboarding',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            final userId = extra['userId'] as String? ?? '';
+            final sellerType = extra['sellerType'] as String? ?? 'member';
+
+            return SellerOnboardingQuickScreen(
+              userId: userId,
+              sellerType: sellerType,
+            );
           },
         ),
       ],

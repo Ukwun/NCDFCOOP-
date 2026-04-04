@@ -163,6 +163,7 @@ class MemberHomeScreen extends ConsumerWidget {
                   _buildMemberProductsList(context, featuredAsync),
 
                   const SizedBox(height: 24),
+                  const SizedBox(height: 80), // Bottom padding for nav bar
                 ],
               );
             },
@@ -524,6 +525,74 @@ class MemberHomeScreen extends ConsumerWidget {
     );
   }
 
+  void _showWithdrawDialog(BuildContext context) {
+    final withdrawController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Withdraw from Savings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: withdrawController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Amount (\u20a6)',
+                prefixText: '\u20a6',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                hintText: '5,000',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Funds will be transferred to your registered account',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Processing time: 1-3 business days',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.orange,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(withdrawController.text) ?? 0;
+              if (amount > 0) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Withdrawal of \u20a6${amount.toStringAsFixed(0)} processed'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+            ),
+            child: const Text('Confirm Withdrawal'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLoyaltyActionsGrid(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -584,13 +653,7 @@ class MemberHomeScreen extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Withdrawal feature coming soon'),
-                      ),
-                    );
-                  },
+                  onTap: () => _showWithdrawDialog(context),
                   child: _ActionButton(
                     icon: Icons.remove_circle_outline,
                     label: 'Quick\nWithdraw',

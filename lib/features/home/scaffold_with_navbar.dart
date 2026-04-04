@@ -9,18 +9,30 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surfaceColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (int index) => _onTap(context, index),
-        backgroundColor: AppColors.surface,
+        backgroundColor: surfaceColor,
         indicatorColor: AppColors.primary.withValues(alpha: 0.2),
         destinations: const <NavigationDestination>[
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home, color: AppColors.primary),
             label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.local_offer_outlined),
+            selectedIcon: Icon(Icons.local_offer, color: AppColors.primary),
+            label: 'Offer',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.message_outlined),
+            selectedIcon: Icon(Icons.message, color: AppColors.primary),
+            label: 'Message',
           ),
           NavigationDestination(
             icon: Icon(Icons.shopping_cart_outlined),
@@ -30,7 +42,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person, color: AppColors.primary),
-            label: 'Profile',
+            label: 'My NCDFCOOP',
           ),
         ],
       ),
