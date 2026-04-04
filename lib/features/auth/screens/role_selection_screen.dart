@@ -33,53 +33,55 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
 
   final List<_RoleOptionModel> roleOptions = [
     _RoleOptionModel(
-      role: UserRole.consumer,
-      title: '🛍️ Regular Shopper',
-      subtitle: 'Shop individually with retail pricing',
-      description:
-          'Perfect for personal shopping. Browse our full catalog of groceries, products, and essentials with convenient retail pricing.',
-      benefits: [
-        '✓ Personal shopping cart',
-        '✓ Fast checkout',
-        '✓ Home delivery',
-        '✓ Easy returns',
-      ],
-      color: const Color(0xFF6B5B95),
-      icon: Icons.shopping_cart_outlined,
-    ),
-    _RoleOptionModel(
       role: UserRole.coopMember,
-      title: '🤝 Cooperative Member',
-      subtitle: 'Join our community & get wholesale prices',
+      title: '👤 Member',
+      subtitle: 'Shop and save with member benefits',
       description:
-          'Become part of our cooperative. Buy in bulk, earn loyalty rewards, share profits, and have a voice in community decisions.',
+          'Become a member and enjoy exclusive benefits. Upgrade to Premium Member for even more rewards. Add and save money in your account for easier checkout.',
       benefits: [
-        '✓ Wholesale pricing (10-30% off)',
-        '✓ Loyalty points & rewards',
-        '✓ Share yearly profits',
-        '✓ Vote on cooperative decisions',
-        '✓ Team ordering features',
-        '✓ Priority customer support',
+        '✓ Member pricing',
+        '✓ Add money to account',
+        '✓ Save money in account',
+        '✓ Upgrade to Premium Member',
+        '✓ Loyalty rewards',
+        '✓ Priority support',
       ],
       color: const Color(0xFF8B6F47),
-      icon: Icons.people_alt_outlined,
+      icon: Icons.person_outlined,
     ),
     _RoleOptionModel(
       role: UserRole.institutionalBuyer,
-      title: '🏢 Wholesale Buyer',
-      subtitle: 'For businesses, institutions & bulk orders',
+      title: '🛒 Wholesale Buyer',
+      subtitle: 'Buy in bulk with wholesale pricing',
       description:
-          'For companies, schools, hospitals, and organizations. Get wholesale pricing, bulk discounts, flexible payment terms, and dedicated support.',
+          'For businesses, resellers, and bulk buyers. Get wholesale pricing, bulk discounts, flexible payment terms, and dedicated support.',
       benefits: [
         '✓ Wholesale bulk pricing',
+        '✓ Add money to account',
         '✓ Multiple delivery locations',
         '✓ Flexible payment terms',
         '✓ Dedicated account manager',
-        '✓ Custom pricing agreements',
         '✓ Invoice billing available',
       ],
       color: const Color(0xFF2E5090),
-      icon: Icons.business_outlined,
+      icon: Icons.shopping_cart_outlined,
+    ),
+    _RoleOptionModel(
+      role: UserRole.seller,
+      title: '🚀 Start Selling Now',
+      subtitle: 'Become a seller and reach customers',
+      description:
+          'Start your selling journey. List products, manage inventory, and sell to Members and Wholesale Buyers. Grow your business on our platform.',
+      benefits: [
+        '✓ Sell to Members',
+        '✓ Sell to Wholesale Buyers',
+        '✓ Inventory management',
+        '✓ Sales analytics',
+        '✓ Marketing tools',
+        '✓ Seller support',
+      ],
+      color: const Color(0xFF1A4E00),
+      icon: Icons.store_outlined,
     ),
   ];
 
@@ -138,8 +140,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   }
 
   Future<void> _skipForNow() async {
-    // Allow users to skip and use as consumer by default
-    context.go('/home', extra: {'selectedRole': UserRole.consumer});
+    // Allow users to skip and use as Member by default
+    context.go('/home', extra: {'selectedRole': UserRole.coopMember});
   }
 
   @override

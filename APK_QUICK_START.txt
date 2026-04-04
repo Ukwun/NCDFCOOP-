@@ -1,0 +1,109 @@
+═════════════════════════════════════════════════════════════════════════════
+  QUICK START - APK INSTALLATION & TESTING
+═════════════════════════════════════════════════════════════════════════════
+
+📱 APP: CoopCommerce v1.0
+📦 FILE: app-release.apk (48.4 MB)
+📅 DATE: April 4, 2026
+🎯 PURPOSE: Real-time testing with 5 clients across 5 states
+
+═════════════════════════════════════════════════════════════════════════════
+3-STEP INSTALLATION (5 minutes)
+═════════════════════════════════════════════════════════════════════════════
+
+STEP 1: ENABLE INSTALLATION FROM UNKNOWN SOURCES
+─────────────────────────────────────────────────
+1. Open Settings
+2. Go to Security (or Privacy & Security)
+3. Enable "Unknown Sources" or "Install Unknown Apps"
+4. Tap OK/Agree
+
+STEP 2: TRANSFER APK FILE
+─────────────────────────
+1. Copy app-release.apk to your phone's Download folder
+   (via USB cable, email, or cloud storage)
+
+STEP 3: INSTALL THE APP
+───────────────────────
+1. Open Downloads folder on your phone
+2. Tap "app-release.apk"
+3. Tap "Install"
+4. Wait for completion
+5. Tap "Open" (or find "CoopCommerce" in app drawer)
+
+✅ DONE! Your app is ready to use.
+
+═════════════════════════════════════════════════════════════════════════════
+QUICK TESTING (Test these 3 things first)
+═════════════════════════════════════════════════════════════════════════════
+
+1️⃣  LOGIN/SIGNUP
+   • Open app
+   • Create account or log in
+   • Expected: ✅ Account works
+
+2️⃣  CARD PAYMENT
+   • Add items to cart
+   • Go to checkout
+   • Select "Card Payment"
+   • Card: 4242 4242 4242 4242
+   • Expiry: Any future date
+   • CVV: Any 3 digits
+   • Expected: ✅ Order confirmed immediately
+
+3️⃣  BANK TRANSFER
+   • New order in cart
+   • Checkout → Select "Bank Transfer"
+   • View account details displayed
+   • Expected: ✅ Account info shown clearly
+
+═════════════════════════════════════════════════════════════════════════════
+KEY FEATURES TO TEST
+═════════════════════════════════════════════════════════════════════════════
+
+✓ Browse products & search
+✓ Add/remove items in cart
+✓ Enter delivery address
+✓ Card payment (instant confirmation)
+✓ Bank transfer (manual verification)
+✓ View order history
+✓ Receive notifications
+✓ App speed & stability
+
+═════════════════════════════════════════════════════════════════════════════
+REPORTING ISSUES
+═════════════════════════════════════════════════════════════════════════════
+
+Found a bug? Send us:
+├─ What happened
+├─ Your device model & Android version
+├─ Screenshot (if possible)
+└─ How to repeat the issue
+
+Email: [Support Email]
+Phone: [Support Phone]
+
+═════════════════════════════════════════════════════════════════════════════
+INSTALLATION FAILED?
+═════════════════════════════════════════════════════════════════════════════
+
+"Unknown Sources blocked"
+→ Enable in Settings > Security > Unknown Sources
+
+"App crashes"
+→ Go to Settings > Apps > CoopCommerce > Clear Cache > Reinstall
+
+"Can't find APK"
+→ Check Downloads folder or ask to resend file
+
+Still stuck? Contact support with your error message.
+
+═════════════════════════════════════════════════════════════════════════════
+THANK YOU FOR TESTING! 🎉
+═════════════════════════════════════════════════════════════════════════════
+
+Your feedback helps us make CoopCommerce better for everyone.
+
+For detailed testing instructions, see: CLIENT_TESTING_GUIDE.md
+
+═════════════════════════════════════════════════════════════════════════════

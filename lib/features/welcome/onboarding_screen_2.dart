@@ -112,7 +112,7 @@ class OnboardingScreen2 extends StatelessWidget {
                           text: const TextSpan(
                             children: [
                               TextSpan(
-                                text: 'Become a Member & ',
+                                text: 'Alone you trade, ',
                                 style: TextStyle(
                                   color: Color(0xFFFAFAFA),
                                   fontSize: 32,
@@ -122,7 +122,7 @@ class OnboardingScreen2 extends StatelessWidget {
                                 ),
                               ),
                               TextSpan(
-                                text: 'save more',
+                                text: 'Together you grow',
                                 style: TextStyle(
                                   color: Color(0xFFF3951A),
                                   fontSize: 32,
@@ -136,42 +136,8 @@ class OnboardingScreen2 extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Container(
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFFFFFFFF).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFFF3951A)
-                                  .withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          padding: const EdgeInsets.all(12),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _MembershipTierBadge(
-                                name: 'Basic',
-                                discount: '10%',
-                                color: Color(0xFF98D32A),
-                              ),
-                              _MembershipTierBadge(
-                                name: 'Gold',
-                                discount: '15%',
-                                color: Color(0xFFFFC107),
-                              ),
-                              _MembershipTierBadge(
-                                name: 'Platinum',
-                                discount: '20%',
-                                color: Color(0xFF9C27B0),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
                         const Text(
-                          'Plus: Exclusive deals, loyalty rewards, and priority support',
+                          'Say bye bye to\nUnreliable supply • Delayed delivery • Payment uncertainty',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFFCCCCCC),

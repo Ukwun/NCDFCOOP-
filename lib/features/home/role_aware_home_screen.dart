@@ -34,7 +34,7 @@ class RoleAwareHomeScreen extends ConsumerWidget {
 
   Widget _buildHomeScreenForRole(UserRole role) {
     switch (role) {
-      case UserRole.consumer:
+      case UserRole.wholesaleBuyer:
         return const ConsumerHomeScreen();
 
       case UserRole.coopMember:

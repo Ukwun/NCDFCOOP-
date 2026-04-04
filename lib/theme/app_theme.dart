@@ -4,6 +4,7 @@ import 'app_text_styles.dart';
 
 export 'app_colors.dart';
 export 'app_text_styles.dart';
+export 'theme_extension.dart'; // Available for screens to use dynamic colors
 
 class AppSpacing {
   // Base unit: 4px

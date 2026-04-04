@@ -74,7 +74,7 @@ class OnboardingScreen extends StatelessWidget {
                                 ),
                               ),
                               TextSpan(
-                                text: 'Cooperative',
+                                text: 'NCDFCOOP',
                                 style: TextStyle(
                                   color: Color(0xFFF3951A),
                                   fontSize: 32,
@@ -84,22 +84,12 @@ class OnboardingScreen extends StatelessWidget {
                                   height: 1.2,
                                 ),
                               ),
-                              TextSpan(
-                                text: ' Commerce',
-                                style: TextStyle(
-                                  color: Color(0xFFFAFAFA),
-                                  fontSize: 32,
-                                  fontFamily: 'Libre Baskerville',
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.2,
-                                ),
-                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'Shop smarter, save more, grow together',
+                          'Nigeria\'s controlled trade infrastructure for reliable buying and selling',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFFCCCCCC),

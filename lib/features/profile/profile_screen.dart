@@ -445,6 +445,12 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildMenuSection(BuildContext context) {
     final menuItems = [
       {
+        'icon': Icons.storefront_outlined,
+        'label': 'Start Selling Now',
+        'subtitle': 'Become a seller on NCDFCOOP',
+        'route': 'start-selling',
+      },
+      {
         'icon': Icons.shopping_bag_outlined,
         'label': 'My Orders',
         'subtitle': 'Track and manage orders',

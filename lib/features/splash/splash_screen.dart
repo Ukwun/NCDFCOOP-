@@ -53,46 +53,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       if (!mounted) return;
 
-      // Check for "Remember Me" and auto-login
-      final authStorageService = AuthStorageService();
-      final isRememberMeEnabled =
-          await authStorageService.isRememberMeEnabled();
-
-      if (isRememberMeEnabled) {
-        try {
-          final savedUser = await authStorageService.loadSavedUser();
-          if (savedUser != null) {
-            // User has saved credentials and Remember Me is enabled
-            // User is already authenticated via Firebase
-            if (mounted) {
-              context.go('/home');
-              return;
-            }
-          }
-        } catch (e) {
-          debugPrint('Error loading saved user: $e');
-          // Clear saved credentials if loading fails
-          await authStorageService.clearAll();
-        }
-      }
-
-      // Check if user is authenticated
-      final authService = FirebaseAuthService();
-      if (authService.isUserLoggedIn) {
-        // User is logged in - go to home
-        if (mounted) {
-          context.go('/home');
-        }
-      } else {
-        // User not logged in - go to login
-        if (mounted) {
-          context.go('/auth/login');
-        }
+      // Always start with onboarding/welcome flow
+      // This ensures every app session shows the welcome/onboarding screens first
+      if (mounted) {
+        context.go('/welcome');
       }
     } catch (e) {
       debugPrint('Error during splash initialization: $e');
       if (mounted) {
-        context.go('/auth/login');
+        context.go('/welcome');
       }
     }
   }

@@ -482,16 +482,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: () {
-                    // TODO: Navigate to password reset
-                    // context.push('/auth/forgot-password');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🔑 Forgot password flow'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
+                  onTap: () => context.push('/forgot-password'),
                   child: Text(
                     'Forgot Password?',
                     style: TextStyle(

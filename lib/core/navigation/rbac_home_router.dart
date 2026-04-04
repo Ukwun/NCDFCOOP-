@@ -9,6 +9,7 @@ import 'package:coop_commerce/features/home/role_screens/franchise_owner_home_sc
 import 'package:coop_commerce/features/home/role_screens/institutional_buyer_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/warehouse_staff_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/admin_home_screen.dart';
+import 'package:coop_commerce/features/selling/seller_home_screen.dart';
 
 /// Home Router with RBAC enforcement
 /// Routes users to appropriate home screen based on their roles
@@ -50,6 +51,8 @@ class RBACHomeRouter extends ConsumerWidget {
         return const MemberHomeScreen();
       case UserRole.premiumMember:
         return const MemberHomeScreen(); // Uses member screen with premium benefits
+      case UserRole.seller:
+        return const SellerHomeScreen(); // Uses seller-specific dashboard
       case UserRole.franchiseOwner:
         return const FranchiseOwnerHomeScreen();
       case UserRole.storeManager:

@@ -34,6 +34,7 @@ class PricingService {
         product.retailPrice * 0.95, // 5% member discount
       auth_role.UserRole.premiumMember =>
         product.retailPrice * 0.90, // 10% premium member discount
+      auth_role.UserRole.seller => product.wholesalePrice,
       auth_role.UserRole.franchiseOwner => product.wholesalePrice,
       auth_role.UserRole.storeManager => product.wholesalePrice,
       auth_role.UserRole.storeStaff => product.wholesalePrice,
@@ -57,6 +58,7 @@ class PricingService {
         product.retailPrice * 0.95, // 5% member discount
       auth_role.UserRole.premiumMember =>
         product.retailPrice * 0.90, // 10% premium member discount
+      auth_role.UserRole.seller => product.wholesalePrice,
       auth_role.UserRole.franchiseOwner => product.wholesalePrice,
       auth_role.UserRole.storeManager => product.wholesalePrice,
       auth_role.UserRole.storeStaff => product.wholesalePrice,
@@ -147,6 +149,7 @@ class PricingService {
       auth_role.UserRole.wholesaleBuyer => product.visibleToRetail,
       auth_role.UserRole.coopMember => product.visibleToRetail,
       auth_role.UserRole.premiumMember => product.visibleToRetail,
+      auth_role.UserRole.seller => product.visibleToWholesale,
       auth_role.UserRole.franchiseOwner => product.visibleToWholesale,
       auth_role.UserRole.storeManager => product.visibleToWholesale,
       auth_role.UserRole.storeStaff => product.visibleToWholesale,

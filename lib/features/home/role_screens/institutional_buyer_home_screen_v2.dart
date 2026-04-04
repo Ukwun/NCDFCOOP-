@@ -35,7 +35,7 @@ class InstitutionalBuyerHomeScreenV2 extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: Colors.grey[600]),
-            onPressed: () {},
+            onPressed: () => context.pushNamed('notifications'),
           ),
         ],
       ),
@@ -449,7 +449,8 @@ class InstitutionalBuyerHomeScreenV2 extends ConsumerWidget {
                 child: _PlanningToolButton(
                   icon: Icons.file_download_outlined,
                   label: 'Download\nTemplate',
-                  onTap: () {},
+                  onTap: () =>
+                      context.pushNamed('institutional-download-template'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -457,7 +458,7 @@ class InstitutionalBuyerHomeScreenV2 extends ConsumerWidget {
                 child: _PlanningToolButton(
                   icon: Icons.file_upload_outlined,
                   label: 'Bulk\nUpload',
-                  onTap: () {},
+                  onTap: () => context.pushNamed('institutional-bulk-upload'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -465,7 +466,8 @@ class InstitutionalBuyerHomeScreenV2 extends ConsumerWidget {
                 child: _PlanningToolButton(
                   icon: Icons.assessment_outlined,
                   label: 'Demand\nForecast',
-                  onTap: () {},
+                  onTap: () =>
+                      context.pushNamed('institutional-demand-forecast'),
                 ),
               ),
             ],

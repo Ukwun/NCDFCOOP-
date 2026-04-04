@@ -286,7 +286,7 @@ class SavingsService {
         // Update goal
         final newAmount =
             (goal.currentAmount + amount).clamp(0, goal.targetAmount);
-        await txn.update(
+        txn.update(
           _firestore.collection('savings_goals').doc(goalId),
           {
             'currentAmount': newAmount,
@@ -350,7 +350,7 @@ class SavingsService {
         await txRef.set(transaction.toFirestore());
 
         // Update goal
-        await txn.update(
+        txn.update(
           _firestore.collection('savings_goals').doc(goalId),
           {
             'currentAmount': goal.currentAmount - amount,
@@ -545,9 +545,7 @@ class SavingsService {
 
       // Get or initialize savings account
       var account = await getSavingsAccount(userId);
-      if (account == null) {
-        account = await initializeSavingsAccount(userId);
-      }
+      account ??= await initializeSavingsAccount(userId);
 
       // Create transaction record
       final transactionRef =
@@ -571,7 +569,7 @@ class SavingsService {
 
         // Update account balance and totals
         final newBalance = account!.balance + amount;
-        await txn.update(
+        txn.update(
           _firestore.collection('savings_accounts').doc(userId),
           {
             'balance': newBalance,
@@ -656,7 +654,7 @@ class SavingsService {
         await transactionRef.set(transactionData);
 
         // Deduct from balance
-        await txn.update(accountRef, {
+        txn.update(accountRef, {
           'balance': currentBalance - amount,
           'lastTransactionAt': FieldValue.serverTimestamp(),
         });

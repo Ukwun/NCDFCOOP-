@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/features/notifications/notification_screens.dart';
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
 import 'package:coop_commerce/providers/app_settings_provider.dart';
+import 'package:coop_commerce/providers/app_initializer_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +33,8 @@ void main() async {
     }
   } catch (e) {
     debugPrint('⚠️ Firebase initialization failed: $e');
-    print('⚠️ Firebase initialization failed - app will run with reduced functionality');
+    print(
+        '⚠️ Firebase initialization failed - app will run with reduced functionality');
     // Don't crash - let the app run anyway
   }
 
@@ -55,10 +57,13 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Initialize persisted user on app startup
     ref.watch(initializePersistedUserProvider);
-    
+
+    // Initialize app systems (cart, inventory, etc.)
+    ref.watch(appInitializerProvider);
+
     // Watch dark mode setting
     final isDarkMode = ref.watch(darkModeProvider);
-    
+
     final router = AppRouter.createRouter(ref);
 
     // Define light theme - comprehensive with all UI elements
@@ -74,12 +79,48 @@ class MyApp extends ConsumerWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
       ),
       cardTheme: CardThemeData(
         color: Colors.grey[50],
+        elevation: 0,
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFE5E7EB),
+        thickness: 1,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey[50],
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+        ),
+      ),
+      listTileTheme: const ListTileThemeData(
+        tileColor: Colors.white,
+        textColor: Colors.black,
+        iconColor: Colors.black,
+      ),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(color: Color(0xFF1F2937)),
+        bodyMedium: TextStyle(color: Color(0xFF1F2937)),
+        bodySmall: TextStyle(color: Color(0xFF6B7280)),
       ),
     );
 
@@ -91,17 +132,54 @@ class MyApp extends ConsumerWidget {
       ),
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: Colors.grey[900],
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.grey[900],
+      scaffoldBackgroundColor: const Color(0xFF121212),
+      canvasColor: const Color(0xFF1E1E1E),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E1E1E),
         foregroundColor: Colors.white,
         elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: Colors.grey[850],
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF1E1E1E),
+        selectedItemColor: Color(0xFF7C3AED),
+        unselectedItemColor: Colors.grey,
       ),
       cardTheme: CardThemeData(
-        color: Colors.grey[800],
+        color: const Color(0xFF2A2A2A),
+        elevation: 0,
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFF3A3A3A),
+        thickness: 1,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF2A2A2A),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF3A3A3A)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF3A3A3A)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 2),
+        ),
+      ),
+      listTileTheme: const ListTileThemeData(
+        tileColor: Color(0xFF2A2A2A),
+        textColor: Colors.white,
+        iconColor: Colors.white,
+      ),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(color: Colors.white),
+        bodyMedium: TextStyle(color: Colors.white),
+        bodySmall: TextStyle(color: Color(0xFFB0B0B0)),
       ),
     );
 

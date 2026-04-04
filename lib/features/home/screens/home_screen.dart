@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/widgets/product_image.dart';
+import 'package:coop_commerce/widgets/app_footer_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int currentCarouselIndex = 0;
+  int _currentNavIndex = 0;
 
   // Mock data
   final List<Map<String, String>> carouselItems = [
@@ -85,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -116,6 +118,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 24),
 
+              // Intelligence Features Section
+              _buildIntelligenceFeaturesSection(),
+
+              const SizedBox(height: 24),
+
               // Categories section
               _buildCategoriesSection(),
 
@@ -129,7 +136,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: AppFooterNavigation(
+        currentIndex: _currentNavIndex,
+        onTap: (index) {
+          setState(() {
+            _currentNavIndex = index;
+          });
+        },
+      ),
     );
   }
 
@@ -142,31 +156,34 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '👋 Hello, Member!',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+              Builder(
+                builder: (context) => Text(
+                  '👋 Hello, Member!',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                'Ready to save more?',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
+              Builder(
+                builder: (context) => Text(
+                  'Ready to save more?',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[400]
+                        : Colors.grey[600],
+                  ),
                 ),
               ),
             ],
           ),
           GestureDetector(
-            onTap: () {
-              // TODO: Navigate to profile
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('👤 Profile')),
-              );
-            },
+            onTap: () => context.push('/profile'),
             child: Container(
               width: 50,
               height: 50,
@@ -190,12 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GestureDetector(
-        onTap: () {
-          // TODO: Navigate to product listing
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🔍 Product search')),
-          );
-        },
+        onTap: () => context.push('/search'),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -341,9 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             GestureDetector(
-              onTap: () {
-                // TODO: Navigate to membership details
-              },
+              onTap: () => context.push('/member-benefits'),
               child: const Icon(
                 Icons.arrow_forward_ios,
                 color: Colors.white,
@@ -374,12 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () {
-                  // TODO: Navigate to all products
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('🛒 View all products')),
-                  );
-                },
+                onTap: () => context.push('/products'),
                 child: Text(
                   'See All',
                   style: TextStyle(
@@ -605,6 +610,104 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildIntelligenceFeaturesSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '🧠 For You',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Activity Feed
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.pushNamed('activity-feed'),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.history, color: Colors.blue, size: 24),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Activity',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Your interactions',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Recommendations
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.pushNamed('recommendations'),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 24),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Personalized',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Just for you',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRecentOrdersSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -623,12 +726,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () {
-                  // TODO: Navigate to order history
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('📋 View all orders')),
-                  );
-                },
+                onTap: () => context.push('/orders'),
                 child: Text(
                   'View All',
                   style: TextStyle(
@@ -678,11 +776,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          'Premium Basmati Rice x 2',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
+                        Builder(
+                          builder: (context) => Text(
+                            'Premium Basmati Rice x 2',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                            ),
                           ),
                         ),
                       ],
@@ -694,7 +797,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.2),
+                      color: Colors.green.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
@@ -715,34 +818,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: Colors.grey[600],
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search),
-          label: 'Shop',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart),
-          label: 'Cart',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.favorite),
-          label: 'Wishlist',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Account',
-        ),
-      ],
-    );
-  }
 }

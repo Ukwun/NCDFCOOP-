@@ -22,7 +22,7 @@ class InstitutionalBuyerHomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: Colors.grey[600]),
-            onPressed: () {},
+            onPressed: () => context.pushNamed('notifications'),
           ),
         ],
       ),
@@ -114,25 +114,26 @@ class InstitutionalBuyerHomeScreen extends ConsumerWidget {
                   title: 'Approvals',
                   icon: Icons.done_all_outlined,
                   count: '5',
-                  onTap: () {},
+                  onTap: () => context.pushNamed('approvals'),
                 ),
                 _PortalActionCard(
                   title: 'Orders',
                   icon: Icons.assignment_outlined,
                   count: '24',
-                  onTap: () {},
+                  onTap: () => context.push('/orders'),
                 ),
                 _PortalActionCard(
                   title: 'Reports',
                   icon: Icons.description_outlined,
                   count: '12',
-                  onTap: () {},
+                  onTap: () =>
+                      context.pushNamed('institutional-demand-forecast'),
                 ),
                 _PortalActionCard(
                   title: 'Budget',
                   icon: Icons.account_balance_wallet_outlined,
                   count: 'Avl',
-                  onTap: () {},
+                  onTap: () => context.pushNamed('wallet'),
                 ),
               ],
             ),

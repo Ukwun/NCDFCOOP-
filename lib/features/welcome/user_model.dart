@@ -14,6 +14,7 @@ class User {
   final DateTime? membershipExpiryDate;
   final String? franchiseId;
   final bool roleSelectionCompleted; // Has user gone through role selection?
+  final bool onboardingCompleted; // Has user seen the onboarding screens?
 
   const User({
     required this.id,
@@ -27,6 +28,7 @@ class User {
     this.membershipExpiryDate,
     this.franchiseId,
     this.roleSelectionCompleted = false,
+    this.onboardingCompleted = false,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -64,6 +66,7 @@ class User {
           : null,
       franchiseId: json['franchiseId'],
       roleSelectionCompleted: json['roleSelectionCompleted'] ?? false,
+      onboardingCompleted: json['onboardingCompleted'] ?? false,
     );
   }
 
@@ -82,6 +85,7 @@ class User {
         'membershipExpiryDate': membershipExpiryDate?.toIso8601String(),
         'franchiseId': franchiseId,
         'roleSelectionCompleted': roleSelectionCompleted,
+        'onboardingCompleted': onboardingCompleted,
       };
 
   User copyWith({
@@ -96,6 +100,7 @@ class User {
     DateTime? membershipExpiryDate,
     String? franchiseId,
     bool? roleSelectionCompleted,
+    bool? onboardingCompleted,
   }) {
     return User(
       id: id ?? this.id,
@@ -110,6 +115,7 @@ class User {
       franchiseId: franchiseId ?? this.franchiseId,
       roleSelectionCompleted:
           roleSelectionCompleted ?? this.roleSelectionCompleted,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 

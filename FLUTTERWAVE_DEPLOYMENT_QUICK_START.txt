@@ -1,0 +1,281 @@
+═════════════════════════════════════════════════════════════════════════════
+  FLUTTERWAVE IMPLEMENTATION - IMMEDIATE ACTION PLAN
+═════════════════════════════════════════════════════════════════════════════
+
+Everything is BUILT and READY. Follow these steps to go LIVE.
+
+═════════════════════════════════════════════════════════════════════════════
+PHASE 1: CLOUD FUNCTIONS DEPLOYMENT (5 minutes)
+═════════════════════════════════════════════════════════════════════════════
+
+COMMAND:
+  cd c:\development\coop_commerce\functions
+  firebase deploy --only functions
+
+WHAT IT DOES:
+  - Deploys flutterwave-webhook.js (HTTP endpoint)
+  - Deploys verify-bank-transfer.js (Callable function)
+  - Makes webhooks active and ready to receive payments
+
+EXPECTED OUTPUT:
+  ✅ Function onFlutterwaveWebhook deployed
+  ✅ Function verifyBankTransfer deployed
+  ✅ Get function URL: https://coop-commerce-8d43f.cloudfunctions.net/onFlutterwaveWebhook
+
+VERIFY:
+  - Open Firebase Console
+  - Go to: Cloud Functions section
+  - See both functions listed (not "Error")
+
+═════════════════════════════════════════════════════════════════════════════
+PHASE 2: FLUTTERWAVE WEBHOOK CONFIGURATION (5 minutes)
+═════════════════════════════════════════════════════════════════════════════
+
+ACTION STEPS:
+
+1. Log into Flutterwave Dashboard
+   URL: https://dashboard.flutterwave.com
+   Account: (Your Flutterwave account)
+
+2. Navigate to Settings
+   Left sidebar → Settings → Webhooks
+
+3. Click "Add New Endpoint"
+   Fill in:
+   ├─ Webhook URL: https://coop-commerce-8d43f.cloudfunctions.net/onFlutterwaveWebhook
+   ├─ Select events:
+   │  ✓ charge.completed
+   │  ✓ charge.failed
+   └─ Secret Key: sk_test_7ffa54e85c90861976aad3b51f2c5ffbdb1bdd7c
+
+4. Click Save
+
+5. Test Webhook (IMPORTANT!)
+   - Flutterwave will send test webhook
+   - Check Firebase Cloud Functions logs
+   - Should see successful signature verification
+
+VERIFICATION:
+  - Go to Firebase Console
+  - Cloud Functions → onFlutterwaveWebhook → Logs
+  - Should show incoming webhook requests
+
+═════════════════════════════════════════════════════════════════════════════
+PHASE 3: BUILD & TEST (10 minutes)
+═════════════════════════════════════════════════════════════════════════════
+
+ACTION STEPS:
+
+1. Rebuild Flutter app:
+   flutter pub get
+   flutter build apk     # For Android
+   flutter build ios     # For iOS (macOS required)
+
+2. Install on device/emulator:
+   flutter run
+
+3. Run through payment flows:
+
+   TEST 1: CARD PAYMENT
+   ├─ Go to Checkout
+   ├─ Select "Card Payment"
+   ├─ Amount: ₦1,000 (test amount)
+   ├─ Click "Pay ₦1,000"
+   ├─ Use card: 4242 4242 4242 4242
+   ├─ Expiry: 12/25, CVV: 123
+   ├─ Wait for confirmation
+   └─ Expected: Order status → "confirmed" immediately ✅
+
+   TEST 2: BANK TRANSFER
+   ├─ Go to Checkout (new order)
+   ├─ Select "Bank Transfer"
+   ├─ Review account details dialog
+   ├─ Copy account number (test the copy button)
+   ├─ Click "I've Transferred the Money"
+   ├─ Wait for webhook (might take 30 seconds)
+   └─ Expected: Order status → "payment_pending_verification" ⏳
+
+   TEST 3: MANUAL VERIFICATION
+   ├─ Open Firebase Console → Firestore
+   ├─ Navigate to: orders collection
+   ├─ Find order with status "payment_pending_verification"
+   ├─ In admin dashboard (to be created):
+   │  └─ Click "Verify Bank Transfer"
+   └─ Expected: Order status → "confirmed" ✅
+
+CHECK LOGS:
+  Firebase Console → Cloud Functions → Logs
+  Should show:
+  ✓ Webhook received and verified
+  ✓ Order updated in Firestore
+  ✓ Notifications sent
+  ✓ Inventory deducted
+
+═════════════════════════════════════════════════════════════════════════════
+PHASE 4: PRODUCTION PREPARATION (30 minutes)
+═════════════════════════════════════════════════════════════════════════════
+
+BEFORE GOING LIVE:
+
+1. Get Production Flutterwave Keys
+   - Log into Flutterwave Dashboard
+   - Settings → API Keys
+   - Copy LIVE Public and Secret keys
+   - Keep secure (don't commit to Git)
+
+2. Update Services with Live Keys
+   
+   File: lib/services/payments/flutterwave_payment_service.dart
+   Change:
+     const String PUBLIC_KEY = 'pk_test_...';
+     const String SECRET_KEY = 'sk_test_...';
+   To:
+     const String PUBLIC_KEY = 'pk_live_...';  // Your live key
+     const String SECRET_KEY = 'sk_live_...';   // Your live key
+
+3. Re-deploy Cloud Functions
+   firebase deploy --only functions
+
+4. Update Webhook in Flutterwave Dashboard
+   - Change secret key from test to live
+   - Re-test webhook delivery
+
+5. Set up Email Notifications
+   - Update notification service to send real emails
+   - Test with small payment
+   - Verify email reaches sellers
+
+6. Enable Firebase Security Rules
+   - Protect payments collection from public read
+   - Allow manual verification only for admins
+   - Whitelist verified users
+
+═════════════════════════════════════════════════════════════════════════════
+COMMONLY NEEDED COMMANDS
+═════════════════════════════════════════════════════════════════════════════
+
+# View Cloud Functions logs
+firebase functions:log
+
+# Redeploy if changes made
+firebase deploy --only functions:onFlutterwaveWebhook
+
+# Test webhook locally (requires ngrok or Firebase Emulator)
+firebase functions:shell
+
+# View payment transactions in Firestore
+# Firebase Console → Firestore → payments collection
+
+# Monitor webhook deliveries
+# Flutterwave Dashboard → Webhooks → Logs section
+
+═════════════════════════════════════════════════════════════════════════════
+TROUBLESHOOTING QUICK REFERENCE
+═════════════════════════════════════════════════════════════════════════════
+
+Problem: "Webhook not firing"
+Solution:
+  1. Check webhook URL in Flutterwave dashboard (must match exactly)
+  2. Verify secret key in Cloud Function matches Flutterwave
+  3. Check Firebase logs for signature verification errors
+  4. Test webhook re-delivery in Flutterwave dashboard
+
+Problem: "Order status not updating"
+Solution:
+  1. Check Cloud Function logs for errors
+  2. Verify Firestore has data in payments collection
+  3. Check order document exists in orders collection
+  4. Verify Firebase permissions allow writes
+
+Problem: "Bank transfer account details not showing"
+Solution:
+  1. Verify BankTransferDetailsDialog is being called
+  2. Check bank account values in bank_transfer_details_dialog.dart
+  3. Update DUMMY values with actual bank account
+  4. Rebuild and test
+
+Problem: "Can't verify bank transfer manually"
+Solution:
+  1. Ensure admin is authenticated
+  2. Check verifyBankTransfer function deployed successfully
+  3. Verify order status is "payment_pending_verification"
+  4. Check Cloud Function logs for errors
+
+═════════════════════════════════════════════════════════════════════════════
+CRITICAL REMINDERS
+═════════════════════════════════════════════════════════════════════════════
+
+⚠️ SECURITY:
+  ✓ Never commit API keys to Git
+  ✓ Use Firebase Environment Variables or Secrets Manager for production
+  ✓ All webhooks verified with HMAC-SHA256
+  ✓ Manual verification requires authentication
+
+⚠️ BANK TRANSFER DETAILS:
+  ✓ Update dummy account details with real Flutterwave bank account
+  ✓ Current file: lib/services/payments/bank_transfer_details_dialog.dart
+  ✓ Fields to update:
+    - bankName
+    - accountName
+    - accountNumber
+    - bankCode
+
+⚠️ TESTING:
+  ✓ Always test with small amounts first
+  ✓ Use Flutterwave test keys for development
+  ✓ Never test with live keys on dummy orders
+  ✓ Verify webhook logs after each test payment
+
+═════════════════════════════════════════════════════════════════════════════
+SUCCESS CHECKLIST - YOU'RE DONE WHEN...
+═════════════════════════════════════════════════════════════════════════════
+
+□ Cloud Functions deployed successfully
+  Command: firebase deploy --only functions ✅
+
+□ Webhook URL added to Flutterwave dashboard
+  Dashboard: Settings → Webhooks ✅
+
+□ Card payment tested end-to-end
+  Result: Order status = "confirmed" ✅
+
+□ Bank transfer tested end-to-end  
+  Result: Order status = "payment_pending_verification" ✅
+
+□ Manual verification tested
+  Result: Order status = "confirmed" after manual click ✅
+
+□ Seller notifications sent
+  Result: Emails received by sellers ✅
+
+□ Production keys configured (optional for test environment)
+  Keys: pk_live_..., sk_live_... ✅
+
+□ Firestore rules updated
+  Security: payments protected from public read ✅
+
+□ Monitoring/alerts configured
+  Tools: Firebase alerts + Flutterwave delivery logs ✅
+
+═════════════════════════════════════════════════════════════════════════════
+TIME ESTIMATE
+═════════════════════════════════════════════════════════════════════════════
+
+Phase 1 (Deploy Functions):     5 minutes
+Phase 2 (Configure Webhook):    5 minutes
+Phase 3 (Build & Test):         10 minutes
+Phase 4 (Production Setup):     30 minutes
+                                ___________
+TOTAL TIME TO LIVE:             ~50 minutes
+
+═════════════════════════════════════════════════════════════════════════════
+
+READY? FOLLOW THE STEPS ABOVE TO GO LIVE.
+
+Need help? Check:
+  - FLUTTERWAVE_IMPLEMENTATION_COMPLETE.md (detailed reference)
+  - QUICK_START_FLUTTERWAVE.txt (payment flows & setup)
+  - Firebase Cloud Functions logs (debugging)
+  - Flutterwave Dashboard (webhook delivery logs)
+
+═════════════════════════════════════════════════════════════════════════════

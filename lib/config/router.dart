@@ -100,6 +100,7 @@ import 'package:coop_commerce/features/products/product_reviews_screen.dart';
 import 'package:coop_commerce/features/education/about_cooperatives_screen.dart';
 import 'package:coop_commerce/features/education/features_guide_screen.dart';
 import 'package:coop_commerce/features/education/app_tour_screen.dart';
+import 'package:coop_commerce/features/selling/start_selling_screen.dart';
 // Phase 4: Search, Review, Inventory, and Logistics imports
 import 'package:coop_commerce/features/inventory/inventory_dashboard_screen.dart';
 import 'package:coop_commerce/features/inventory/warehouse_management_screen.dart';
@@ -271,13 +272,10 @@ class AppRouter {
   static GoRouter createRouter(WidgetRef ref) {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: '/welcome',
+      initialLocation: '/splash',
       redirect: (context, state) {
         final isAuthenticated = ref.watch(isAuthenticatedProvider);
         final authState = ref.watch(authStateProvider);
-
-        // IMPORTANT: Use currentUserProvider for fresh in-memory user state
-        // This ensures role selection changes are immediately reflected
         final currentUser = ref.watch(global_auth.currentUserProvider);
 
         final isOnPublicRoute = state.uri.path == '/welcome' ||
@@ -293,7 +291,7 @@ class AppRouter {
             state.uri.path == '/help-center' ||
             state.uri.path == '/role-selection';
 
-        // While auth state is loading, stay on splash/welcome
+        // While auth state is loading, stay on splash
         if (authState.isLoading) {
           if (!isOnPublicRoute) {
             return '/splash';
@@ -310,30 +308,25 @@ class AppRouter {
           return null;
         }
 
-        // Redirect to signin if not authenticated and not on public route
-        if (!isAuthenticated && !isOnPublicRoute) {
-          return '/signin';
+        // Unauthenticated users can access public authentication routes
+        if (!isAuthenticated) {
+          if (isOnPublicRoute) {
+            return null;
+          }
+          // Redirect to splash for unauthenticated users trying to access protected routes
+          return '/splash';
         }
 
-        // Only redirect to home if authenticated and on welcome route
-        // Allow authenticated users to navigate to signin/signup (maybe to switch accounts)
-        if (isAuthenticated && state.uri.path == '/welcome') {
-          return '/';
-        }
-
+        // AUTHENTICATED USER FLOW:
         // If authenticated but hasn't completed role selection, send to role-selection
-        // (unless they're already on it or on a public route)
-        // Use currentUser (fresh in-memory state) for role selection check
-        if (isAuthenticated &&
-            currentUser != null &&
+        if (currentUser != null &&
             !currentUser.roleSelectionCompleted &&
             !isOnPublicRoute) {
           return '/role-selection';
         }
 
         // Check role-based permissions for protected routes
-        // Use currentUser for role-based permission checks
-        if (isAuthenticated && currentUser != null && !isOnPublicRoute) {
+        if (currentUser != null && !isOnPublicRoute) {
           final currentPath = state.uri.path;
           final userRolesSet = currentUser.roles.toSet();
 
@@ -1792,6 +1785,14 @@ class AppRouter {
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) {
             return const AnalyticsDashboardScreen();
+          },
+        ),
+        GoRoute(
+          path: '/start-selling',
+          name: 'start-selling',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            return const StartSellingScreen();
           },
         ),
       ],

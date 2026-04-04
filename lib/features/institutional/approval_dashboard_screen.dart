@@ -164,8 +164,8 @@ class _ApprovalDashboardScreenState
                 ),
                 // Budget Verification Section
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -220,8 +220,8 @@ class _ApprovalDashboardScreenState
                 ),
                 // Final Authorization Section
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -380,11 +380,30 @@ class _ApprovalDashboardScreenState
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _showPODetailsDialog(context, approval),
                   icon: const Icon(Icons.visibility),
                   label: const Text('View Details'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _approvePO(context, approval),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Approve'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _rejectPO(context, approval),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Reject'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
                   ),
                 ),
               ],
@@ -441,11 +460,30 @@ class _ApprovalDashboardScreenState
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _showBudgetDetailsDialog(context, approval),
                   icon: const Icon(Icons.visibility),
                   label: const Text('Review Budget'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _approveBudget(context, approval),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Approve'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _rejectBudget(context, approval),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Reject'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
                   ),
                 ),
               ],
@@ -502,17 +540,299 @@ class _ApprovalDashboardScreenState
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _authorizeAndApprovePO(context, approval),
                   icon: const Icon(Icons.lock_open),
-                  label: const Text('Authorize'),
+                  label: const Text('Authorize & Approve'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _rejectAuthorization(context, approval),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Reject'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
                   ),
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // APPROVAL ACTION HANDLERS
+  // ============================================================================
+
+  void _showPODetailsDialog(BuildContext context, POApprovalWorkflow approval) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('PO Details - ${approval.poId}'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _DetailRow('PO Number:', approval.poId),
+              _DetailRow('Created Date:', '2026-04-03'),
+              _DetailRow('Vendor:', 'Agricultural Supplies Co.'),
+              _DetailRow('Total Amount:', '₦250,000'),
+              _DetailRow('Items Count:', '24 items'),
+              _DetailRow('Status:', 'Pending Approval'),
+              _DetailRow('Description:', 'Premium rice bulk order'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBudgetDetailsDialog(
+      BuildContext context, POApprovalWorkflow approval) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Budget Review - ${approval.poId}'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _DetailRow('PO Number:', approval.poId),
+              _DetailRow('Total Budget:', '₦500,000'),
+              _DetailRow('Requested Amount:', '₦250,000'),
+              _DetailRow('Budget Available:', '₦380,500'),
+              _DetailRow('Budget Status:', 'OK - Within Limits'),
+              _DetailRow('Department:', 'Procurement'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _approvePO(BuildContext context, POApprovalWorkflow approval) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Approve PO'),
+        content: Text(
+          'Approve PO ${approval.poId}?\n\nThis will move the PO to the next approval stage.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('PO ${approval.poId} approved successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _rejectPO(BuildContext context, POApprovalWorkflow approval) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject PO'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Reject PO ${approval.poId}?'),
+            const SizedBox(height: 16),
+            const Text('Rejection Reason:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Enter reason for rejection',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('PO ${approval.poId} rejected'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _approveBudget(BuildContext context, POApprovalWorkflow approval) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Budget for PO ${approval.poId} approved'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _rejectBudget(BuildContext context, POApprovalWorkflow approval) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Budget'),
+        content: Text('Reject budget for PO ${approval.poId}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Budget for PO ${approval.poId} rejected'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _authorizeAndApprovePO(
+      BuildContext context, POApprovalWorkflow approval) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Final Authorization'),
+        content: Text(
+          'Authorize and approve PO ${approval.poId}?\n\nThis is the final approval step. The order will be sent to the vendor.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('PO ${approval.poId} authorized and approved!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Authorize'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _rejectAuthorization(BuildContext context, POApprovalWorkflow approval) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Authorization'),
+        content: Text('Reject authorization for PO ${approval.poId}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content:
+                      Text('Authorization for PO ${approval.poId} rejected'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Helper widget to display detail rows
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DetailRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
+        ],
       ),
     );
   }

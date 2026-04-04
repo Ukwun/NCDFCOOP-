@@ -9,6 +9,7 @@ import 'package:coop_commerce/core/providers/order_providers.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
 import 'package:coop_commerce/core/services/payment_processing_service.dart';
+import 'package:coop_commerce/providers/inventory_providers.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -90,6 +91,38 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     ref.read(checkoutStateProvider.notifier).setLoading(true);
 
     try {
+      // Step 0: Validate inventory before proceeding
+      debugPrint('📦 Validating inventory...');
+      final inventoryService = ref.read(inventoryWarningServiceProvider);
+
+      // Create a map of product IDs to quantities from cart
+      final cartMap = <String, int>{};
+      for (final item in cart.items) {
+        cartMap[item.productId] = item.quantity;
+      }
+
+      // Validate all items in cart have sufficient stock
+      final isInventoryValid =
+          await inventoryService.validateCartInventory(cartMap);
+
+      if (!isInventoryValid) {
+        debugPrint('❌ Inventory validation failed');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  '⚠️ Some items in your cart are no longer available. Please review and try again.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        ref.read(checkoutStateProvider.notifier).setLoading(false);
+        return;
+      }
+
+      debugPrint('✅ Inventory validation passed');
+
       // Step 1: Create order via order fulfillment service
       final fulfillmentService = ref.read(orderFulfillmentServiceProvider);
 

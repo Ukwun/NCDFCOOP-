@@ -301,37 +301,225 @@ class MemberHomeScreen extends ConsumerWidget {
     final totalSpent = data?.totalSpent ?? 0.0;
     final savingsPercentage = data?.discountPercentage ?? 5.0;
     final estimatedSavings = totalSpent * (savingsPercentage / 100);
+    final savingsGoal = 50000.0; // Example goal: ₦50,000
+    final currentSavings = estimatedSavings; // Current accumulated savings
+    final goalProgress = (currentSavings / savingsGoal * 100).clamp(0, 100);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        children: [
+          // SAVINGS CARDS - Stats
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _SavingsCard(
+                  label: 'Total Spent',
+                  value: '₦${(totalSpent).toStringAsFixed(0)}',
+                  icon: Icons.shopping_bag_outlined,
+                ),
+                _SavingsCard(
+                  label: 'Saved This Year',
+                  value: '₦${estimatedSavings.toStringAsFixed(0)}',
+                  icon: Icons.trending_up,
+                  color: Colors.green,
+                ),
+                _SavingsCard(
+                  label: 'Discount Rate',
+                  value: '${savingsPercentage.toStringAsFixed(0)}%',
+                  icon: Icons.local_offer_outlined,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // SAVINGS GOAL TRACKER
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.green.shade600, Colors.green.shade700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Savings Goal',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '₦${savingsGoal.toStringAsFixed(0)}',
+                          style: AppTextStyles.h2.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${goalProgress.toStringAsFixed(0)}%',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Progress Bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: goalProgress / 100,
+                    minHeight: 8,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.greenAccent.shade400,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Goal Status
+                Text(
+                  'You have saved ₦${currentSavings.toStringAsFixed(0)} towards your goal',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // DEPOSIT MONEY BUTTON - PROMINENT ACTION
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // Show deposit dialog
+                _showDepositDialog(context);
+              },
+              icon: const Icon(Icons.add_circle, size: 20),
+              label: const Text(
+                'Deposit Money to Savings',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDepositDialog(BuildContext context) {
+    final depositController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Deposit to Savings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _SavingsCard(
-              label: 'Total Spent',
-              value: '₦${(totalSpent).toStringAsFixed(0)}',
-              icon: Icons.shopping_bag_outlined,
+            TextField(
+              controller: depositController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Amount (₦)',
+                prefixText: '₦',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                hintText: '5,000',
+              ),
             ),
-            _SavingsCard(
-              label: 'Saved This Year',
-              value: '₦${estimatedSavings.toStringAsFixed(0)}',
-              icon: Icons.trending_up,
-              color: Colors.green,
-            ),
-            _SavingsCard(
-              label: 'Discount Rate',
-              value: '${savingsPercentage.toStringAsFixed(0)}%',
-              icon: Icons.local_offer_outlined,
+            const SizedBox(height: 16),
+            Text(
+              'Funds will be secured in your savings account',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.grey,
+              ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(depositController.text) ?? 0;
+              if (amount > 0) {
+                // TODO: Call deposit API
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content:
+                        Text('Depositing ₦${amount.toStringAsFixed(0)}...'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+            ),
+            child: const Text('Confirm Deposit'),
+          ),
+        ],
       ),
     );
   }
@@ -339,39 +527,89 @@ class MemberHomeScreen extends ConsumerWidget {
   Widget _buildLoyaltyActionsGrid(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => context.pushNamed('my-rewards'),
-              child: _ActionButton(
-                icon: Icons.card_giftcard,
-                label: 'Redeem\nRewards',
-                color: Colors.amber,
+          // Row 1: Rewards, Benefits, Refer
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.pushNamed('my-rewards'),
+                  child: _ActionButton(
+                    icon: Icons.card_giftcard,
+                    label: 'Redeem\nRewards',
+                    color: Colors.amber,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.pushNamed('member-benefits'),
+                  child: _ActionButton(
+                    icon: Icons.star,
+                    label: 'Your\nBenefits',
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.pushNamed('member-loyalty'),
+                  child: _ActionButton(
+                    icon: Icons.people_alt_outlined,
+                    label: 'Refer &\nEarn',
+                    color: Colors.purple,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => context.pushNamed('member-benefits'),
-              child: _ActionButton(
-                icon: Icons.star,
-                label: 'Your\nBenefits',
-                color: AppColors.primary,
+          const SizedBox(height: 12),
+
+          // Row 2: Quick Deposit and Withdrawal
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _showDepositDialog(context),
+                  child: _ActionButton(
+                    icon: Icons.add_circle_outline,
+                    label: 'Quick\nDeposit',
+                    color: Colors.green,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => context.pushNamed('member-loyalty'),
-              child: _ActionButton(
-                icon: Icons.people_alt_outlined,
-                label: 'Refer &\nEarn',
-                color: Colors.purple,
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Withdrawal feature coming soon'),
+                      ),
+                    );
+                  },
+                  child: _ActionButton(
+                    icon: Icons.remove_circle_outline,
+                    label: 'Quick\nWithdraw',
+                    color: Colors.orange,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.pushNamed('member-savings'),
+                  child: _ActionButton(
+                    icon: Icons.trending_up,
+                    label: 'My\nSavings',
+                    color: Colors.teal,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -425,7 +663,7 @@ class MemberHomeScreen extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () => context.pushNamed('member-benefits'),
+              onTap: () => context.pushNamed('member-voting'),
               child: Text(
                 'Vote',
                 style: AppTextStyles.bodySmall.copyWith(
@@ -463,7 +701,7 @@ class MemberHomeScreen extends ConsumerWidget {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => context.pushNamed('member-benefits'),
+                  onTap: () => context.pushNamed('member-transparency'),
                   child: Text(
                     'View All',
                     style: AppTextStyles.bodySmall.copyWith(

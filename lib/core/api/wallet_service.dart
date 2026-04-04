@@ -82,9 +82,7 @@ class WalletService {
 
       // Get or initialize wallet
       var wallet = await getWallet(userId);
-      if (wallet == null) {
-        wallet = await initializeWallet(userId);
-      }
+      wallet ??= await initializeWallet(userId);
 
       // Create transaction record
       final transactionRef =
@@ -113,7 +111,7 @@ class WalletService {
 
         // Update wallet balance
         final newBalance = wallet!.balance + amount;
-        await txn.update(
+        txn.update(
           _firestore.collection(walletsCollection).doc(userId),
           {
             'balance': newBalance,
@@ -195,7 +193,7 @@ class WalletService {
 
         // Deduct from balance
         final newBalance = currentBalance - amount;
-        await txn.update(walletRef, {
+        txn.update(walletRef, {
           'balance': newBalance,
           'lastTransactionAt': FieldValue.serverTimestamp(),
         });
@@ -261,7 +259,7 @@ class WalletService {
         });
 
         // Deduct from wallet
-        await txn.update(walletRef, {
+        txn.update(walletRef, {
           'balance': FieldValue.increment(-amount),
           'totalSpent': FieldValue.increment(amount),
           'lastTransactionAt': FieldValue.serverTimestamp(),
@@ -323,7 +321,7 @@ class WalletService {
         });
 
         // Credit to balance
-        await txn.update(
+        txn.update(
           _firestore.collection(walletsCollection).doc(userId),
           {
             'balance': FieldValue.increment(amount),
@@ -387,7 +385,7 @@ class WalletService {
         });
 
         // Deduct from wallet
-        await txn.update(
+        txn.update(
           _firestore.collection(walletsCollection).doc(userId),
           {
             'balance': FieldValue.increment(-amount),

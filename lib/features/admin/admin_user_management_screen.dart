@@ -36,7 +36,7 @@ final userListProvider = FutureProvider<List<UserAccount>>((ref) async {
       name: 'John Doe',
       email: 'john@coop.com',
       phone: '08012345678',
-      roles: [UserRole.consumer, UserRole.coopMember],
+      roles: [UserRole.wholesaleBuyer, UserRole.coopMember],
       isActive: true,
       createdAt: DateTime(2025, 6, 15),
       lastLogin: DateTime.now().subtract(const Duration(days: 2)),

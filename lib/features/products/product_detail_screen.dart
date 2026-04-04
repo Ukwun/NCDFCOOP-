@@ -10,6 +10,9 @@ import 'package:coop_commerce/providers/cart_provider.dart';
 import 'package:coop_commerce/providers/wishlist_provider.dart' as wl;
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/providers/user_activity_providers.dart';
+import 'package:coop_commerce/providers/inventory_providers.dart';
+import 'package:coop_commerce/core/services/inventory_warning_service.dart'
+    show InventoryStatus;
 
 /// Product Detail Screen - Shows full product information with real data
 class ProductDetailScreen extends ConsumerStatefulWidget {
@@ -200,48 +203,237 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  // Add to Cart Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        // Log add to cart activity
-                        try {
-                          final activityLogger =
-                              ref.read(activityLoggerProvider.notifier);
-                          await activityLogger.logAddToCart(
-                            productId: widget.productId,
-                            productName: product['name'] ?? 'Unknown',
-                            category: product['category'] ?? 'Uncategorized',
-                            price: (product['price'] as num?)?.toDouble() ?? 0,
-                            quantity: quantity,
-                          );
-                          debugPrint('✅ Add to cart logged');
-                        } catch (e) {
-                          debugPrint('⚠️ Failed to log add to cart: $e');
-                        }
+                  // Inventory Status Widget
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final stockLevel = ref.watch(
+                        realtimeStockProvider(widget.productId),
+                      );
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                '${product['name']} (x$quantity) added to cart'),
-                            duration: const Duration(seconds: 2),
+                      return stockLevel.when(
+                        data: (stock) {
+                          final service = ref.read(
+                            inventoryWarningServiceProvider,
+                          );
+                          final status = service.getInventoryStatus(stock);
+                          final message = service.getStockMessage(stock);
+                          final isAvailable =
+                              service.isAvailableForPurchase(stock);
+
+                          // Determine color based on status
+                          Color statusColor;
+                          switch (status) {
+                            case InventoryStatus.available:
+                              statusColor = const Color(0xFF10B981); // Green
+                              break;
+                            case InventoryStatus.low:
+                              statusColor = const Color(0xFFF59E0B); // Amber
+                              break;
+                            case InventoryStatus.criticalLow:
+                              statusColor = Colors.red;
+                              break;
+                            case InventoryStatus.outOfStock:
+                              statusColor = Colors.red.shade900;
+                              break;
+                          }
+
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              border: Border.all(color: statusColor),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isAvailable
+                                      ? Icons.check_circle
+                                      : Icons.block,
+                                  color: statusColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    message,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        loading: () => Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text(
-                        'Add to Cart',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          child: const SizedBox(
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                        error: (err, stack) => Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            border: Border.all(color: Colors.orange),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '⚠️ Unable to check stock',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  // Add to Cart Button with Inventory Validation
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final stockLevel = ref.watch(
+                        realtimeStockProvider(widget.productId),
+                      );
+
+                      return stockLevel.when(
+                        data: (stock) {
+                          final isAvailable = stock > 0;
+                          final canAddQuantity = stock >= quantity;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(
+                                height: 50,
+                                child: ElevatedButton(
+                                  onPressed: isAvailable && canAddQuantity
+                                      ? () async {
+                                          // Log add to cart activity
+                                          try {
+                                            final activityLogger = ref.read(
+                                              activityLoggerProvider.notifier,
+                                            );
+                                            await activityLogger.logAddToCart(
+                                              productId: widget.productId,
+                                              productName:
+                                                  product['name'] ?? 'Unknown',
+                                              category: product['category'] ??
+                                                  'Uncategorized',
+                                              price: (product['price'] as num?)
+                                                      ?.toDouble() ??
+                                                  0,
+                                              quantity: quantity,
+                                            );
+                                            debugPrint(
+                                              '✅ Add to cart logged',
+                                            );
+                                          } catch (e) {
+                                            debugPrint(
+                                              '⚠️ Failed to log add to cart: $e',
+                                            );
+                                          }
+
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${product['name']} (x$quantity) added to cart',
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 2,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        isAvailable && canAddQuantity
+                                            ? AppColors.primary
+                                            : Colors.grey[400],
+                                    disabledBackgroundColor: Colors.grey[400],
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isAvailable && canAddQuantity
+                                        ? 'Add to Cart'
+                                        : (isAvailable
+                                            ? 'Quantity exceeds stock'
+                                            : 'Out of Stock'),
+                                    style: TextStyle(
+                                      color: isAvailable && canAddQuantity
+                                          ? Colors.white
+                                          : Colors.grey[600],
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (!canAddQuantity && isAvailable)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    'Only $stock available. Please reduce quantity.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange[700],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                        loading: () => SizedBox(
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            onPressed: null,
+                            icon: const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            label: const Text('Checking stock...'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[400],
+                              disabledBackgroundColor: Colors.grey[400],
+                            ),
+                          ),
+                        ),
+                        error: (err, stack) => SizedBox(
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[400],
+                              disabledBackgroundColor: Colors.grey[400],
+                            ),
+                            child: const Text(
+                              'Unable to check stock',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
                   // Description

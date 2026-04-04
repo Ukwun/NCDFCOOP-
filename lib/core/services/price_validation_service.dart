@@ -149,6 +149,7 @@ class PriceValidationService {
       UserRole.coopMember => product.retailPrice * 0.95, // 5% member discount
       UserRole.premiumMember =>
         product.retailPrice * 0.90, // 10% premium member discount
+      UserRole.seller => product.wholesalePrice,
       UserRole.franchiseOwner => product.wholesalePrice,
       UserRole.storeManager => product.wholesalePrice,
       UserRole.storeStaff => product.wholesalePrice,

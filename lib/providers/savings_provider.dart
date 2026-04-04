@@ -1,4 +1,4 @@
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/savings_models.dart';
 import '../../core/api/savings_service.dart';
 

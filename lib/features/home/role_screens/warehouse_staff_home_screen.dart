@@ -27,7 +27,7 @@ class WarehouseStaffHomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: Colors.grey[600]),
-            onPressed: () {},
+            onPressed: () => context.pushNamed('notifications'),
           ),
         ],
       ),
@@ -99,25 +99,36 @@ class WarehouseStaffHomeScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: qcPendingCount.when(
-                data: (count) => _TaskCard(
-                  title: 'Quality Check',
-                  count: '$count items pending',
-                  priority: 'High',
-                  onTap: () => context.push('/warehouse/qc'),
-                ),
-                loading: () => _TaskCard(
-                  title: 'Quality Check',
-                  count: 'Loading...',
-                  priority: 'High',
-                  onTap: () {},
-                ),
-                error: (_, __) => _TaskCard(
-                  title: 'Quality Check',
-                  count: 'Error',
-                  priority: 'High',
-                  onTap: () {},
-                ),
+              child: Column(
+                children: [
+                  qcPendingCount.when(
+                    data: (count) => _TaskCard(
+                      title: 'Quality Check',
+                      count: '$count items pending',
+                      priority: 'High',
+                      onTap: () => context.push('/warehouse/qc'),
+                    ),
+                    loading: () => _TaskCard(
+                      title: 'Quality Check',
+                      count: 'Loading...',
+                      priority: 'High',
+                      onTap: () {},
+                    ),
+                    error: (_, __) => _TaskCard(
+                      title: 'Quality Check',
+                      count: 'Error',
+                      priority: 'High',
+                      onTap: () {},
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _TaskCard(
+                    title: 'View All Tasks',
+                    count: 'Manage priority assignments',
+                    priority: 'Normal',
+                    onTap: () => context.pushNamed('warehouse-priority-tasks'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),

@@ -14,7 +14,7 @@ enum UserRole {
   FRANCHISE_STAFF, // Franchise store operations
   INSTITUTION_ADMIN, // Institutional account admin
   INSTITUTION_BUYER, // Institutional buyer
-  CONSUMER, // Individual consumer
+  WHOLESALE_BUYER, // Individual buyer (formerly CONSUMER)
   SUPPORT_AGENT, // Customer support
 }
 
@@ -156,7 +156,7 @@ final rolePermissionsMap = {
     Permission.view_order,
     Permission.view_contract_pricing,
   },
-  UserRole.CONSUMER: {
+  UserRole.WHOLESALE_BUYER: {
     Permission.create_order,
     Permission.view_order,
     Permission.cancel_order,
@@ -190,7 +190,7 @@ class UserContext {
     final roleStr = data['role'] as String;
     final role = UserRole.values.firstWhere(
       (r) => r.toString().split('.')[1] == roleStr,
-      orElse: () => UserRole.CONSUMER,
+      orElse: () => UserRole.WHOLESALE_BUYER,
     );
 
     return UserContext(

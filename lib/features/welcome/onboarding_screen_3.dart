@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/features/welcome/auth_provider.dart';
 
-class OnboardingScreen3 extends StatelessWidget {
+class OnboardingScreen3 extends ConsumerWidget {
   const OnboardingScreen3({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -49,166 +51,186 @@ class OnboardingScreen3 extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
 
-                  // Main Text
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: Column(
-                      children: [
-                        RichText(
-                          textAlign: TextAlign.center,
-                          text: const TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Multiple Ways to ',
-                                style: TextStyle(
-                                  color: Color(0xFFFAFAFA),
-                                  fontSize: 32,
-                                  fontFamily: 'Libre Baskerville',
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.2,
+                    // Main Text
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                      child: Column(
+                        children: [
+                          RichText(
+                            textAlign: TextAlign.center,
+                            text: const TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Unlock Wholesale ',
+                                  style: TextStyle(
+                                    color: Color(0xFFFAFAFA),
+                                    fontSize: 32,
+                                    fontFamily: 'Libre Baskerville',
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                  ),
                                 ),
-                              ),
-                              TextSpan(
-                                text: 'grow',
-                                style: TextStyle(
-                                  color: Color(0xFFF3951A),
-                                  fontSize: 32,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Libre Baskerville',
-                                  fontWeight: FontWeight.w400,
-                                  height: 1.2,
+                                TextSpan(
+                                  text: 'Power',
+                                  style: TextStyle(
+                                    color: Color(0xFFF3951A),
+                                    fontSize: 32,
+                                    fontStyle: FontStyle.italic,
+                                    fontFamily: 'Libre Baskerville',
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.2,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFFFFFFFF).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFFF3951A)
-                                  .withValues(alpha: 0.3),
-                              width: 1,
+                              ],
                             ),
                           ),
-                          padding: const EdgeInsets.all(12),
-                          child: const Column(
-                            children: [
-                              _RoleOption(
-                                icon: Icons.shopping_bag,
-                                title: 'Shop Retail',
-                                subtitle: 'Find great deals as a consumer',
+                          const SizedBox(height: 16),
+                          const Text(
+                            'As a member, gain direct access to wholesale prices, bulk deals, and exclusive supply channels designed to maximize your profit.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFFCCCCCC),
+                              fontSize: 13,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFFFF)
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFF3951A)
+                                    .withValues(alpha: 0.3),
+                                width: 1,
                               ),
-                              SizedBox(height: 10),
-                              _RoleOption(
-                                icon: Icons.store,
-                                title: 'Be a Franchisee',
-                                subtitle: 'Own your own store with our support',
-                              ),
-                              SizedBox(height: 10),
-                              _RoleOption(
-                                icon: Icons.business,
-                                title: 'Institutional Buying',
-                                subtitle: 'Bulk orders for organizations',
-                              ),
-                            ],
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: const Column(
+                              children: [
+                                _RoleOption(
+                                  icon: Icons.shopping_bag,
+                                  title: 'Shop Retail',
+                                  subtitle: 'Find great deals as a consumer',
+                                ),
+                                SizedBox(height: 10),
+                                _RoleOption(
+                                  icon: Icons.store,
+                                  title: 'Be a Franchisee',
+                                  subtitle:
+                                      'Own your own store with our support',
+                                ),
+                                SizedBox(height: 10),
+                                _RoleOption(
+                                  icon: Icons.business,
+                                  title: 'Institutional Buying',
+                                  subtitle: 'Bulk orders for organizations',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Join a community of entrepreneurs and smart shoppers',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFFCCCCCC),
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Indicators
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1A4E00),
+                            shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Join a community of entrepreneurs and smart shoppers',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xFFCCCCCC),
-                            fontSize: 12,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1A4E00),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 50,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF98D32A),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ],
                     ),
-                  ),
 
-                  const Spacer(),
+                    const SizedBox(height: 12),
 
-                  // Indicators
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF1A4E00),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF1A4E00),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 50,
-                        height: 10,
+                    // Get Started Button
+                    GestureDetector(
+                      onTap: () async {
+                        // Mark onboarding as completed
+                        await ref
+                            .read(authControllerProvider.notifier)
+                            .markOnboardingCompleted();
+                        // Navigate to sign-in screen to complete authentication
+                        // User can choose between sign-in or sign-up
+                        if (context.mounted) {
+                          context.go('/signin');
+                        }
+                      },
+                      child: Container(
+                        width: 280,
+                        height: 50,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF98D32A),
-                          borderRadius: BorderRadius.circular(10),
+                          color: const Color(0xFF1A4E00),
+                          borderRadius: BorderRadius.circular(50),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x3F000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Get Started Button
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to welcome screen (not signup directly)
-                      // Welcome will give user choice between login/signup
-                      context.go('/welcome');
-                    },
-                    child: Container(
-                      width: 280,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A4E00),
-                        borderRadius: BorderRadius.circular(50),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x3F000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 4),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Get Started',
+                          style: TextStyle(
+                            color: Color(0xFFFAFAFA),
+                            fontSize: 20,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
                           ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'Get Started',
-                        style: TextStyle(
-                          color: Color(0xFFFAFAFA),
-                          fontSize: 20,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
           ),

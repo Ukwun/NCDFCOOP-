@@ -29,7 +29,7 @@ class FranchiseOwnerHomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: Colors.grey[600]),
-            onPressed: () {},
+            onPressed: () => context.pushNamed('notifications'),
           ),
         ],
       ),

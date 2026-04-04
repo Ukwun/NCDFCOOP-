@@ -687,11 +687,13 @@ class OrderService {
       case auth_role.UserRole.superAdmin:
         return perm.UserRole.SUPER_ADMIN;
       case auth_role.UserRole.wholesaleBuyer:
-        return perm.UserRole.CONSUMER;
+        return perm.UserRole.WHOLESALE_BUYER;
       case auth_role.UserRole.coopMember:
-        return perm.UserRole.CONSUMER;
+        return perm.UserRole.WHOLESALE_BUYER;
       case auth_role.UserRole.premiumMember:
-        return perm.UserRole.CONSUMER;
+        return perm.UserRole.WHOLESALE_BUYER;
+      case auth_role.UserRole.seller:
+        return perm.UserRole.WHOLESALE_BUYER;
       case auth_role.UserRole.franchiseOwner:
         return perm.UserRole.FRANCHISE_OWNER;
       case auth_role.UserRole.deliveryDriver:

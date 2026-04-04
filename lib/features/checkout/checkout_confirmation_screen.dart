@@ -9,6 +9,7 @@ import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/providers/cart_provider.dart';
 import 'package:coop_commerce/core/services/payment_gateway_service.dart';
 import 'package:coop_commerce/providers/user_activity_providers.dart';
+import 'package:coop_commerce/services/payments/flutterwave_payment_button.dart';
 
 class CheckoutConfirmationScreen extends ConsumerWidget {
   const CheckoutConfirmationScreen({super.key});
@@ -81,15 +82,34 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
               ),
             ),
 
-            // Place order button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _handlePlaceOrder(context, ref, userId),
-                  child: const Text('Place Order'),
-                ),
+            // Payment button - handles real Paystack payment
+            orderCalcAsync.when(
+              data: (calculation) {
+                final customerName = user?.name ?? 'Customer';
+                final orderId =
+                    'order_${DateTime.now().millisecondsSinceEpoch}';
+
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  child: _buildPaymentButton(
+                    context: context,
+                    orderId: orderId,
+                    customerId: userId,
+                    customerEmail: user?.email ?? '',
+                    customerName: customerName,
+                    totalAmount: calculation.total,
+                  ),
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: CircularProgressIndicator(),
+              ),
+              error: (error, _) => Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: Text('Error loading payment: $error'),
               ),
             ),
           ],
@@ -392,6 +412,89 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// Helper method to build Flutterwave payment button widget
+  /// Supports both card payments and bank transfers
+  Widget _buildPaymentButton({
+    required BuildContext context,
+    required String orderId,
+    required String customerId,
+    required String customerEmail,
+    required String customerName,
+    required double totalAmount,
+  }) {
+    return FlutterwavePaymentButton(
+      orderId: orderId,
+      amount: totalAmount,
+      customerEmail: customerEmail,
+      customerName: customerName,
+      phoneNumber: '+234', // Will be updated with actual phone number
+      customerId: customerId,
+      onPaymentInitiated: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🔄 Processing payment...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+      onCardPaymentSuccess: (reference) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('✅ Card payment successful! Your order is confirmed.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // The webhook will confirm the order
+        // Navigate to success screen after short delay
+        Future.delayed(const Duration(seconds: 2), () {
+          if (context.mounted) {
+            context.go(
+              '/payment-success',
+              extra: {
+                'orderId': orderId,
+                'transactionId': reference,
+                'amount': totalAmount,
+              },
+            );
+          }
+        });
+      },
+      onBankTransferDetails: (bankDetails) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                '💳 Bank transfer initiated. Complete the transfer to confirm your order.'),
+            backgroundColor: Colors.blue,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        // Navigate to bank transfer confirmation screen
+        Future.delayed(const Duration(seconds: 2), () {
+          if (context.mounted) {
+            context.go(
+              '/bank-transfer-pending',
+              extra: {
+                'orderId': orderId,
+                'amount': totalAmount,
+                'bankDetails': bankDetails,
+              },
+            );
+          }
+        });
+      },
+      onPaymentFailed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Payment cancelled or failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
     );
   }
 

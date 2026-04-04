@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/services/inventory_management_service.dart';
 import 'package:coop_commerce/models/inventory_models.dart';
+import 'package:coop_commerce/core/services/inventory_warning_service.dart';
 
 // ==================== Providers ====================
 
@@ -296,6 +297,68 @@ final inventoryDashboardStatsProvider = FutureProvider((ref) async {
     lowStockItems: lowStockCount,
     criticalAlerts: criticalAlertCount,
   );
+});
+
+// ==================== INVENTORY WARNINGS FOR SHOPPING ====================
+
+/// Inventory warning service provider
+final inventoryWarningServiceProvider = Provider((ref) {
+  return InventoryWarningService();
+});
+
+/// Get stock level for a single product
+final stockLevelProvider =
+    FutureProvider.family<int, String>((ref, productId) async {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.getStockLevel(productId);
+});
+
+/// Watch real-time stock level for a product
+final realtimeStockProvider =
+    StreamProvider.family<int, String>((ref, productId) {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.watchStockLevel(productId);
+});
+
+/// Get inventory status (available, low, critical, out of stock)
+final inventoryStatusProvider =
+    Provider.family<InventoryStatus?, int>((ref, stock) {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.getInventoryStatus(stock);
+});
+
+/// Get stock message (user-friendly text)
+final stockMessageProvider = Provider.family<String, int>((ref, stock) {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.getStockMessage(stock);
+});
+
+/// Check if product is available for purchase
+final isProductAvailableProvider = Provider.family<bool, int>((ref, stock) {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.isAvailableForPurchase(stock);
+});
+
+/// Check if user can add specific quantity to cart
+final canAddQuantityProvider =
+    Provider.family<bool, (int stock, int quantity)>((ref, params) {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.canAddToCart(params.$1, params.$2);
+});
+
+/// Validate entire cart inventory before checkout
+final validateCartInventoryProvider =
+    FutureProvider.family<bool, Map<String, int>>((ref, cartItems) async {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.validateCartInventory(cartItems);
+});
+
+/// Get bulk stock levels
+final bulkStockLevelsProvider =
+    FutureProvider.family<Map<String, int>, List<String>>(
+        (ref, productIds) async {
+  final service = ref.watch(inventoryWarningServiceProvider);
+  return service.getBulkStockLevels(productIds);
 });
 
 /// Dashboard Statistics Model

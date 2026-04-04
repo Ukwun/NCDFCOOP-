@@ -33,12 +33,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     _animationController.forward();
 
-    // Navigate to splash screen after 5 seconds
-    _navigationTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) {
-        context.go('/splash');
-      }
-    });
+    // Don't auto-navigate - wait for user to select membership type
+    // User should make a conscious choice, not be auto-redirected
   }
 
   @override

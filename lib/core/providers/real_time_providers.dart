@@ -149,7 +149,7 @@ final contractPricingUpdatesProvider =
 /// Real-time product inventory status for display badges
 /// Shows low stock warning when stock < 10, out of stock when stock = 0
 final productInventoryStatusProvider =
-    StreamProvider.autoDispose.family<InventoryStatus, String>(
+    StreamProvider.autoDispose.family<ProductInventoryStatusData, String>(
   (ref, productId) {
     final firestore = FirebaseFirestore.instance;
 
@@ -159,7 +159,7 @@ final productInventoryStatusProvider =
         .snapshots()
         .map((snapshot) {
       if (!snapshot.exists) {
-        return InventoryStatus(
+        return ProductInventoryStatusData(
           productId: productId,
           stock: 0,
           status: 'out_of_stock',
@@ -176,7 +176,7 @@ final productInventoryStatusProvider =
         status = 'low_stock';
       }
 
-      return InventoryStatus(
+      return ProductInventoryStatusData(
         productId: productId,
         stock: stock,
         status: status,
@@ -429,14 +429,15 @@ class InventorySyncUpdate {
   });
 }
 
-/// Product inventory status for real-time display badges
-class InventoryStatus {
+/// Product inventory status class for real-time tracking
+/// Different from the InventoryStatus enum in inventory_warning_service.dart
+class ProductInventoryStatusData {
   final String productId;
   final int stock;
   final String status; // 'in_stock', 'low_stock', 'out_of_stock'
   final DateTime? lastUpdated;
 
-  InventoryStatus({
+  ProductInventoryStatusData({
     required this.productId,
     required this.stock,
     required this.status,

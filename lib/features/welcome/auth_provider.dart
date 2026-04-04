@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api/auth_service.dart';
 import '../../core/api/service_locator.dart';
 import '../../core/auth/user_persistence.dart';
@@ -19,6 +20,13 @@ final authServiceProvider = Provider<AuthService>((ref) {
 final authStateProvider = StreamProvider<User?>((ref) {
   final authService = ref.watch(authServiceProvider);
   return authService.authStateChanges;
+});
+
+/// Provider to check if user has completed onboarding
+/// This is checked from SharedPreferences, independent of authentication state
+final onboardingCompletedProvider = FutureProvider<bool>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool('onboarding_completed') ?? false;
 });
 
 /// Controller for Auth UI logic
@@ -66,7 +74,7 @@ class AuthController extends AsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final user = await _authService.register(
+      var user = await _authService.register(
         RegisterRequest(name: '', email: email, password: password),
         rememberMe: rememberMe,
       );
@@ -88,7 +96,7 @@ class AuthController extends AsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final user = await _authService.register(
+      var user = await _authService.register(
         RegisterRequest(
           name: '',
           email: email,
@@ -113,7 +121,7 @@ class AuthController extends AsyncNotifier<void> {
   Future<void> signInWithGoogle() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final user = await _authService.signInWithGoogle(rememberMe: true);
+      var user = await _authService.signInWithGoogle(rememberMe: true);
       // Save user to persistent secure storage
       await UserPersistence.saveUser(user);
       // Log login activity
@@ -126,7 +134,7 @@ class AuthController extends AsyncNotifier<void> {
   Future<void> signInWithFacebook() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final user = await _authService.signInWithFacebook(rememberMe: true);
+      var user = await _authService.signInWithFacebook(rememberMe: true);
       // Save user to persistent secure storage
       await UserPersistence.saveUser(user);
       // Log login activity
@@ -139,12 +147,37 @@ class AuthController extends AsyncNotifier<void> {
   Future<void> signInWithApple() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final user = await _authService.signInWithApple(rememberMe: true);
+      var user = await _authService.signInWithApple(rememberMe: true);
       // Save user to persistent secure storage
       await UserPersistence.saveUser(user);
       // Log login activity
       await ref.read(activityLoggerProvider.notifier).logLogin(user.email);
       ref.read(global_auth.currentUserProvider.notifier).setUser(user);
+      return;
+    });
+  }
+
+  /// Mark onboarding as completed (called when user clicks "Get Started" button)
+  Future<void> markOnboardingCompleted() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      // Save onboarding completed flag to SharedPreferences
+      // This way new users can complete onboarding before creating an account
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_completed', true);
+      print('✅ Onboarding marked as completed in SharedPreferences');
+
+      // Invalidate the provider cache so the router picks up the new value
+      ref.invalidate(onboardingCompletedProvider);
+
+      // Also update currentUser if one exists
+      final localUserStorage = await UserPersistence.getUser();
+      if (localUserStorage != null) {
+        final updatedUser =
+            localUserStorage.copyWith(onboardingCompleted: true);
+        await UserPersistence.saveUser(updatedUser);
+        ref.read(global_auth.currentUserProvider.notifier).setUser(updatedUser);
+      }
       return;
     });
   }

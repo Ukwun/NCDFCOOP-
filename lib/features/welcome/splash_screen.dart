@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
+import 'package:coop_commerce/features/welcome/auth_provider.dart';
+import 'package:coop_commerce/providers/auth_provider.dart' as global_auth;
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
@@ -33,12 +36,31 @@ class _SplashScreenState extends State<SplashScreen>
     // Start animation
     _controller.forward();
 
-    // Navigate to onboarding screen after 5 seconds
-    Timer(const Duration(seconds: 5), () {
+    // Navigate after 2 seconds based on auth status
+    Timer(const Duration(seconds: 2), () {
       if (mounted) {
-        context.go('/onboarding');
+        _navigateBasedOnAuthStatus();
       }
     });
+  }
+
+  void _navigateBasedOnAuthStatus() {
+    final isAuthenticated = ref.read(isAuthenticatedProvider);
+    final currentUser = ref.read(global_auth.currentUserProvider);
+
+    if (isAuthenticated && currentUser != null) {
+      // User is authenticated
+      if (!currentUser.roleSelectionCompleted) {
+        // Role not selected yet, go to role selection
+        context.go('/role-selection');
+      } else {
+        // Role selected, go to home
+        context.go('/');
+      }
+    } else {
+      // User is not authenticated, show onboarding
+      context.go('/onboarding');
+    }
   }
 
   @override

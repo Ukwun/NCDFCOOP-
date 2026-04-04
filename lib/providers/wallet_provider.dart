@@ -1,4 +1,4 @@
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/wallet_models.dart';
 import '../../core/api/wallet_service.dart';
 

@@ -30,13 +30,7 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen> {
   }
 
   void _trackOrder() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('📍 Order tracking - coming soon'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-    // TODO: Navigate to order history with filter
+    context.push('/orders/tracking');
   }
 
   void _continueShopping() {
