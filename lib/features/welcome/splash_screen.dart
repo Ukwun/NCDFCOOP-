@@ -17,6 +17,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+  Timer? _navigationTimer;
+  Timer? _failsafeTimer;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -36,20 +39,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // Start animation
     _controller.forward();
 
-    // Navigate after 2 seconds based on auth status
-    Timer(const Duration(seconds: 2), () {
+    // Primary navigation after a short splash display
+    _navigationTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         _navigateBasedOnAuthStatus();
+      }
+    });
+
+    // Failsafe: never allow splash to hang indefinitely
+    _failsafeTimer = Timer(const Duration(seconds: 6), () {
+      if (mounted && !_hasNavigated) {
+        _hasNavigated = true;
+        context.go('/welcome');
       }
     });
   }
 
   void _navigateBasedOnAuthStatus() {
+    if (_hasNavigated) return;
+
     final isAuthenticated = ref.read(isAuthenticatedProvider);
     final currentUser = ref.read(global_auth.currentUserProvider);
 
-    if (isAuthenticated && currentUser != null) {
-      // User is authenticated
+    // Prefer persisted app user context first; Firebase stream can lag on some devices.
+    if (currentUser != null) {
+      _hasNavigated = true;
       if (!currentUser.roleSelectionCompleted) {
         // Role not selected yet, go to role selection
         context.go('/role-selection');
@@ -57,14 +71,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         // Role selected, go to home
         context.go('/');
       }
+      return;
+    }
+
+    if (isAuthenticated) {
+      _hasNavigated = true;
+      context.go('/');
     } else {
       // User is not authenticated, show onboarding
+      _hasNavigated = true;
       context.go('/onboarding');
     }
   }
 
   @override
   void dispose() {
+    _navigationTimer?.cancel();
+    _failsafeTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
