@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:coop_commerce/core/config/social_auth_config.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthException implements Exception {
@@ -24,7 +24,6 @@ class FirebaseAuthService {
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final FacebookAuth _facebookAuth = FacebookAuth.instance;
 
   // Stream of auth state changes
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
@@ -106,31 +105,15 @@ class FirebaseAuthService {
 
   // Facebook Sign In
   Future<User?> signInWithFacebook() async {
-    try {
-      final loginResult = await _facebookAuth.login();
-
-      if (loginResult.status == LoginStatus.cancelled) {
-        throw AuthException(message: 'Facebook sign-in cancelled by user');
-      }
-
-      if (loginResult.status == LoginStatus.failed) {
-        throw AuthException(
-          message: 'Facebook sign-in failed: ${loginResult.message}',
-        );
-      }
-
-      final token = loginResult.accessToken?.tokenString;
-      if (token == null) {
-        throw AuthException(message: 'Failed to get Facebook access token');
-      }
-
-      final credential = FacebookAuthProvider.credential(token);
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
-      return userCredential.user;
-    } on FirebaseAuthException catch (e) {
-      throw _handleFirebaseException(e);
+    if (!SocialAuthConfig.isFacebookConfigured) {
+      throw AuthException(
+        message: SocialAuthConfig.facebookUnavailableMessage,
+      );
     }
+    throw AuthException(
+      message: 'Facebook sign-in is temporarily unavailable on this build.',
+      code: 'facebook_unavailable',
+    );
   }
 
   // Apple Sign In
@@ -249,7 +232,6 @@ class FirebaseAuthService {
       await Future.wait([
         _firebaseAuth.signOut(),
         _googleSignIn.signOut(),
-        _facebookAuth.logOut(),
       ]);
     } catch (e) {
       throw AuthException(message: 'Failed to sign out: $e');

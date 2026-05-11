@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../models/seller_models.dart';
-import '../../services/seller_service.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/models/seller_models.dart';
+import '../../core/services/seller_service.dart';
 import 'seller_onboarding_context.dart';
 import 'screens/seller_onboarding_landing_screen.dart';
 import 'screens/seller_setup_screen.dart';
@@ -73,8 +74,8 @@ class _SellerOnboardingScreenState extends State<SellerOnboardingScreen> {
           businessName: _context.sellerProfile?.businessName ?? 'My Store',
           products: _products,
           onAddNewProduct: _handleAddNewProduct,
-          onProductTap: () {
-            // Product details navigation
+          onProductTap: (product) {
+            _openProductDetails(product);
           },
         );
       default:
@@ -180,6 +181,31 @@ class _SellerOnboardingScreenState extends State<SellerOnboardingScreen> {
 
   void _handleAddNewProduct() {
     _goToStep(3);
+  }
+
+  Future<void> _openProductDetails(SellerProduct product) async {
+    final productId = product.id;
+    if (productId == null || productId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This product cannot be opened yet.')),
+      );
+      return;
+    }
+
+    final didUpdate = await context.pushNamed<bool>(
+      'seller-product-detail-edit',
+      pathParameters: {'productId': productId},
+      extra: {'editable': true},
+    );
+
+    if (didUpdate == true && _context.sellerProfile?.id != null) {
+      final sellerId = _context.sellerProfile!.id!;
+      final latestProducts = await _sellerService.getProductsBySeller(sellerId);
+      if (!mounted) return;
+      setState(() {
+        _products = latestProducts;
+      });
+    }
   }
 
   void _goToStep(int step) {

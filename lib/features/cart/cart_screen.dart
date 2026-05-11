@@ -1,34 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/cart_provider.dart';
 
-class CartScreen extends ConsumerWidget {
+class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends ConsumerState<CartScreen> {
+  bool _requestedInitialLoad = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_requestedInitialLoad) {
+      return;
+    }
+
+    _requestedInitialLoad = true;
+    Future.microtask(() async {
+      final cartState = ref.read(cartProvider);
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (!cartState.isLoading &&
+          cartState.items.isEmpty &&
+          currentUser != null) {
+        await ref.read(cartProvider.notifier).initializeCart();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
     final cartNotifier = ref.read(cartProvider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: cartState.items.isEmpty
-          ? _buildEmptyCart()
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildHeader(context, cartState),
-                  _buildCartItems(context, ref, cartState, cartNotifier),
-                  const SizedBox(height: 20),
-                  _buildSummary(cartState),
-                  const SizedBox(height: 20),
-                  _buildCheckoutButton(context),
-                  const SizedBox(height: 80), // Bottom padding for nav bar
-                ],
-              ),
-            ),
+      body: cartState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : cartState.items.isEmpty
+              ? _buildEmptyCart()
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildHeader(context, cartState),
+                      _buildCartItems(context, ref, cartState, cartNotifier),
+                      const SizedBox(height: 20),
+                      _buildSummary(cartState),
+                      const SizedBox(height: 20),
+                      _buildCheckoutButton(context),
+                      const SizedBox(height: 80), // Bottom padding for nav bar
+                    ],
+                  ),
+                ),
     );
   }
 

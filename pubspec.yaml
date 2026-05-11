@@ -43,12 +43,12 @@ dependencies:
   crypto: ^3.0.3
   shared_preferences: ^2.2.2
   google_sign_in: ^6.2.1
-  flutter_facebook_auth: ^7.0.1
   sign_in_with_apple: ^7.0.1
   firebase_core: ^2.32.0
   firebase_auth: ^4.15.0
   cloud_firestore: ^4.17.4
   cloud_functions: ^4.6.0
+  firebase_app_check: ^0.2.2
   firebase_messaging: ^14.0.0
   firebase_analytics: ^10.8.0
   flutter_local_notifications: ^17.1.0

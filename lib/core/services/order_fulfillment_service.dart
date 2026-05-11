@@ -445,7 +445,7 @@ class OrderData {
 
     return OrderData(
       orderId: data['orderId'] as String,
-      buyerId: data['buyerId'] as String,
+      buyerId: (data['buyerId'] ?? data['userId'] ?? '') as String,
       items: itemsData
           .map((item) => OrderItem(
                 id: item['id'] as String,

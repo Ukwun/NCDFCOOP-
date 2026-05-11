@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coop_commerce/core/services/real_time_sync_service.dart';
@@ -71,12 +72,22 @@ final franchiseReorderCountProvider =
 
 /// Real-time pricing updates for items in cart
 /// Emits whenever pricing rules change (promotions, contract updates, etc.)
+/// Gracefully returns a no_change event on permission errors to avoid infinite retry loops.
 final cartPricingUpdatesProvider =
     StreamProvider.autoDispose.family<PricingUpdateEvent, List<String>>(
   (ref, productIds) {
+    if (productIds.isEmpty) {
+      return Stream.value(PricingUpdateEvent(
+        eventType: 'no_change',
+        affectedProducts: [],
+        timestamp: DateTime.now(),
+        description: 'No products to watch',
+      ));
+    }
+
     final firestore = FirebaseFirestore.instance;
 
-    // Watch for pricing rule changes
+    // Watch for pricing rule changes; handle permission errors gracefully
     return firestore
         .collection('pricing_rules_updates')
         .where('affectedProductIds', arrayContainsAny: productIds)
@@ -106,7 +117,14 @@ final cartPricingUpdatesProvider =
         newPrice: (data['newPrice'] as num?)?.toDouble(),
         promotionActive: data['promotionActive'] ?? false,
       );
-    });
+    }).handleError(
+      (error, stackTrace) {
+        // Log permission/access errors but allow the stream to complete gracefully
+        debugPrint(
+            '⚠️ cartPricingUpdatesProvider: Pricing updates unavailable ($error)');
+        // Don't re-throw; let stream end gracefully so provider returns initial loading state
+      },
+    );
   },
 );
 

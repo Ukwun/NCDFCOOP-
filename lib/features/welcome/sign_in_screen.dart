@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/core/config/social_auth_config.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'auth_provider.dart';
 
@@ -110,14 +111,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 if (isLoading)
                   const CircularProgressIndicator()
                 else ...[
-                  _SocialButton(
-                    icon: Icons.facebook,
-                    label: 'Continue with Facebook',
-                    onTap: () => ref
-                        .read(authControllerProvider.notifier)
-                        .signInWithFacebook(),
-                  ),
-                  const SizedBox(height: 16),
+                  if (SocialAuthConfig.isFacebookConfigured) ...[
+                    _SocialButton(
+                      icon: Icons.facebook,
+                      label: 'Continue with Facebook',
+                      onTap: () => ref
+                          .read(authControllerProvider.notifier)
+                          .signInWithFacebook(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _SocialButton(
                     icon: Icons.g_mobiledata,
                     label: 'Continue with Google',

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/models/member_models.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/member_providers.dart';
 
 /// Member Loyalty Points Screen - MVP with mock data
 class MemberLoyaltyScreen extends ConsumerWidget {
@@ -8,6 +11,9 @@ class MemberLoyaltyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    final memberId = currentUser?.id;
+
     // Mock data for MVP
     const memberName = "Chinedu Okoro";
     const currentPoints = 2450;
@@ -131,6 +137,10 @@ class MemberLoyaltyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               _buildRedemptionOption(
+                context: context,
+                ref: ref,
+                memberId: memberId,
+                currentPoints: currentPoints,
                 icon: Icons.local_offer,
                 title: 'Discount Voucher',
                 description: '500 points = ₦500 discount',
@@ -138,6 +148,10 @@ class MemberLoyaltyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               _buildRedemptionOption(
+                context: context,
+                ref: ref,
+                memberId: memberId,
+                currentPoints: currentPoints,
                 icon: Icons.local_shipping,
                 title: 'Free Shipping',
                 description: '300 points = Free delivery on next order',
@@ -145,6 +159,10 @@ class MemberLoyaltyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               _buildRedemptionOption(
+                context: context,
+                ref: ref,
+                memberId: memberId,
+                currentPoints: currentPoints,
                 icon: Icons.card_giftcard,
                 title: 'Gift Card',
                 description: '1000 points = ₦1000 gift card',
@@ -282,14 +300,49 @@ class MemberLoyaltyScreen extends ConsumerWidget {
   }
 
   Widget _buildRedemptionOption({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String? memberId,
+    required int currentPoints,
     required IconData icon,
     required String title,
     required String description,
     required int points,
   }) {
     return GestureDetector(
-      onTap: () {
-        // Mock redemption - in real app, would trigger redemption
+      onTap: () async {
+        if (memberId == null || memberId.isEmpty) {
+          context.go('/signin');
+          return;
+        }
+        if (currentPoints < points) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Not enough points for $title'),
+            ),
+          );
+          return;
+        }
+
+        final reward = Reward(
+          id: '${title.toLowerCase().replaceAll(' ', '_')}_$points',
+          name: title,
+          description: description,
+          pointsRequired: points,
+          rewardType: 'voucher',
+          rewardValue: points,
+          isClaimed: false,
+        );
+
+        await ref.read(claimRewardProvider((memberId, reward)).future);
+
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reward claimed: $title'),
+            backgroundColor: Colors.green,
+          ),
+        );
       },
       child: Container(
         decoration: BoxDecoration(

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/services/product_service.dart';
 import 'package:coop_commerce/core/audit/audit_service.dart';
@@ -199,6 +200,109 @@ List<Product> _getMockProducts() {
   ];
 }
 
+Product _sellerDocToProduct(
+  String id,
+  Map<String, dynamic> data,
+) {
+  final sellerPrice = ((data['price'] ?? 0) as num).toDouble();
+
+  return Product(
+    id: id,
+    name: (data['productName'] ?? 'Seller Product') as String,
+    description: (data['description'] ?? '') as String,
+    retailPrice: sellerPrice,
+    wholesalePrice: sellerPrice,
+    contractPrice: sellerPrice,
+    categoryId: (data['category'] ?? 'seller') as String,
+    imageUrl: data['imageUrl'] as String?,
+    stock: ((data['quantity'] ?? 0) as num).toInt(),
+    minimumOrderQuantity: ((data['moq'] ?? 1) as num).toInt(),
+    visibleToRetail: false,
+    visibleToWholesale: true,
+    visibleToInstitutions: false,
+    franchiseId: 'seller_marketplace',
+    uploadedBy: (data['sellerUserId'] ?? data['sellerId'] ?? '') as String,
+  );
+}
+
+Future<List<Product>> _fetchApprovedSellerProducts() async {
+  try {
+    final firestore = FirebaseFirestore.instance;
+    final snapshot = await firestore
+        .collection('seller_products')
+        .where('status', isEqualTo: 'approved')
+        .get();
+
+    return snapshot.docs
+        .map((doc) => _sellerDocToProduct(doc.id, doc.data()))
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
+
+List<Product> _mergeProducts(
+    List<Product> baseProducts, List<Product> sellerProducts) {
+  final merged = <String, Product>{
+    for (final product in baseProducts) product.id: product,
+  };
+
+  for (final product in sellerProducts) {
+    merged[product.id] = product;
+  }
+
+  return merged.values.toList();
+}
+
+List<Product> _applyProductFilters(
+    List<Product> products, ProductFilters filters) {
+  var filtered = products;
+
+  if (filters.searchQuery?.isNotEmpty == true) {
+    final query = filters.searchQuery!.toLowerCase();
+    filtered = filtered
+        .where((p) =>
+            p.name.toLowerCase().contains(query) ||
+            p.description.toLowerCase().contains(query))
+        .toList();
+  }
+
+  if (filters.category?.isNotEmpty == true) {
+    filtered = filtered.where((p) => p.categoryId == filters.category).toList();
+  }
+
+  if (filters.minPrice != null) {
+    filtered =
+        filtered.where((p) => p.retailPrice >= filters.minPrice!).toList();
+  }
+
+  if (filters.maxPrice != null) {
+    filtered =
+        filtered.where((p) => p.retailPrice <= filters.maxPrice!).toList();
+  }
+
+  switch (filters.sortBy) {
+    case 'price':
+      filtered.sort((a, b) => a.retailPrice.compareTo(b.retailPrice));
+      break;
+    case 'rating':
+      filtered.sort((a, b) => b.rating.compareTo(a.rating));
+      break;
+    case 'name':
+      filtered.sort((a, b) => a.name.compareTo(b.name));
+      break;
+    case 'newest':
+      filtered.sort((a, b) => b.id.compareTo(a.id));
+      break;
+    case 'popularity':
+    default:
+      filtered.sort((a, b) => b.stock.compareTo(a.stock));
+      break;
+  }
+
+  return filtered;
+}
+
 /// Get products filtered by active filters
 final productsByFiltersProvider =
     FutureProvider.autoDispose<List<Product>>((ref) async {
@@ -206,6 +310,8 @@ final productsByFiltersProvider =
   final productService = ref.watch(productServiceProvider);
 
   try {
+    List<Product> baseProducts;
+
     // Apply filters based on what's set
     if (filters.searchQuery?.isNotEmpty == true) {
       // If searching, use search endpoint
@@ -214,7 +320,7 @@ final productsByFiltersProvider =
         limit: 50,
         offset: 0,
       );
-      return result.products;
+      baseProducts = result.products;
     } else if (filters.category?.isNotEmpty == true) {
       // If category selected, use category endpoint
       final result = await productService.getProductsByCategory(
@@ -223,7 +329,7 @@ final productsByFiltersProvider =
         offset: 0,
         sortBy: filters.sortBy,
       );
-      return result.products;
+      baseProducts = result.products;
     } else {
       // Default: get all products
       final result = await productService.getAllProducts(
@@ -231,11 +337,17 @@ final productsByFiltersProvider =
         offset: 0,
         sortBy: filters.sortBy,
       );
-      return result.products;
+      baseProducts = result.products;
     }
+
+    final sellerProducts = await _fetchApprovedSellerProducts();
+    final merged = _mergeProducts(baseProducts, sellerProducts);
+    return _applyProductFilters(merged, filters);
   } catch (e) {
-    // Return mock products as fallback when service fails
-    return _getMockProducts();
+    // Return merged mock + seller fallback when service fails
+    final sellerProducts = await _fetchApprovedSellerProducts();
+    final merged = _mergeProducts(_getMockProducts(), sellerProducts);
+    return _applyProductFilters(merged, filters);
   }
 });
 
@@ -253,9 +365,11 @@ final allProductsProvider =
       sortBy: 'popularity',
     );
 
-    return result.products;
+    final sellerProducts = await _fetchApprovedSellerProducts();
+    return _mergeProducts(result.products, sellerProducts);
   } catch (e) {
-    return _getMockProducts();
+    final sellerProducts = await _fetchApprovedSellerProducts();
+    return _mergeProducts(_getMockProducts(), sellerProducts);
   }
 });
 
@@ -313,6 +427,17 @@ final productDetailProvider =
     final productService = ref.watch(productServiceProvider);
     return productService.getProductById(productId: productId);
   } catch (e) {
+    // Fallback to seller marketplace listing by id.
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final sellerDoc =
+          await firestore.collection('seller_products').doc(productId).get();
+
+      if (sellerDoc.exists && sellerDoc.data() != null) {
+        return _sellerDocToProduct(productId, sellerDoc.data()!);
+      }
+    } catch (_) {}
+
     // Fallback: find in mock products
     final mockProducts = _getMockProducts();
     try {

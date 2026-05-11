@@ -1,14 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:coop_commerce/providers/cart_provider.dart';
 
 /// App Initialization Provider
 /// This initializes critical app systems on startup
 class AppInitializerNotifier extends Notifier<bool> {
+  bool _started = false;
+
   @override
   bool build() {
-    _initializeApp();
+    if (!_started) {
+      _started = true;
+      Future.microtask(_initializeApp);
+    }
     return true;
   }
 
@@ -22,16 +26,7 @@ class AppInitializerNotifier extends Notifier<bool> {
 
       if (user != null) {
         debugPrint('👤 User logged in: ${user.email}');
-
-        // Initialize cart from Firestore for logged-in user
-        debugPrint('📦 Loading cart from Firestore...');
-        try {
-          await ref.read(cartProvider.notifier).initializeCart();
-          debugPrint('✅ Cart initialized successfully');
-        } catch (e) {
-          debugPrint('⚠️  Cart initialization warning: $e');
-          // Non-blocking error - app continues without cart
-        }
+        debugPrint('📦 Cart initialization deferred until cart is opened');
       } else {
         debugPrint('😐 No user logged in, starting with empty cart');
       }

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:coop_commerce/core/services/approval_service.dart';
@@ -19,6 +22,198 @@ final paymentProcessingServiceProvider =
 
 final orderManagementServiceProvider =
     Provider((ref) => OrderManagementService());
+
+Stream<List<OrderData>> _mergeOrderSnapshots({
+  required Stream<QuerySnapshot<Map<String, dynamic>>> primary,
+  required Stream<QuerySnapshot<Map<String, dynamic>>> legacy,
+}) {
+  final controller = StreamController<List<OrderData>>();
+
+  QuerySnapshot<Map<String, dynamic>>? latestPrimary;
+  QuerySnapshot<Map<String, dynamic>>? latestLegacy;
+
+  void emitMerged() {
+    final mergedDocs = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
+
+    for (final doc in latestPrimary?.docs ?? const []) {
+      mergedDocs[doc.id] = doc;
+    }
+    for (final doc in latestLegacy?.docs ?? const []) {
+      mergedDocs[doc.id] = doc;
+    }
+
+    final mergedOrders = <OrderData>[];
+    for (final doc in mergedDocs.values) {
+      try {
+        mergedOrders.add(OrderData.fromFirestore(doc));
+      } catch (error) {
+        debugPrint('Skipping unparsable order doc ${doc.id}: $error');
+      }
+    }
+
+    mergedOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    controller.add(mergedOrders);
+  }
+
+  late final StreamSubscription<QuerySnapshot<Map<String, dynamic>>> primarySub;
+  late final StreamSubscription<QuerySnapshot<Map<String, dynamic>>> legacySub;
+
+  primarySub = primary.listen(
+    (snapshot) {
+      latestPrimary = snapshot;
+      emitMerged();
+    },
+    onError: controller.addError,
+  );
+
+  legacySub = legacy.listen(
+    (snapshot) {
+      latestLegacy = snapshot;
+      emitMerged();
+    },
+    onError: controller.addError,
+  );
+
+  controller.onCancel = () async {
+    await primarySub.cancel();
+    await legacySub.cancel();
+  };
+
+  return controller.stream;
+}
+
+Stream<List<OrderData>> _buyerOrdersStream(
+  FirebaseFirestore firestore,
+  String buyerId, {
+  List<String>? statuses,
+  int? limit,
+}) {
+  Query<Map<String, dynamic>> applyFilters(Query<Map<String, dynamic>> query) {
+    var filtered = query;
+
+    if (statuses != null && statuses.isNotEmpty) {
+      if (statuses.length == 1) {
+        filtered = filtered.where('status', isEqualTo: statuses.first);
+      } else {
+        filtered = filtered.where('status', whereIn: statuses);
+      }
+    }
+
+    filtered = filtered.orderBy('createdAt', descending: true);
+
+    if (limit != null) {
+      filtered = filtered.limit(limit);
+    }
+
+    return filtered;
+  }
+
+  final primary = applyFilters(
+    firestore.collection('orders').where('buyerId', isEqualTo: buyerId),
+  ).snapshots();
+
+  final legacy = applyFilters(
+    firestore.collection('orders').where('userId', isEqualTo: buyerId),
+  ).snapshots();
+
+  return _mergeOrderSnapshots(primary: primary, legacy: legacy);
+}
+
+Stream<List<PaymentData>> _mergePaymentSnapshots({
+  required Stream<QuerySnapshot<Map<String, dynamic>>> primary,
+  required Stream<QuerySnapshot<Map<String, dynamic>>> legacy,
+}) {
+  final controller = StreamController<List<PaymentData>>();
+
+  QuerySnapshot<Map<String, dynamic>>? latestPrimary;
+  QuerySnapshot<Map<String, dynamic>>? latestLegacy;
+
+  void emitMerged() {
+    final mergedDocs = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
+
+    for (final doc in latestPrimary?.docs ?? const []) {
+      mergedDocs[doc.id] = doc;
+    }
+    for (final doc in latestLegacy?.docs ?? const []) {
+      mergedDocs[doc.id] = doc;
+    }
+
+    final mergedPayments = <PaymentData>[];
+    for (final doc in mergedDocs.values) {
+      try {
+        mergedPayments.add(PaymentData.fromFirestore(doc));
+      } catch (error) {
+        debugPrint('Skipping unparsable payment doc ${doc.id}: $error');
+      }
+    }
+
+    mergedPayments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    controller.add(mergedPayments);
+  }
+
+  late final StreamSubscription<QuerySnapshot<Map<String, dynamic>>> primarySub;
+  late final StreamSubscription<QuerySnapshot<Map<String, dynamic>>> legacySub;
+
+  primarySub = primary.listen(
+    (snapshot) {
+      latestPrimary = snapshot;
+      emitMerged();
+    },
+    onError: controller.addError,
+  );
+
+  legacySub = legacy.listen(
+    (snapshot) {
+      latestLegacy = snapshot;
+      emitMerged();
+    },
+    onError: controller.addError,
+  );
+
+  controller.onCancel = () async {
+    await primarySub.cancel();
+    await legacySub.cancel();
+  };
+
+  return controller.stream;
+}
+
+Stream<List<PaymentData>> _buyerPaymentsStream(
+  FirebaseFirestore firestore,
+  String buyerId, {
+  List<String>? statuses,
+  int? limit,
+}) {
+  Query<Map<String, dynamic>> applyFilters(Query<Map<String, dynamic>> query) {
+    var filtered = query;
+
+    if (statuses != null && statuses.isNotEmpty) {
+      if (statuses.length == 1) {
+        filtered = filtered.where('status', isEqualTo: statuses.first);
+      } else {
+        filtered = filtered.where('status', whereIn: statuses);
+      }
+    }
+
+    filtered = filtered.orderBy('createdAt', descending: true);
+
+    if (limit != null) {
+      filtered = filtered.limit(limit);
+    }
+
+    return filtered;
+  }
+
+  final primary = applyFilters(
+    firestore.collection('payments').where('buyerId', isEqualTo: buyerId),
+  ).snapshots();
+
+  final legacy = applyFilters(
+    firestore.collection('payments').where('userId', isEqualTo: buyerId),
+  ).snapshots();
+
+  return _mergePaymentSnapshots(primary: primary, legacy: legacy);
+}
 
 // ===================== APPROVAL PROVIDERS =====================
 
@@ -87,14 +282,7 @@ final userOrdersProvider =
     StreamProvider.family<List<OrderData>, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('orders')
-      .where('buyerId', isEqualTo: buyerId)
-      .orderBy('createdAt', descending: true)
-      .limit(50)
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => OrderData.fromFirestore(doc)).toList());
+  return _buyerOrdersStream(firestore, buyerId, limit: 50);
 });
 
 /// Stream of specific order details
@@ -115,15 +303,12 @@ final ordersByStatusProvider =
   (ref, params) {
     final firestore = FirebaseFirestore.instance;
 
-    return firestore
-        .collection('orders')
-        .where('buyerId', isEqualTo: params.buyerId)
-        .where('status', isEqualTo: params.status)
-        .orderBy('createdAt', descending: true)
-        .limit(50)
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => OrderData.fromFirestore(doc)).toList());
+    return _buyerOrdersStream(
+      firestore,
+      params.buyerId,
+      statuses: [params.status],
+      limit: 50,
+    );
   },
 );
 
@@ -132,14 +317,11 @@ final pendingOrdersProvider =
     StreamProvider.family<List<OrderData>, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('orders')
-      .where('buyerId', isEqualTo: buyerId)
-      .where('status', whereIn: ['draft', 'submitted'])
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => OrderData.fromFirestore(doc)).toList());
+  return _buyerOrdersStream(
+    firestore,
+    buyerId,
+    statuses: ['draft', 'submitted'],
+  );
 });
 
 /// Stream of in-transit orders (shipped but not delivered)
@@ -147,14 +329,11 @@ final inTransitOrdersProvider =
     StreamProvider.family<List<OrderData>, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('orders')
-      .where('buyerId', isEqualTo: buyerId)
-      .where('status', whereIn: ['shipped', 'processing', 'packed'])
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => OrderData.fromFirestore(doc)).toList());
+  return _buyerOrdersStream(
+    firestore,
+    buyerId,
+    statuses: ['shipped', 'processing', 'packed'],
+  );
 });
 
 /// Stream of delivered orders
@@ -162,15 +341,12 @@ final deliveredOrdersProvider =
     StreamProvider.family<List<OrderData>, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('orders')
-      .where('buyerId', isEqualTo: buyerId)
-      .where('status', isEqualTo: 'delivered')
-      .orderBy('createdAt', descending: true)
-      .limit(50)
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => OrderData.fromFirestore(doc)).toList());
+  return _buyerOrdersStream(
+    firestore,
+    buyerId,
+    statuses: ['delivered'],
+    limit: 50,
+  );
 });
 
 /// Count of active orders for user
@@ -178,19 +354,18 @@ final activeOrdersCountProvider =
     StreamProvider.family<int, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('orders')
-      .where('buyerId', isEqualTo: buyerId)
-      .where('status', whereIn: [
-        'draft',
-        'submitted',
-        'approved',
-        'processing',
-        'packed',
-        'shipped'
-      ])
-      .snapshots()
-      .map((snapshot) => snapshot.docs.length);
+  return _buyerOrdersStream(
+    firestore,
+    buyerId,
+    statuses: [
+      'draft',
+      'submitted',
+      'approved',
+      'processing',
+      'packed',
+      'shipped',
+    ],
+  ).map((orders) => orders.length);
 });
 
 /// Stream of fulfillment details for an order
@@ -241,14 +416,11 @@ final userPaymentHistoryProvider =
     StreamProvider.family<List<PaymentData>, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('payments')
-      .where('buyerId', isEqualTo: buyerId)
-      .orderBy('createdAt', descending: true)
-      .limit(50)
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => PaymentData.fromFirestore(doc)).toList());
+  return _buyerPaymentsStream(
+    firestore,
+    buyerId,
+    limit: 50,
+  );
 });
 
 /// Stream of pending payments
@@ -256,14 +428,11 @@ final pendingPaymentsProvider =
     StreamProvider.family<List<PaymentData>, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('payments')
-      .where('buyerId', isEqualTo: buyerId)
-      .where('status', whereIn: ['pending', 'processing'])
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => PaymentData.fromFirestore(doc)).toList());
+  return _buyerPaymentsStream(
+    firestore,
+    buyerId,
+    statuses: const ['pending', 'processing'],
+  );
 });
 
 /// Stream of successful payments for an order
@@ -345,15 +514,8 @@ final newOrderNotificationProvider =
     StreamProvider.family<OrderData?, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
 
-  return firestore
-      .collection('orders')
-      .where('buyerId', isEqualTo: buyerId)
-      .orderBy('createdAt', descending: true)
-      .limit(1)
-      .snapshots()
-      .map((snapshot) => snapshot.docs.isNotEmpty
-          ? OrderData.fromFirestore(snapshot.docs.first)
-          : null);
+  return _buyerOrdersStream(firestore, buyerId, limit: 1)
+      .map((orders) => orders.isNotEmpty ? orders.first : null);
 });
 
 /// Notification when order status changes

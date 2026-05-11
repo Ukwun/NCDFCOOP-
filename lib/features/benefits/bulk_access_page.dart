@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// Bulk Purchasing & Wholesale Page
@@ -131,7 +133,26 @@ class BulkAccessPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          final uri = Uri(
+                            scheme: 'mailto',
+                            path: 'wholesale@coopcommerce.app',
+                            queryParameters: {
+                              'subject': 'Bulk Purchase Request',
+                              'body':
+                                  'Hello Wholesale Team,%0D%0A%0D%0AI need a custom quote for bulk quantities.%0D%0A%0D%0AThank you.',
+                            },
+                          );
+
+                          final launched = await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+
+                          if (!launched && context.mounted) {
+                            context.pushNamed('help-support');
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(vertical: 12),

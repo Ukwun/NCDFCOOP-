@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/savings_provider.dart';
 
 /// Community Dividends & Rewards Page
 class CommunityDividendsPage extends StatelessWidget {
@@ -7,6 +11,16 @@ class CommunityDividendsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return const _CommunityDividendsView();
+  }
+}
+
+class _CommunityDividendsView extends ConsumerWidget {
+  const _CommunityDividendsView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -159,7 +173,13 @@ class CommunityDividendsPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          if (user == null) {
+                            context.go('/signin');
+                            return;
+                          }
+                          _showWithdrawDialog(context, ref, user.id);
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -180,6 +200,103 @@ class CommunityDividendsPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showWithdrawDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+  ) async {
+    final amountController = TextEditingController();
+    final accountController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Withdraw Dividends'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: amountController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Amount (NGN)',
+                hintText: 'Enter amount to withdraw',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: accountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Account Number (optional)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final amount = _parseAmount(amountController.text);
+              if (amount <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Enter a valid withdrawal amount'),
+                  ),
+                );
+                return;
+              }
+
+              try {
+                await ref
+                    .read(
+                      withdrawFromSavingsProvider((
+                        userId: userId,
+                        amount: amount,
+                        description: 'Community dividends withdrawal',
+                        accountNumber: accountController.text.trim().isEmpty
+                            ? null
+                            : accountController.text.trim(),
+                      )).future,
+                    )
+                    .timeout(const Duration(seconds: 20));
+
+                if (!context.mounted) return;
+                Navigator.of(dialogContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Withdrawal request submitted: ₦${amount.toStringAsFixed(0)}',
+                    ),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Withdrawal failed: $e'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            },
+            child: const Text('Submit Request'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _parseAmount(String raw) {
+    return double.tryParse(raw.replaceAll(',', '').trim()) ?? 0;
   }
 
   Widget _buildStepCard(String number, String title, String description) {

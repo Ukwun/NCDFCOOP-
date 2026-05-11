@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/order_providers.dart';
 import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -14,8 +15,6 @@ class OrdersScreen extends ConsumerStatefulWidget {
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   String selectedFilter = 'All';
-  int currentPage = 1;
-  final int pageSize = 10;
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -37,33 +36,31 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ordersAsync = ref.watch(
-      orderHistoryProvider((page: currentPage, pageSize: pageSize)),
-    );
+    final user = ref.watch(currentUserProvider);
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Text(
+            'Sign in to view your orders',
+            style: AppTextStyles.bodyMedium,
+          ),
+        ),
+      );
+    }
+
+    final ordersAsync = ref.watch(userOrdersProvider(user.id));
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: ordersAsync.when(
-        data: (orderPage) => SingleChildScrollView(
+        data: (orders) => SingleChildScrollView(
           child: Column(
             children: [
               _buildHeader(context),
               _buildFilterTabs(),
-              _buildOrdersList(orderPage.orders),
-              if (orderPage.totalPages > currentPage)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() => currentPage++);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    child: const Text('Load More Orders'),
-                  ),
-                ),
+              _buildOrdersList(_applyFilter(orders)),
               const SizedBox(height: 24),
             ],
           ),
@@ -96,6 +93,27 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         ),
       ),
     );
+  }
+
+  List<OrderData> _applyFilter(List<OrderData> orders) {
+    if (selectedFilter == 'All') return orders;
+
+    return orders.where((order) {
+      final status = order.status.toLowerCase();
+      if (selectedFilter == 'Delivered') {
+        return status == 'delivered';
+      }
+      if (selectedFilter == 'In Transit') {
+        return status == 'in transit' ||
+            status == 'dispatched' ||
+            status == 'shipped' ||
+            status == 'processing';
+      }
+      if (selectedFilter == 'Cancelled') {
+        return status == 'cancelled' || status == 'failed';
+      }
+      return true;
+    }).toList();
   }
 
   Widget _buildHeader(BuildContext context) {

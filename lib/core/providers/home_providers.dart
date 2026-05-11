@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/models/product.dart';
@@ -56,7 +58,7 @@ final memberDataProvider =
   try {
     final firestore = FirebaseFirestore.instance;
     final doc = await firestore.collection('members').doc(userId).get();
-    
+
     if (doc.exists) {
       return MemberData.fromFirestore(doc);
     } else {
@@ -619,15 +621,80 @@ List<Product> _getDefaultMockProducts() {
 
 /// Featured products filtered by user role
 /// - Consumer: visibleToRetail = true
-/// - Member: visibleToWholesale = true  
+/// - Member: visibleToWholesale = true
 /// - Institutional: visibleToInstitutions = true
 final roleAwareFeaturedProductsProvider =
     FutureProvider.family<List<Product>, String>((ref, userRole) async {
   try {
-    // For now, use mock products directly since they load instantly
-    // Firebase integration can be added later when collections are properly set up
-    final mockProducts = _getDefaultMockProducts();
-    return mockProducts.take(6).toList();
+    final firestore = FirebaseFirestore.instance;
+    final role = userRole.toLowerCase();
+
+    String visibilityField;
+    if (role.contains('member') || role.contains('cooperative')) {
+      visibilityField = 'visibleToWholesale';
+    } else if (role.contains('institutional')) {
+      visibilityField = 'visibleToInstitutions';
+    } else {
+      visibilityField = 'visibleToRetail';
+    }
+
+    final companySnapshot = await firestore
+        .collection('products')
+        .where(visibilityField, isEqualTo: true)
+        .limit(18)
+        .get();
+
+    final merged = <String, Product>{
+      for (final doc in companySnapshot.docs)
+        doc.id: Product.fromFirestore({
+          ...doc.data(),
+          'id': doc.id,
+        }),
+    };
+
+    // Seller listings are intended for cooperative members and wholesale buyers.
+    final canSeeSellerProducts = role.contains('member') ||
+        role.contains('cooperative') ||
+        role.contains('wholesale');
+
+    if (canSeeSellerProducts) {
+      final sellerSnapshot = await firestore
+          .collection('seller_products')
+          .where('status', isEqualTo: 'approved')
+          .limit(18)
+          .get();
+
+      for (final doc in sellerSnapshot.docs) {
+        final data = doc.data();
+        merged[doc.id] = Product(
+          id: doc.id,
+          name: (data['productName'] ?? 'Seller Product') as String,
+          description: (data['description'] ?? '') as String,
+          retailPrice: ((data['price'] ?? 0) as num).toDouble(),
+          wholesalePrice: ((data['price'] ?? 0) as num).toDouble(),
+          contractPrice: ((data['price'] ?? 0) as num).toDouble(),
+          categoryId: (data['category'] ?? 'seller') as String,
+          imageUrl: data['imageUrl'] as String?,
+          stock: ((data['quantity'] ?? 0) as num).toInt(),
+          minimumOrderQuantity: ((data['moq'] ?? 1) as num).toInt(),
+          visibleToRetail: false,
+          visibleToWholesale: true,
+          visibleToInstitutions: false,
+          uploadedBy:
+              (data['sellerUserId'] ?? data['sellerId'] ?? '') as String,
+          franchiseId: 'seller_marketplace',
+        );
+      }
+    }
+
+    final products = merged.values.toList()
+      ..sort((a, b) => b.stock.compareTo(a.stock));
+
+    if (products.isEmpty) {
+      return _getDefaultMockProducts().take(6).toList();
+    }
+
+    return products.take(6).toList();
   } catch (e) {
     print('⚠️ Error in roleAwareFeaturedProductsProvider: $e');
     return _getDefaultMockProducts().take(6).toList();
@@ -639,27 +706,93 @@ final roleAwareProductsProvider =
     StreamProvider.family<List<Product>, String>((ref, userRole) {
   try {
     final firestore = FirebaseFirestore.instance;
-    
+    final role = userRole.toLowerCase();
+
     // Determine which visibility flag to filter by
     String visibilityField;
-    if (userRole.contains('member') || userRole.contains('cooperative')) {
+    if (role.contains('member') || role.contains('cooperative')) {
       visibilityField = 'visibleToWholesale';
-    } else if (userRole.contains('institutional')) {
+    } else if (role.contains('institutional')) {
       visibilityField = 'visibleToInstitutions';
     } else {
       visibilityField = 'visibleToRetail';
     }
 
-    return firestore
+    final companyStream = firestore
         .collection('products')
         .where(visibilityField, isEqualTo: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Product.fromFirestore(doc.data()))
-            .toList())
-        .handleError((_) {
-          return _getDefaultMockProducts();
+        .snapshots();
+
+    final sellerStream = (role.contains('member') ||
+            role.contains('cooperative') ||
+            role.contains('wholesale'))
+        ? firestore
+            .collection('seller_products')
+            .where('status', isEqualTo: 'approved')
+            .snapshots()
+        : const Stream.empty();
+
+    final controller = StreamController<List<Product>>();
+    QuerySnapshot<Map<String, dynamic>>? latestCompany;
+    QuerySnapshot<Map<String, dynamic>>? latestSeller;
+
+    void emitMerged() {
+      final merged = <String, Product>{};
+
+      for (final doc in latestCompany?.docs ?? const []) {
+        merged[doc.id] = Product.fromFirestore({
+          ...doc.data(),
+          'id': doc.id,
         });
+      }
+
+      for (final doc in latestSeller?.docs ?? const []) {
+        final data = doc.data();
+        merged[doc.id] = Product(
+          id: doc.id,
+          name: (data['productName'] ?? 'Seller Product') as String,
+          description: (data['description'] ?? '') as String,
+          retailPrice: ((data['price'] ?? 0) as num).toDouble(),
+          wholesalePrice: ((data['price'] ?? 0) as num).toDouble(),
+          contractPrice: ((data['price'] ?? 0) as num).toDouble(),
+          categoryId: (data['category'] ?? 'seller') as String,
+          imageUrl: data['imageUrl'] as String?,
+          stock: ((data['quantity'] ?? 0) as num).toInt(),
+          minimumOrderQuantity: ((data['moq'] ?? 1) as num).toInt(),
+          visibleToRetail: false,
+          visibleToWholesale: true,
+          visibleToInstitutions: false,
+          uploadedBy:
+              (data['sellerUserId'] ?? data['sellerId'] ?? '') as String,
+          franchiseId: 'seller_marketplace',
+        );
+      }
+
+      controller.add(merged.values.toList());
+    }
+
+    final companySub = companyStream.listen(
+      (snapshot) {
+        latestCompany = snapshot;
+        emitMerged();
+      },
+      onError: controller.addError,
+    );
+
+    final sellerSub = sellerStream.listen(
+      (snapshot) {
+        latestSeller = snapshot;
+        emitMerged();
+      },
+      onError: controller.addError,
+    );
+
+    controller.onCancel = () async {
+      await companySub.cancel();
+      await sellerSub.cancel();
+    };
+
+    return controller.stream;
   } catch (e) {
     print('⚠️ Firebase error in roleAwareProductsProvider: $e');
     return Stream.value(_getDefaultMockProducts());
@@ -668,20 +801,18 @@ final roleAwareProductsProvider =
 
 /// Product list for a specific category, filtered by role
 /// Uses FutureProvider for instant display of mock data
-final roleAwareCategoryProductsProvider =
-    FutureProvider.family<List<Product>, ({String categoryId, String userRole})>(
-        (ref, params) async {
+final roleAwareCategoryProductsProvider = FutureProvider.family<List<Product>,
+    ({String categoryId, String userRole})>((ref, params) async {
   try {
     // Return mock products filtered by category immediately
     // This provides instant UI feedback instead of waiting for Firebase
     final mockProducts = _getDefaultMockProducts();
-    final filtered = mockProducts
-        .where((p) => p.categoryId == params.categoryId)
-        .toList();
-    
+    final filtered =
+        mockProducts.where((p) => p.categoryId == params.categoryId).toList();
+
     // Sort by price descending by default (popular = highest quality first)
     filtered.sort((a, b) => b.retailPrice.compareTo(a.retailPrice));
-    
+
     return filtered;
   } catch (e) {
     print('⚠️ Error in roleAwareCategoryProductsProvider: $e');

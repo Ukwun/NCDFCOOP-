@@ -380,6 +380,55 @@ final createOrderProvider =
         );
       }
 
+      Map<String, dynamic> asMap(dynamic value) {
+        if (value is Map<String, dynamic>) return value;
+        if (value is Map) return Map<String, dynamic>.from(value);
+        return <String, dynamic>{};
+      }
+
+      String? readSellerField(Map<String, dynamic> item, String key) {
+        final direct = item[key];
+        if (direct != null && direct.toString().trim().isNotEmpty) {
+          return direct.toString();
+        }
+
+        final product = item['product'];
+        if (product is Map) {
+          final productMap = Map<String, dynamic>.from(product);
+          final nested = productMap[key];
+          if (nested != null && nested.toString().trim().isNotEmpty) {
+            return nested.toString();
+          }
+        }
+
+        return null;
+      }
+
+      final sellerIds = <String>{};
+      final sellerUserIds = <String>{};
+      final sellerProfileIds = <String>{};
+
+      for (final rawItem in items) {
+        if (rawItem is! Map) continue;
+        final item = asMap(rawItem);
+
+        final sellerId = readSellerField(item, 'sellerId');
+        final sellerUserId = readSellerField(item, 'sellerUserId');
+        final sellerProfileId = readSellerField(item, 'sellerProfileId');
+
+        if (sellerId != null) sellerIds.add(sellerId);
+        if (sellerUserId != null) sellerUserIds.add(sellerUserId);
+        if (sellerProfileId != null) sellerProfileIds.add(sellerProfileId);
+      }
+
+      final primarySellerId = sellerIds.isNotEmpty
+          ? sellerIds.first
+          : (sellerUserIds.isNotEmpty ? sellerUserIds.first : null);
+      final primarySellerUserId =
+          sellerUserIds.isNotEmpty ? sellerUserIds.first : primarySellerId;
+      final primarySellerProfileId =
+          sellerProfileIds.isNotEmpty ? sellerProfileIds.first : null;
+
       // Get order calculation if not provided
       double subtotal = params['subtotal'] ?? 0.0;
       double tax = params['tax'] ?? 0.0;
@@ -409,7 +458,14 @@ final createOrderProvider =
 
       await orderRef.set({
         'orderId': orderRef.id,
+        'buyerId': userId,
         'userId': userId,
+        'sellerId': primarySellerId,
+        'sellerUserId': primarySellerUserId,
+        'sellerProfileId': primarySellerProfileId,
+        'sellerIds': sellerIds.toList(),
+        'sellerUserIds': sellerUserIds.toList(),
+        'sellerProfileIds': sellerProfileIds.toList(),
         'items': items,
         'shippingAddress': address.toMap(),
         'paymentMethodId': paymentMethod.id,
@@ -421,8 +477,8 @@ final createOrderProvider =
         'totalAmount': total,
         'status': 'pending_payment',
         'paymentStatus': 'awaiting_payment',
-        'createdAt': DateTime.now().toIso8601String(),
-        'updatedAt': DateTime.now().toIso8601String(),
+        'createdAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
       });
 
       // Return success with order ID
@@ -447,13 +503,27 @@ final userCartItemsProvider =
 
     try {
       final firestore = FirebaseFirestore.instance;
-      final snapshot = await firestore
+
+      // Primary path: CartPersistenceService saves here (shopping_carts/{userId})
+      final cartDoc =
+          await firestore.collection('shopping_carts').doc(userId).get();
+
+      if (cartDoc.exists) {
+        final data = cartDoc.data();
+        final items = data?['items'];
+        if (items is List && items.isNotEmpty) {
+          return items.cast<Map<String, dynamic>>();
+        }
+      }
+
+      // Legacy fallback: old sub-collection format (users/{userId}/cart/{itemId})
+      final legacySnapshot = await firestore
           .collection('users')
           .doc(userId)
           .collection('cart')
           .get();
 
-      return snapshot.docs.map((doc) => doc.data()).toList();
+      return legacySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       return [];
     }

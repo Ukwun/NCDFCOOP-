@@ -25,17 +25,27 @@ class InstitutionalBuyerHomeScreenV2 extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        toolbarHeight: 56,
         title: Text(
           'My Organization',
-          style: AppTextStyles.bodyMedium.copyWith(
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.grey[800],
+            fontSize: 14,
           ),
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.notifications_outlined, color: Colors.grey[600]),
-            onPressed: () => context.pushNamed('notifications'),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(maxWidth: 40, maxHeight: 40),
+              icon: Icon(Icons.notifications_outlined,
+                  color: Colors.grey[600], size: 20),
+              onPressed: () => context.pushNamed('notifications'),
+            ),
           ),
         ],
       ),

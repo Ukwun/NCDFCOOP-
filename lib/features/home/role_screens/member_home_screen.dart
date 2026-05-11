@@ -5,6 +5,7 @@ import '../../../theme/app_theme.dart';
 import '../../../models/product.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../core/providers/home_providers.dart';
+import '../../../providers/savings_provider.dart';
 
 /// MEMBER HOME SCREEN
 /// Co-operative members with loyalty benefits
@@ -105,14 +106,19 @@ class MemberHomeScreen extends ConsumerWidget {
                   // ═════════════════════════════════════════════════
                   // 2. SAVINGS & IMPACT - Show member value
                   // ═════════════════════════════════════════════════
-                  _buildSavingsAndImpactSection(context, displayData),
+                  _buildSavingsAndImpactSection(
+                    context,
+                    ref,
+                    displayData,
+                    user?.id ?? '',
+                  ),
 
                   const SizedBox(height: 24),
 
                   // ═════════════════════════════════════════════════
                   // 3. QUICK ACTIONS - Points & Rewards
                   // ═════════════════════════════════════════════════
-                  _buildLoyaltyActionsGrid(context),
+                  _buildLoyaltyActionsGrid(context, ref, user?.id ?? ''),
 
                   const SizedBox(height: 24),
 
@@ -298,7 +304,12 @@ class MemberHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSavingsAndImpactSection(BuildContext context, dynamic data) {
+  Widget _buildSavingsAndImpactSection(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic data,
+    String userId,
+  ) {
     final totalSpent = data?.totalSpent ?? 0.0;
     final savingsPercentage = data?.discountPercentage ?? 5.0;
     final estimatedSavings = totalSpent * (savingsPercentage / 100);
@@ -439,7 +450,7 @@ class MemberHomeScreen extends ConsumerWidget {
             child: ElevatedButton.icon(
               onPressed: () {
                 // Show deposit dialog
-                _showDepositDialog(context);
+                _showDepositDialog(context, ref, userId);
               },
               icon: const Icon(Icons.add_circle, size: 20),
               label: const Text(
@@ -464,7 +475,7 @@ class MemberHomeScreen extends ConsumerWidget {
     );
   }
 
-  void _showDepositDialog(BuildContext context) {
+  void _showDepositDialog(BuildContext context, WidgetRef ref, String userId) {
     final depositController = TextEditingController();
 
     showDialog(
@@ -501,16 +512,50 @@ class MemberHomeScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              final amount = double.tryParse(depositController.text) ?? 0;
-              if (amount > 0) {
-                // TODO: Call deposit API
+            onPressed: () async {
+              final amount = _parseCurrencyAmount(depositController.text);
+              if (amount <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Enter a valid amount to deposit')),
+                );
+                return;
+              }
+              if (userId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Sign in required to deposit funds')),
+                );
+                return;
+              }
+
+              try {
+                await ref
+                    .read(
+                      depositToSavingsProvider((
+                        userId: userId,
+                        amount: amount,
+                        description: 'Member savings deposit',
+                        source: 'member_home',
+                      )).future,
+                    )
+                    .timeout(const Duration(seconds: 20));
+
+                if (!context.mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content:
-                        Text('Depositing ₦${amount.toStringAsFixed(0)}...'),
+                    content: Text(
+                        'Deposit successful: ₦${amount.toStringAsFixed(0)}'),
                     backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deposit failed: $e'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }
@@ -525,7 +570,7 @@ class MemberHomeScreen extends ConsumerWidget {
     );
   }
 
-  void _showWithdrawDialog(BuildContext context) {
+  void _showWithdrawDialog(BuildContext context, WidgetRef ref, String userId) {
     final withdrawController = TextEditingController();
 
     showDialog(
@@ -570,15 +615,50 @@ class MemberHomeScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              final amount = double.tryParse(withdrawController.text) ?? 0;
-              if (amount > 0) {
+            onPressed: () async {
+              final amount = _parseCurrencyAmount(withdrawController.text);
+              if (amount <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Enter a valid amount to withdraw')),
+                );
+                return;
+              }
+              if (userId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Sign in required to withdraw funds')),
+                );
+                return;
+              }
+
+              try {
+                await ref
+                    .read(
+                      withdrawFromSavingsProvider((
+                        userId: userId,
+                        amount: amount,
+                        description: 'Member savings withdrawal',
+                        accountNumber: null,
+                      )).future,
+                    )
+                    .timeout(const Duration(seconds: 20));
+
+                if (!context.mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                        'Withdrawal of \u20a6${amount.toStringAsFixed(0)} processed'),
+                        'Withdrawal request submitted: ₦${amount.toStringAsFixed(0)}'),
                     backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Withdrawal failed: $e'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }
@@ -593,7 +673,8 @@ class MemberHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLoyaltyActionsGrid(BuildContext context) {
+  Widget _buildLoyaltyActionsGrid(
+      BuildContext context, WidgetRef ref, String userId) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -642,7 +723,7 @@ class MemberHomeScreen extends ConsumerWidget {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => _showDepositDialog(context),
+                  onTap: () => _showDepositDialog(context, ref, userId),
                   child: _ActionButton(
                     icon: Icons.add_circle_outline,
                     label: 'Quick\nDeposit',
@@ -653,7 +734,7 @@ class MemberHomeScreen extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => _showWithdrawDialog(context),
+                  onTap: () => _showWithdrawDialog(context, ref, userId),
                   child: _ActionButton(
                     icon: Icons.remove_circle_outline,
                     label: 'Quick\nWithdraw',
@@ -778,21 +859,29 @@ class MemberHomeScreen extends ConsumerWidget {
             _ReportItem(
               title: 'Annual Financials (2025)',
               subtitle: 'Revenue ₦2.5M | Members 5,000',
+              onTap: () => context.pushNamed('member-transparency'),
             ),
             const SizedBox(height: 8),
             _ReportItem(
               title: 'Impact Report (Q4 2025)',
               subtitle: 'Savings distributed: ₦850K',
+              onTap: () => context.pushNamed('member-transparency'),
             ),
             const SizedBox(height: 8),
             _ReportItem(
               title: 'Farmer Support Fund',
               subtitle: 'Allocated ₦250K for smallholder support',
+              onTap: () => context.pushNamed('member-transparency'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  double _parseCurrencyAmount(String raw) {
+    final normalized = raw.replaceAll(',', '').trim();
+    return double.tryParse(normalized) ?? 0;
   }
 
   Widget _buildExclusiveDealsList(
@@ -974,16 +1063,18 @@ class _ActionButton extends StatelessWidget {
 class _ReportItem extends StatelessWidget {
   final String title;
   final String subtitle;
+  final VoidCallback onTap;
 
   const _ReportItem({
     required this.title,
     required this.subtitle,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Row(
         children: [
           Icon(Icons.description_outlined, color: AppColors.primary, size: 20),

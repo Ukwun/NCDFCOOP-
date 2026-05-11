@@ -87,6 +87,8 @@ class SellerProfile {
 class SellerProduct {
   final String? id;
   final String sellerId;
+  final String? sellerUserId;
+  final String? sellerProfileId;
   final String productName;
   final String category;
   final double price;
@@ -103,6 +105,8 @@ class SellerProduct {
   SellerProduct({
     this.id,
     required this.sellerId,
+    this.sellerUserId,
+    this.sellerProfileId,
     required this.productName,
     required this.category,
     required this.price,
@@ -122,6 +126,8 @@ class SellerProduct {
     return SellerProduct(
       id: doc.id,
       sellerId: data['sellerId'] ?? '',
+      sellerUserId: data['sellerUserId'],
+      sellerProfileId: data['sellerProfileId'],
       productName: data['productName'] ?? '',
       category: data['category'] ?? '',
       price: (data['price'] ?? 0).toDouble(),
@@ -143,6 +149,8 @@ class SellerProduct {
   Map<String, dynamic> toFirestore() {
     return {
       'sellerId': sellerId,
+      'sellerUserId': sellerUserId,
+      'sellerProfileId': sellerProfileId,
       'productName': productName,
       'category': category,
       'price': price,
@@ -164,6 +172,7 @@ class ProductModerationRequest {
   final String? id;
   final String productId;
   final String sellerId;
+  final String? sellerUserId;
   final String productName;
   final DateTime submittedAt;
   final ProductApprovalStatus status;
@@ -175,6 +184,7 @@ class ProductModerationRequest {
     this.id,
     required this.productId,
     required this.sellerId,
+    this.sellerUserId,
     required this.productName,
     required this.submittedAt,
     this.status = ProductApprovalStatus.pending,
@@ -189,6 +199,7 @@ class ProductModerationRequest {
       id: doc.id,
       productId: data['productId'] ?? '',
       sellerId: data['sellerId'] ?? '',
+      sellerUserId: data['sellerUserId'],
       productName: data['productName'] ?? '',
       submittedAt:
           (data['submittedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -206,6 +217,7 @@ class ProductModerationRequest {
     return {
       'productId': productId,
       'sellerId': sellerId,
+      'sellerUserId': sellerUserId,
       'productName': productName,
       'submittedAt': Timestamp.fromDate(submittedAt),
       'status': status.name,

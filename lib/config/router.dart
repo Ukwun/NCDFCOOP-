@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:coop_commerce/features/home/role_aware_home_screen.dart';
+import 'package:coop_commerce/features/home/role_aware_primary_tab_screen.dart';
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
 import 'package:coop_commerce/providers/auth_provider.dart' as global_auth;
 import 'package:coop_commerce/features/home/scaffold_with_navbar.dart';
@@ -43,6 +43,8 @@ import 'package:coop_commerce/models/order.dart' as order_model;
 import 'package:coop_commerce/features/search/search_screen.dart';
 import 'package:coop_commerce/features/member/member_benefits_screen.dart';
 import 'package:coop_commerce/features/member/member_loyalty_screen.dart';
+import 'package:coop_commerce/features/member/voting_dashboard_screen.dart';
+import 'package:coop_commerce/features/member/transparency_reports_screen.dart';
 import 'package:coop_commerce/features/orders/enhanced_order_tracking_screen.dart';
 import 'package:coop_commerce/features/benefits/exclusive_pricing_page.dart';
 import 'package:coop_commerce/features/benefits/members_only_page.dart';
@@ -101,9 +103,9 @@ import 'package:coop_commerce/features/education/features_guide_screen.dart';
 import 'package:coop_commerce/features/education/app_tour_screen.dart';
 import 'package:coop_commerce/features/selling/start_selling_screen.dart';
 import 'package:coop_commerce/features/selling/seller_onboarding_quick_screen.dart';
-import 'package:coop_commerce/features/offers/offers_screen.dart';
-import 'package:coop_commerce/features/messages/messages_screen.dart';
-import 'package:coop_commerce/features/ncdfcoop/my_ncdfcoop_screen.dart';
+import 'package:coop_commerce/features/selling/seller_add_product_screen.dart';
+import 'package:coop_commerce/features/selling/seller_sales_ledger_screen.dart';
+import 'package:coop_commerce/features/selling/screens/seller_product_detail_screen.dart';
 // Phase 4: Search, Review, Inventory, and Logistics imports
 import 'package:coop_commerce/features/inventory/inventory_dashboard_screen.dart';
 import 'package:coop_commerce/features/inventory/warehouse_management_screen.dart';
@@ -532,6 +534,20 @@ class AppRouter {
           builder: (context, state) => const MemberLoyaltyScreen(),
         ),
 
+        GoRoute(
+          path: '/member/voting',
+          name: 'member-voting',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const VotingDashboardScreen(),
+        ),
+
+        GoRoute(
+          path: '/member/transparency',
+          name: 'member-transparency',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const TransparencyReportsScreen(),
+        ),
+
         // Products Routes
         GoRoute(
           path: '/products',
@@ -719,7 +735,8 @@ class AppRouter {
                 GoRoute(
                   path: '/',
                   name: 'home',
-                  builder: (context, state) => const RoleAwareHomeScreen(),
+                  builder: (context, state) =>
+                      const RoleAwarePrimaryTabScreen(tabIndex: 0),
                 ),
               ],
             ),
@@ -730,7 +747,8 @@ class AppRouter {
                 GoRoute(
                   path: '/offers',
                   name: 'offers',
-                  builder: (context, state) => const OffersScreen(),
+                  builder: (context, state) =>
+                      const RoleAwarePrimaryTabScreen(tabIndex: 1),
                 ),
               ],
             ),
@@ -741,7 +759,8 @@ class AppRouter {
                 GoRoute(
                   path: '/messages',
                   name: 'messages',
-                  builder: (context, state) => const MessagesScreen(),
+                  builder: (context, state) =>
+                      const RoleAwarePrimaryTabScreen(tabIndex: 2),
                 ),
               ],
             ),
@@ -752,7 +771,8 @@ class AppRouter {
                 GoRoute(
                   path: '/cart',
                   name: 'cart',
-                  builder: (context, state) => const CartScreen(),
+                  builder: (context, state) =>
+                      const RoleAwarePrimaryTabScreen(tabIndex: 3),
                 ),
               ],
             ),
@@ -763,7 +783,8 @@ class AppRouter {
                 GoRoute(
                   path: '/my-ncdfcoop',
                   name: 'my-ncdfcoop',
-                  builder: (context, state) => const MyNCDFCOOPScreen(),
+                  builder: (context, state) =>
+                      const RoleAwarePrimaryTabScreen(tabIndex: 4),
                 ),
               ],
             ),
@@ -1031,8 +1052,21 @@ class AppRouter {
           name: 'order-confirmation',
           parentNavigatorKey: _rootNavigatorKey,
           pageBuilder: (context, state) {
-            final order = state.extra as order_model.Order?;
-            if (order == null) {
+            final extra = state.extra;
+            String? orderId;
+
+            if (extra is order_model.Order) {
+              orderId = extra.id;
+            } else if (extra is String && extra.isNotEmpty) {
+              orderId = extra;
+            } else if (extra is Map<String, dynamic>) {
+              final dynamic mapOrderId = extra['orderId'];
+              if (mapOrderId is String && mapOrderId.isNotEmpty) {
+                orderId = mapOrderId;
+              }
+            }
+
+            if (orderId == null) {
               return CustomTransitionPage(
                 key: state.pageKey,
                 child: Scaffold(
@@ -1046,7 +1080,7 @@ class AppRouter {
             }
             return CustomTransitionPage(
               key: state.pageKey,
-              child: OrderConfirmationScreen(orderId: order.id),
+              child: OrderConfirmationScreen(orderId: orderId),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                 return ScaleTransition(
@@ -1838,6 +1872,37 @@ class AppRouter {
             return SellerOnboardingQuickScreen(
               userId: userId,
               sellerType: sellerType,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/seller/add-product',
+          name: 'seller-add-product',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            return const SellerAddProductScreen();
+          },
+        ),
+        GoRoute(
+          path: '/seller/sales-ledger',
+          name: 'seller-sales-ledger',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            return const SellerSalesLedgerScreen();
+          },
+        ),
+        GoRoute(
+          path: '/seller/products/:productId/edit',
+          name: 'seller-product-detail-edit',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final productId = state.pathParameters['productId'] ?? '';
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            final editable = extra['editable'] as bool? ?? true;
+
+            return SellerProductDetailRouteScreen(
+              productId: productId,
+              editable: editable,
             );
           },
         ),

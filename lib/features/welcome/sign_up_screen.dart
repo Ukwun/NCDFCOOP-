@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/core/config/social_auth_config.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'auth_provider.dart';
 
@@ -230,12 +231,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 40,
                     children: [
-                      _SocialIcon(
-                        icon: Icons.facebook,
-                        onTap: () => ref
-                            .read(authControllerProvider.notifier)
-                            .signInWithFacebook(),
-                      ),
+                      if (SocialAuthConfig.isFacebookConfigured)
+                        _SocialIcon(
+                          icon: Icons.facebook,
+                          onTap: () => ref
+                              .read(authControllerProvider.notifier)
+                              .signInWithFacebook(),
+                        ),
                       _SocialIcon(
                         icon: Icons.g_mobiledata,
                         onTap: () => ref

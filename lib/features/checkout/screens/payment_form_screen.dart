@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
+import 'package:coop_commerce/services/payments/flutterwave_payment_service.dart';
+import 'package:coop_commerce/core/payments/payment_config.dart';
 
 enum PaymentMethod {
   card,
@@ -69,6 +72,8 @@ class PaymentFormScreen extends StatefulWidget {
 class _PaymentFormScreenState extends State<PaymentFormScreen> {
   PaymentMethod? selectedPaymentMethod;
   bool isProcessing = false;
+  bool _paymentServiceInitialized = false;
+  late final FlutterwavePaymentService _flutterwavePaymentService;
 
   // Form controllers
   final cardNumberController = TextEditingController();
@@ -81,6 +86,30 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   final accountNameController = TextEditingController();
 
   final phoneNumberController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _flutterwavePaymentService = FlutterwavePaymentService();
+    _initializePaymentService();
+  }
+
+  Future<void> _initializePaymentService() async {
+    try {
+      await _flutterwavePaymentService.initialize(
+        publicKey: PaymentConfig.flutterwavePublicKey,
+        secretKey: PaymentConfig.flutterwaveSecretKey,
+        testMode: !PaymentConfig.isProduction(),
+      );
+      if (mounted) {
+        setState(() => _paymentServiceInitialized = true);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _paymentServiceInitialized = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -117,33 +146,85 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
       return;
     }
 
+    if (!_paymentServiceInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment gateway is unavailable. Try again shortly.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => isProcessing = true);
 
     try {
-      // TODO: Call payment service to initiate Flutterwave payment
-      // final paymentService = ref.read(paymentServiceProvider);
-      // final response = await paymentService.initiatePayment(
-      //   amount: widget.totalAmount,
-      //   paymentMethod: selectedPaymentMethod!,
-      //   email: 'user@example.com', // Get from auth provider
-      //   orderId: widget.orderId,
-      // );
+      final orderId = widget.orderId?.trim().isNotEmpty == true
+          ? widget.orderId!.trim()
+          : 'ORD-${DateTime.now().millisecondsSinceEpoch}';
 
-      // For now, simulate payment processing
-      await Future.delayed(const Duration(seconds: 2));
+      final customerEmail =
+          (widget.cartData?['email'] as String?) ?? 'customer@coopcommerce.app';
+      final enteredName = cardNameController.text.trim();
+      final enteredPhone = phoneNumberController.text.trim();
+      final customerName = (widget.cartData?['customerName'] as String?) ??
+          (enteredName.isNotEmpty ? enteredName : 'Coop Commerce Customer');
+      final customerPhone = (widget.cartData?['phoneNumber'] as String?) ??
+          (enteredPhone.isNotEmpty ? enteredPhone : '+2340000000000');
+      final customerId =
+          (widget.cartData?['customerId'] as String?) ?? 'guest-$orderId';
 
-      // Mock success response
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Payment initiated successfully!'),
-            backgroundColor: AppColors.success,
-            duration: Duration(seconds: 2),
-          ),
+      final paymentResult = await _flutterwavePaymentService.initiatePayment(
+        email: customerEmail,
+        amount: widget.totalAmount,
+        orderId: orderId,
+        customerId: customerId,
+        customerName: customerName,
+        phoneNumber: customerPhone,
+        paymentType: selectedPaymentMethod == PaymentMethod.bankTransfer
+            ? 'bank_transfer'
+            : 'card',
+      );
+
+      if (paymentResult['success'] != true) {
+        throw Exception(
+            paymentResult['error'] ?? 'Payment initialization failed');
+      }
+
+      if (selectedPaymentMethod == PaymentMethod.bankTransfer) {
+        final bankDetailsResult =
+            await _flutterwavePaymentService.getBankTransferDetails(
+          orderId: orderId,
+          amount: widget.totalAmount,
         );
 
-        // TODO: Navigate to payment confirmation or Flutterwave page
-        // context.push('/payment-status', extra: {'status': 'success'});
+        if (mounted) {
+          await _showBankTransferDetailsDialog(
+              bankDetailsResult['details'] as Map<String, dynamic>?);
+        }
+      } else {
+        final authUrlRaw = paymentResult['authorizationUrl'] as String?;
+        final authUrl = authUrlRaw == null ? null : Uri.tryParse(authUrlRaw);
+        if (authUrl == null) {
+          throw Exception(
+              'Invalid payment authorization URL returned by gateway');
+        }
+
+        final launched =
+            await launchUrl(authUrl, mode: LaunchMode.externalApplication);
+        if (!launched) {
+          throw Exception('Unable to open payment gateway. Please try again.');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Complete payment in Flutterwave, then return to the app.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -159,6 +240,41 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
         setState(() => isProcessing = false);
       }
     }
+  }
+
+  Future<void> _showBankTransferDetailsDialog(
+      Map<String, dynamic>? details) async {
+    final bankName = details?['bankName']?.toString() ?? 'N/A';
+    final accountName = details?['accountName']?.toString() ?? 'N/A';
+    final accountNumber = details?['accountNumber']?.toString() ?? 'N/A';
+    final reference =
+        details?['reference']?.toString() ?? (widget.orderId ?? 'N/A');
+
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Bank Transfer Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Bank: $bankName'),
+            Text('Account Name: $accountName'),
+            Text('Account Number: $accountNumber'),
+            Text('Reference: $reference'),
+            const SizedBox(height: 12),
+            const Text(
+                'Use the exact amount and reference for reconciliation.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
   }
 
   bool _validatePaymentForm() {

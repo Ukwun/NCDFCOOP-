@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:coop_commerce/core/config/social_auth_config.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/services/auth/firebase_auth_service.dart';
 import 'package:coop_commerce/services/auth/auth_storage_service.dart';
-import 'package:coop_commerce/models/user_model.dart';
+import 'package:coop_commerce/features/welcome/user_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -97,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              displayName: user.displayName,
+              name: user.displayName ?? 'Coop Commerce User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),
@@ -157,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              displayName: user.displayName,
+              name: user.displayName ?? 'Coop Commerce User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),
@@ -208,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              displayName: user.displayName,
+              name: user.displayName ?? 'Coop Commerce User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),
@@ -259,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              displayName: user.displayName,
+              name: user.displayName ?? 'Coop Commerce User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),
@@ -576,7 +577,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: isLoading ? null : _loginWithFacebook,
+                      onPressed:
+                          isLoading || !SocialAuthConfig.isFacebookConfigured
+                              ? null
+                              : _loginWithFacebook,
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.grey[300]!),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -639,11 +643,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
-                        recognizer: _TapGestureRecognizer(
-                          onTap: () {
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
                             context.push('/auth/sign-up');
                           },
-                        ),
                       ),
                     ],
                   ),
@@ -656,17 +659,5 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
-  }
-}
-
-class _TapGestureRecognizer extends GestureRecognizer {
-  final VoidCallback onTap;
-
-  _TapGestureRecognizer({required this.onTap});
-
-  @override
-  void addPointer(PointerDownEvent event) {
-    super.addPointer(event);
-    onTap();
   }
 }

@@ -136,7 +136,7 @@ class SellerProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
 
-                ..._buildFeaturedProducts(),
+                ..._buildFeaturedProducts(context),
 
                 const SizedBox(height: 30),
               ],
@@ -461,7 +461,7 @@ class SellerProfileScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildFeaturedProducts() {
+  List<Widget> _buildFeaturedProducts(BuildContext context) {
     final products = [
       {'name': 'Organic Tomatoes', 'price': '₦1,500'},
       {'name': 'Fresh Lettuce', 'price': '₦800'},
@@ -514,7 +514,9 @@ class SellerProfileScreen extends ConsumerWidget {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  context.pushNamed('products');
+                },
                 style: ElevatedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

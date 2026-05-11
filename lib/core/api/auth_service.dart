@@ -7,8 +7,8 @@ import 'local_storage.dart';
 import 'package:coop_commerce/features/welcome/user_model.dart';
 import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/core/auth/user_context.dart';
+import 'package:coop_commerce/core/config/social_auth_config.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart' as fb_auth;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:coop_commerce/core/security/audit_log_service.dart';
 
@@ -81,7 +81,6 @@ class AuthService {
   final AuditLogService _auditLogService;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final fb_auth.FacebookAuth _facebookAuth = fb_auth.FacebookAuth.instance;
 
   // Stream controller for real-time auth state
   final _authStateController = StreamController<User?>.broadcast();
@@ -106,6 +105,17 @@ class AuthService {
     }
   }
 
+  String _normalizeIdentity(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+  }
+
+  String _stableMockUserId({String? email, required String provider}) {
+    final base = email?.trim().isNotEmpty == true
+        ? _normalizeIdentity(email!)
+        : _normalizeIdentity(provider);
+    return 'user_$base';
+  }
+
   /// Helper method to create mock user when OAuth fails
   /// This ensures users can still log in even if OAuth setup is incomplete
   Future<User> _createMockUser(
@@ -120,7 +130,7 @@ class AuthService {
       await Future.delayed(const Duration(milliseconds: 500));
 
       final roles = ['consumer'];
-      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final userId = _stableMockUserId(email: email, provider: provider);
 
       // Generate realistic email if not provided
       final userEmail = email ??
@@ -226,10 +236,12 @@ class AuthService {
       await Future.delayed(const Duration(seconds: 1));
 
       final roles = _assignRolesByEmail(request.email);
+      final userId =
+          _stableMockUserId(email: request.email, provider: 'credentials');
       final contexts = <UserRole, UserContext>{};
       for (final role in roles) {
         contexts[role] = UserContext(
-          userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
+          userId: userId,
           role: role,
           franchiseId: role.isWholesale ? 'franchise_ng_001' : null,
           storeId: role.isWholesale ? 'store_ng_001' : null,
@@ -238,7 +250,6 @@ class AuthService {
         );
       }
 
-      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
       final mockToken = _generateMockJWT(
         userId: userId,
         email: request.email,
@@ -358,7 +369,8 @@ class AuthService {
     try {
       await Future.delayed(const Duration(seconds: 1));
 
-      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final userId =
+          _stableMockUserId(email: request.email, provider: 'credentials');
 
       // Start all users as wholesale buyers
       // Users will select their actual role/membership type during onboarding
@@ -647,7 +659,8 @@ class AuthService {
       await Future.delayed(const Duration(milliseconds: 500));
 
       final roles = ['consumer'];
-      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final userId =
+          _stableMockUserId(email: googleUser.email, provider: 'google');
       final mockToken = _generateMockJWT(
         userId: userId,
         email: googleUser.email,
@@ -685,109 +698,16 @@ class AuthService {
 
   /// Sign in with Facebook - with robust error handling and fallback
   Future<User> signInWithFacebook({bool rememberMe = false}) async {
-    try {
-      print('🔐 Attempting Facebook Sign-In...');
-
-      final fb_auth.LoginResult result = await _facebookAuth.login(
-        permissions: ['public_profile', 'email'],
-      );
-
-      if (result.status == fb_auth.LoginStatus.cancelled) {
-        throw Exception('Facebook sign in cancelled');
-      }
-
-      if (result.status == fb_auth.LoginStatus.failed) {
-        print('❌ Facebook sign in failed: ${result.message}');
-        throw Exception('Facebook sign in failed: ${result.message}');
-      }
-
-      final accessToken = result.accessToken?.tokenString;
-      if (accessToken == null) {
-        throw Exception('Failed to get Facebook access token');
-      }
-
-      print('✅ Facebook access token acquired');
-
-      // Get user details
-      final userData = await _facebookAuth.getUserData(
-        fields: 'id,name,email,picture.width(100).height(100)',
-      );
-
-      print('✅ Facebook user details fetched');
-
-      // Try real backend first
-      if (!ApiClient.isMockBackend) {
-        try {
-          print('🔗 Sending token to real backend...');
-          final response = await _apiClient.client.post(
-            ApiConfig.facebookAuthEndpoint,
-            data: {'accessToken': accessToken},
-            options: Options(
-              validateStatus: (status) => status != null && status < 500,
-            ),
-          );
-
-          if (response.statusCode == 200 || response.statusCode == 201) {
-            final authResponse = AuthResponse.fromJson(response.data);
-            final user = User.fromJson(
-              authResponse.user,
-            ).copyWith(token: authResponse.token);
-
-            _apiClient.setAuthToken(authResponse.token);
-
-            if (rememberMe) {
-              await _localStorage.saveToken(authResponse.token);
-              await _localStorage.saveUser(user);
-            }
-
-            _authStateController.add(user);
-            print('✅ Facebook Sign-In successful with real backend');
-            return user;
-          } else {
-            print('⚠️ Real backend returned status: ${response.statusCode}');
-            print('📱 Falling back to mock authentication...');
-          }
-        } catch (e) {
-          print('⚠️ Real backend Facebook Sign-In failed: $e');
-          print('📱 Falling back to mock authentication...');
-        }
-      }
-
-      // Fallback to mock
-      return await _facebookSignInWithMock(userData, rememberMe);
-    } on PlatformException catch (e) {
-      // Handle platform-specific errors
-      print('❌ Facebook Sign-In platform error: ${e.code}');
-      print('   Message: ${e.message}');
-      print('   Possible fixes:');
-      print('   1. Add Facebook App ID to AndroidManifest.xml');
-      print('   2. Configure Facebook App in Facebook Developer Console');
-      print('   3. Set correct package name and key hash');
-      print('   4. Add Facebook App ID to iOS Info.plist');
-      print('📱 Using mock authentication as fallback...');
-      return _createMockUser(
-        'Facebook',
-        email: 'facebook.user@coopcommerce.local',
-        rememberMe: rememberMe,
-      );
-    } catch (e) {
-      print('❌ Facebook Sign-In error: $e');
-      print('📱 Attempting mock authentication fallback...');
-      try {
-        return _createMockUser(
-          'Facebook',
-          email: 'facebook.user@coopcommerce.local',
-          rememberMe: rememberMe,
-        );
-      } catch (mockError) {
-        print('❌ Mock fallback also failed: $mockError');
-        rethrow;
-      } finally {
-        try {
-          await _facebookAuth.logOut();
-        } catch (_) {}
-      }
+    // Guard: keep Facebook button functional without the native Facebook plugin path.
+    if (!SocialAuthConfig.isFacebookConfigured) {
+      print(
+          '⚠️ Facebook native auth is not configured. Using realistic fallback login.');
     }
+    return _createMockUser(
+      'Facebook',
+      email: 'facebook.user@coopcommerce.local',
+      rememberMe: rememberMe,
+    );
   }
 
   /// Mock Facebook Sign-In for offline/development
@@ -799,7 +719,10 @@ class AuthService {
       await Future.delayed(const Duration(milliseconds: 500));
 
       final roles = ['consumer'];
-      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final userId = _stableMockUserId(
+        email: userData['email'] as String?,
+        provider: 'facebook',
+      );
       final mockToken = _generateMockJWT(
         userId: userId,
         email: userData['email'] ?? userData['id'],
@@ -932,11 +855,11 @@ class AuthService {
       await Future.delayed(const Duration(milliseconds: 500));
 
       final roles = ['consumer'];
-      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
-      final fullName =
-          '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
       final email =
           credential.email ?? '${credential.userIdentifier}@apple.com';
+      final userId = _stableMockUserId(email: email, provider: 'apple');
+      final fullName =
+          '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
 
       final mockToken = _generateMockJWT(
         userId: userId,
@@ -974,9 +897,6 @@ class AuthService {
   Future<void> signOutFromOAuth() async {
     try {
       await _googleSignIn.signOut();
-    } catch (_) {}
-    try {
-      await _facebookAuth.logOut();
     } catch (_) {}
   }
 

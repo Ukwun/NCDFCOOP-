@@ -432,15 +432,8 @@ class _ProposalCardState extends State<_ProposalCard> {
                     value: percentFor / 100,
                     minHeight: 24,
                     backgroundColor: Colors.red[100],
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Colors.green[600]!),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: (percentFor).toInt(),
-                          child: Container(),
-                        ),
-                      ],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.green[600]!,
                     ),
                   ),
                 ),

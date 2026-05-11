@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/seller_providers.dart';
+import '../../core/models/seller_models.dart';
 
 /// QUICK SELLER ONBOARDING
 /// Simplified 3-step seller setup (Alternative to broken complex flow)
@@ -28,6 +30,7 @@ class _SellerOnboardingQuickScreenState
   final _businessDescController = TextEditingController();
   final _businessTypeController = TextEditingController();
   bool _agreeToTerms = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -261,18 +264,29 @@ class _SellerOnboardingQuickScreenState
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton(
-                onPressed: _agreeToTerms ? _completeOnboarding : null,
+                onPressed: _agreeToTerms && !_isSubmitting
+                    ? _completeOnboarding
+                    : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: AppColors.primary,
                 ),
-                child: const Text(
-                  'Complete Setup',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Complete Setup',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -328,20 +342,66 @@ class _SellerOnboardingQuickScreenState
     }
   }
 
-  void _completeOnboarding() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ Store setup completed successfully!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
+  Future<void> _completeOnboarding() async {
+    final user = ref.read(currentUserProvider);
+    final userId = user?.id ?? widget.userId;
 
-    // Navigate to seller dashboard after brief delay
-    Future.delayed(const Duration(seconds: 2), () {
+    if (userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to identify current user')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final sellerService = ref.read(sellerServiceProvider);
+      final existing = await sellerService.getSellerProfileByUserId(userId);
+
+      // Always upsert so tapping Complete Setup has a concrete effect every time.
+      final profile = SellerProfile(
+        id: existing?.id,
+        userId: userId,
+        businessName: _businessNameController.text.trim(),
+        sellerType: _businessTypeController.text.trim().toLowerCase(),
+        sellingPath: widget.sellerType,
+        country: existing?.country.isNotEmpty == true
+            ? existing!.country
+            : 'Nigeria',
+        category: _businessTypeController.text.trim().toLowerCase(),
+        targetCustomer: widget.sellerType == 'wholesale'
+            ? TargetCustomer.bulk
+            : TargetCustomer.individual,
+        isVerified: existing?.isVerified ?? false,
+        createdAt: existing?.createdAt ?? DateTime.now(),
+        approvedAt: existing?.approvedAt,
+      );
+      await sellerService.createSellerProfile(profile);
+
+      ref.invalidate(sellerProfileByUserIdProvider(userId));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seller setup completed and saved successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      context.goNamed('home');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to complete setup: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
       if (mounted) {
-        context.goNamed('home');
+        setState(() => _isSubmitting = false);
       }
-    });
+    }
   }
 }

@@ -175,9 +175,10 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
               Row(
                 spacing: 6,
                 children: [
-                  _buildStatusIcon('assets/icons/signal.png'),
-                  _buildStatusIcon('assets/icons/wifi.png'),
-                  _buildStatusIcon('assets/icons/battery.png'),
+                  Icon(Icons.signal_cellular_4_bar,
+                      color: AppColors.surface, size: 16),
+                  Icon(Icons.wifi, color: AppColors.surface, size: 16),
+                  Icon(Icons.battery_full, color: AppColors.surface, size: 16),
                 ],
               ),
             ],
@@ -223,7 +224,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
               ),
               GestureDetector(
                 onTap: () {
-                  // TODO: Open wishlist
+                  context.pushNamed('wishlist');
                 },
                 child: Container(
                   width: 40,
@@ -242,24 +243,6 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatusIcon(String assetPath) {
-    return SizedBox(
-      width: 16,
-      height: 16,
-      child: Image.asset(
-        assetPath,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.muted, width: 0.5),
-            ),
-          );
-        },
       ),
     );
   }
@@ -579,7 +562,8 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
 
     return GestureDetector(
       onTap: () {
-        context.goNamed('product-detail', pathParameters: {'productId': product.id});
+        context.goNamed('product-detail',
+            pathParameters: {'productId': product.id});
       },
       child: Container(
         decoration: BoxDecoration(
@@ -773,7 +757,8 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
 
     return GestureDetector(
       onTap: () {
-        context.goNamed('product-detail', pathParameters: {'productId': product.id});
+        context.goNamed('product-detail',
+            pathParameters: {'productId': product.id});
       },
       child: Container(
         decoration: BoxDecoration(

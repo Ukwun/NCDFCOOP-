@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
-import '../../../models/seller_models.dart';
+import '../../../core/models/seller_models.dart';
 
 /// SCREEN 5 - SELLER DASHBOARD
 /// Simple dashboard showing All products, Pending, and Approved
@@ -8,7 +8,7 @@ class SellerDashboardScreen extends StatefulWidget {
   final String businessName;
   final List<SellerProduct> products;
   final VoidCallback onAddNewProduct;
-  final VoidCallback onProductTap;
+  final ValueChanged<SellerProduct> onProductTap;
 
   const SellerDashboardScreen({
     super.key,
@@ -30,6 +30,14 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
   void initState() {
     super.initState();
     _filteredProducts = widget.products;
+  }
+
+  @override
+  void didUpdateWidget(covariant SellerDashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.products != widget.products) {
+      _filterProducts();
+    }
   }
 
   @override
@@ -157,7 +165,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
           children: [
             Expanded(
               child: _buildStatCard(
-                icon: Icons.packages_outlined,
+                icon: Icons.inventory_2_outlined,
                 label: 'Total Products',
                 value: totalProducts.toString(),
                 color: AppColors.primary,
@@ -318,7 +326,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
     }
 
     return GestureDetector(
-      onTap: widget.onProductTap,
+      onTap: () => widget.onProductTap(product),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

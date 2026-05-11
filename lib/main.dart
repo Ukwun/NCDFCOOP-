@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:coop_commerce/config/router.dart';
 import 'package:coop_commerce/core/api/service_locator.dart';
@@ -9,6 +13,7 @@ import 'package:coop_commerce/features/notifications/notification_screens.dart';
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
 import 'package:coop_commerce/providers/app_settings_provider.dart';
 import 'package:coop_commerce/providers/app_initializer_provider.dart';
+import 'package:coop_commerce/services/local_search_preferences_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,16 +26,16 @@ void main() async {
   try {
     print('🔥 Initializing Firebase...');
     await Firebase.initializeApp();
-    print('✅ Firebase initialized successfully');
-    // Initialize FCM after Firebase is ready
     try {
-      final fcmService = FCMService();
-      await fcmService.initialize();
-      print('✅ FCM initialized');
+      await FirebaseAppCheck.instance.activate(
+        androidProvider:
+            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+      );
+      print('✅ Firebase App Check initialized');
     } catch (e) {
-      debugPrint('FCM initialization warning: $e');
-      // FCM optional - continue without it
+      debugPrint('⚠️ Firebase App Check initialization warning: $e');
     }
+    print('✅ Firebase initialized successfully');
   } catch (e) {
     debugPrint('⚠️ Firebase initialization failed: $e');
     print(
@@ -38,29 +43,68 @@ void main() async {
     // Don't crash - let the app run anyway
   }
 
-  // Initialize service locator (optional Firebase)
-  try {
-    print('🔧 Initializing service locator...');
-    serviceLocator.initialize();
-    print('✅ Service locator initialized');
-  } catch (e) {
-    debugPrint('Service locator initialization error: $e');
-  }
-
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Initialize persisted user on app startup
-    ref.watch(initializePersistedUserProvider);
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
 
-    // Initialize app systems (cart, inventory, etc.)
-    ref.watch(appInitializerProvider);
+class _MyAppState extends ConsumerState<MyApp> {
+  bool _startedBootstrap = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_startedBootstrap) {
+        return;
+      }
+      _startedBootstrap = true;
+      unawaited(_bootstrapDeferredStartup());
+    });
+  }
+
+  Future<void> _bootstrapDeferredStartup() async {
+    unawaited(ref.read(initializePersistedUserProvider.future));
+    ref.read(appInitializerProvider);
+
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+
+    // Initialize search preferences (for role-specific recent searches and pinned intents)
+    try {
+      print('🔍 Initializing search preferences...');
+      final searchPrefs = LocalSearchPreferencesService();
+      await searchPrefs.init();
+      print('✅ Search preferences initialized');
+    } catch (e) {
+      debugPrint('Search preferences initialization warning: $e');
+    }
+
+    try {
+      print('🔧 Initializing service locator...');
+      serviceLocator.initialize();
+      print('✅ Service locator initialized');
+    } catch (e) {
+      debugPrint('Service locator initialization error: $e');
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+
+    try {
+      final fcmService = FCMService();
+      await fcmService.initialize();
+      print('✅ FCM initialized');
+    } catch (e) {
+      debugPrint('FCM initialization warning: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Watch dark mode setting
     final isDarkMode = ref.watch(darkModeProvider);
 

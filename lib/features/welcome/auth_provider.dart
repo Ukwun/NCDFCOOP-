@@ -33,6 +33,11 @@ final onboardingCompletedProvider = FutureProvider<bool>((ref) async {
 class AuthController extends AsyncNotifier<void> {
   AuthService get _authService => ref.read(authServiceProvider);
 
+  String _fallbackNameFromEmail(String email) {
+    final localPart = email.split('@').first.trim();
+    return localPart.isEmpty ? 'Coop Commerce User' : localPart;
+  }
+
   @override
   Future<void> build() async {
     // Check for persisted session on startup
@@ -75,7 +80,11 @@ class AuthController extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       var user = await _authService.register(
-        RegisterRequest(name: '', email: email, password: password),
+        RegisterRequest(
+          name: _fallbackNameFromEmail(email),
+          email: email,
+          password: password,
+        ),
         rememberMe: rememberMe,
       );
       // Save user to persistent secure storage
@@ -98,7 +107,7 @@ class AuthController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       var user = await _authService.register(
         RegisterRequest(
-          name: '',
+          name: _fallbackNameFromEmail(email),
           email: email,
           password: password,
           role: membershipType,

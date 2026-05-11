@@ -4,6 +4,23 @@ import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/product_providers.dart';
 import 'package:coop_commerce/providers/user_activity_providers.dart';
+import 'package:coop_commerce/core/auth/role.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/search_preferences_providers.dart';
+
+class _SearchIntentAction {
+  final String title;
+  final String query;
+  final String routeName;
+  final IconData icon;
+
+  const _SearchIntentAction({
+    required this.title,
+    required this.query,
+    required this.routeName,
+    required this.icon,
+  });
+}
 
 /// Search screen for browsing products with real-time search
 class SearchScreen extends ConsumerStatefulWidget {
@@ -37,10 +54,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     // Reset pagination when search changes
     ref.read(paginationNotifierProvider.notifier).state = 0;
 
-    // Log search activity to Firestore if query is not empty
+    // Log search activity and save to recent searches if query is not empty
     if (query.isNotEmpty) {
       _logSearchActivity(query);
+      _saveToRecentSearches(query);
     }
+  }
+
+  /// Save search to recent searches for current role
+  Future<void> _saveToRecentSearches(String query) async {
+    try {
+      final service = ref.read(searchPreferencesServiceProvider);
+      final role = ref.read(currentRoleProvider);
+      await service.saveRecentSearch(role, query);
+
+      // Refresh recent searches provider
+      ref.invalidate(recentSearchesForRoleProvider);
+    } catch (e) {
+      debugPrint('⚠️ Failed to save recent search: $e');
+    }
+  }
+
+  /// Activate a recent search
+  Future<void> _activateRecentSearch(String query) async {
+    _searchController.text = query;
+    _searchController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _searchController.text.length),
+    );
+    _updateSearchQuery();
+    await _logSearchActivity(query);
   }
 
   /// Log search activity to Firestore
@@ -62,6 +104,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final searchQuery = ref.watch(productSearchQueryProvider);
     final searchResults = ref.watch(productSearchProvider(searchQuery));
+    final role = ref.watch(currentRoleProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -72,7 +115,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           controller: _searchController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Search products, categories...',
+            hintText: _hintForRole(role),
             hintStyle: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textLight,
             ),
@@ -91,7 +134,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ),
       ),
       body: searchQuery.isEmpty
-          ? _buildEmptyState()
+          ? _buildIntentDiscoveryState(context, role)
           : searchResults.when(
               data: (data) {
                 if (data.isEmpty) {
@@ -137,6 +180,448 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  String _hintForRole(UserRole role) {
+    if (role == UserRole.coopMember || role == UserRole.premiumMember) {
+      return 'Search investment products, savings plans, transactions...';
+    }
+
+    if (role == UserRole.wholesaleBuyer ||
+        role == UserRole.institutionalBuyer ||
+        role == UserRole.institutionalApprover) {
+      return 'Search institutional products, reports, accounts...';
+    }
+
+    if (role == UserRole.seller) {
+      return 'Search clients, catalogues, leads, campaigns...';
+    }
+
+    return 'Search products, categories...';
+  }
+
+  List<_SearchIntentAction> _intentsForRole(UserRole role) {
+    if (role == UserRole.coopMember || role == UserRole.premiumMember) {
+      return const [
+        _SearchIntentAction(
+          title: 'Investment Products',
+          query: 'investment products',
+          routeName: 'products',
+          icon: Icons.trending_up_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Savings Plans',
+          query: 'savings plans',
+          routeName: 'member-savings',
+          icon: Icons.savings_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Transaction History',
+          query: 'transaction history',
+          routeName: 'orders',
+          icon: Icons.receipt_long_outlined,
+        ),
+      ];
+    }
+
+    if (role == UserRole.wholesaleBuyer ||
+        role == UserRole.institutionalBuyer ||
+        role == UserRole.institutionalApprover) {
+      return const [
+        _SearchIntentAction(
+          title: 'Institutional Products',
+          query: 'institutional products',
+          routeName: 'products',
+          icon: Icons.apartment_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Reports',
+          query: 'reports',
+          routeName: 'analytics-dashboard',
+          icon: Icons.insert_chart_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Accounts',
+          query: 'accounts',
+          routeName: 'my-ncdfcoop',
+          icon: Icons.manage_accounts_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Large Portfolios',
+          query: 'large portfolios',
+          routeName: 'bulk-order',
+          icon: Icons.account_balance_outlined,
+        ),
+      ];
+    }
+
+    if (role == UserRole.seller) {
+      return const [
+        _SearchIntentAction(
+          title: 'Clients',
+          query: 'clients',
+          routeName: 'messages',
+          icon: Icons.groups_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Product Catalogues',
+          query: 'product catalogues',
+          routeName: 'products',
+          icon: Icons.inventory_2_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Leads',
+          query: 'leads',
+          routeName: 'dashboard',
+          icon: Icons.track_changes_outlined,
+        ),
+        _SearchIntentAction(
+          title: 'Campaigns',
+          query: 'campaigns',
+          routeName: 'offers',
+          icon: Icons.campaign_outlined,
+        ),
+      ];
+    }
+
+    return const [
+      _SearchIntentAction(
+        title: 'Products',
+        query: 'products',
+        routeName: 'products',
+        icon: Icons.shopping_bag_outlined,
+      ),
+      _SearchIntentAction(
+        title: 'Orders',
+        query: 'orders',
+        routeName: 'orders',
+        icon: Icons.local_shipping_outlined,
+      ),
+    ];
+  }
+
+  Future<void> _activateIntent(
+      BuildContext context, _SearchIntentAction intent) async {
+    _searchController.text = intent.query;
+    _searchController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _searchController.text.length),
+    );
+    _updateSearchQuery();
+
+    await _logSearchActivity(intent.query);
+  }
+
+  void _openIntentRoute(BuildContext context, _SearchIntentAction intent) {
+    try {
+      context.pushNamed(intent.routeName);
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Route ${intent.routeName} is not available yet')),
+      );
+    }
+  }
+
+  Widget _buildIntentDiscoveryState(BuildContext context, UserRole role) {
+    final intents = _intentsForRole(role);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ========== RECENT SEARCHES SECTION ==========
+          _buildRecentSearchesSection(),
+          const SizedBox(height: AppSpacing.xl),
+
+          // ========== PINNED INTENTS & ALL INTENTS SECTION ==========
+          Text(
+            'Intent Search Layer',
+            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Discovery actions tuned to ${role.displayName}',
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textLight),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Pinned intents section (if any pinned)
+          _buildPinnedIntentsSection(context, intents),
+
+          // All intents
+          ...intents.map(
+            (intent) => _buildIntentCard(context, intent),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _buildEmptyState(),
+        ],
+      ),
+    );
+  }
+
+  /// Build recent searches section with role-specific history
+  Widget _buildRecentSearchesSection() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final recentSearches = ref.watch(recentSearchesForRoleProvider);
+
+        return recentSearches.when(
+          data: (searches) {
+            if (searches.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recent Searches',
+                      style: AppTextStyles.h4
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final role = ref.read(currentRoleProvider);
+                        final service =
+                            ref.read(searchPreferencesServiceProvider);
+                        await service.clearRecentSearches(role);
+                        ref.invalidate(recentSearchesForRoleProvider);
+                      },
+                      child: Text(
+                        'Clear',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.error),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: searches
+                      .map(
+                        (query) => GestureDetector(
+                          onTap: () => _activateRecentSearch(query),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.history,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Text(
+                                  query,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            );
+          },
+          loading: () => Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: SizedBox(
+              height: 40,
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.primary.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          error: (err, stack) => const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+
+  /// Build pinned intents section with visual indicators
+  Widget _buildPinnedIntentsSection(
+      BuildContext context, List<_SearchIntentAction> allIntents) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final pinnedIntents = ref.watch(pinnedIntentsForRoleProvider);
+
+        return pinnedIntents.when(
+          data: (pinned) {
+            if (pinned.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            // Filter intents to only show pinned ones
+            final pinnedIntentCards = allIntents
+                .where((intent) => pinned.contains(intent.title))
+                .toList();
+
+            if (pinnedIntentCards.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '⭐ Pinned Workflows',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ...pinnedIntentCards.map(
+                  (intent) => _buildIntentCard(context, intent, isPinned: true),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Divider(color: AppColors.border),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (err, stack) => const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+
+  /// Build a single intent card with pin/unpin button
+  Widget _buildIntentCard(
+    BuildContext context,
+    _SearchIntentAction intent, {
+    bool isPinned = false,
+  }) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final isIntentPinned = ref.watch(isIntentPinnedProvider(intent.title));
+
+        return isIntentPinned.when(
+          data: (pinned) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(
+                  color: pinned ? AppColors.primary : AppColors.border,
+                  width: pinned ? 2 : 1,
+                ),
+                boxShadow: pinned
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        )
+                      ]
+                    : [],
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  child: Icon(intent.icon, color: AppColors.primary),
+                ),
+                title: Text(intent.title, style: AppTextStyles.labelLarge),
+                subtitle: Text('Search: "${intent.query}"'),
+                onTap: () => _activateIntent(context, intent),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Pin button
+                    IconButton(
+                      icon: Icon(
+                        pinned ? Icons.star : Icons.star_outline,
+                        color: pinned ? Colors.amber : AppColors.textLight,
+                      ),
+                      onPressed: () async {
+                        if (pinned) {
+                          await ref
+                              .read(unpinIntentProvider(intent.title).future);
+                        } else {
+                          await ref
+                              .read(pinIntentProvider(intent.title).future);
+                        }
+                      },
+                      tooltip: pinned ? 'Unpin workflow' : 'Pin workflow',
+                    ),
+                    // Open button
+                    TextButton(
+                      onPressed: () => _openIntentRoute(context, intent),
+                      child: const Text('Open'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          loading: () => Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: Icon(intent.icon, color: AppColors.primary),
+              ),
+              title: Text(intent.title, style: AppTextStyles.labelLarge),
+              subtitle: Text('Search: "${intent.query}"'),
+            ),
+          ),
+          error: (err, stack) => Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: Icon(intent.icon, color: AppColors.primary),
+              ),
+              title: Text(intent.title, style: AppTextStyles.labelLarge),
+              subtitle: Text('Search: "${intent.query}"'),
+              onTap: () => _activateIntent(context, intent),
+              trailing: TextButton(
+                onPressed: () => _openIntentRoute(context, intent),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

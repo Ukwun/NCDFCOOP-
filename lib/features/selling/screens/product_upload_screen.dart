@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/seller_models.dart';
 
@@ -28,10 +32,12 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   final _quantityController = TextEditingController();
   final _moqController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   String _category = 'agriculture';
   String _imageUrl = '';
   bool _agreedToTerms = false;
+  bool _isUploadingImage = false;
 
   @override
   void dispose() {
@@ -208,38 +214,59 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Image Upload (placeholder)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  border: Border.all(
-                    color: AppColors.border,
-                    style: BorderStyle.solid,
+              // Image Upload
+              InkWell(
+                onTap: _isUploadingImage ? null : _pickAndUploadImage,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    border: Border.all(
+                      color: _imageUrl.isNotEmpty
+                          ? AppColors.success
+                          : AppColors.border,
+                      style: BorderStyle.solid,
+                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.image_outline,
-                      size: 48,
-                      color: AppColors.textLight,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Click to upload product image',
-                      style: AppTextStyles.labelMedium
-                          .copyWith(color: AppColors.textLight),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'PNG, JPG up to 10MB',
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.textLight),
-                    ),
-                  ],
+                  child: Column(
+                    children: [
+                      if (_isUploadingImage)
+                        const CircularProgressIndicator()
+                      else if (_imageUrl.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: Image.network(
+                            _imageUrl,
+                            height: 140,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      else
+                        Icon(
+                          Icons.image_outlined,
+                          size: 48,
+                          color: AppColors.textLight,
+                        ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _imageUrl.isNotEmpty
+                            ? 'Image uploaded. Tap to replace'
+                            : 'Tap to upload product image',
+                        style: AppTextStyles.labelMedium
+                            .copyWith(color: AppColors.textLight),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'PNG/JPG up to 10MB',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.textLight),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -502,6 +529,13 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
 
   void _handleSubmit() {
     if (_formKey.currentState!.validate()) {
+      if (_imageUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please upload a product image')),
+        );
+        return;
+      }
+
       widget.onProductAdded(
         _productNameController.text,
         _category,
@@ -510,6 +544,44 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         int.parse(_moqController.text),
         _imageUrl,
         _descriptionController.text,
+      );
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      setState(() => _isUploadingImage = true);
+
+      final selected = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+
+      if (selected == null) {
+        setState(() => _isUploadingImage = false);
+        return;
+      }
+
+      final file = File(selected.path);
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('seller_products')
+          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      await storageRef.putFile(file);
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      if (!mounted) return;
+      setState(() {
+        _imageUrl = downloadUrl;
+        _isUploadingImage = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingImage = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image upload failed: $e')),
       );
     }
   }

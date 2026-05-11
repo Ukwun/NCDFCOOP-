@@ -46,26 +46,9 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
-	<!-- Facebook OAuth Configuration -->
-	<key>FacebookAppID</key>
-	<string>FACEBOOK_APP_ID</string>
-	<key>FacebookDisplayName</key>
-	<string>Coop Commerce</string>
-	<key>FacebookClientToken</key>
-	<string>FACEBOOK_CLIENT_TOKEN</string>
-	
 	<!-- URL Schemes for OAuth callbacks -->
 	<key>CFBundleURLTypes</key>
 	<array>
-		<!-- Facebook OAuth URL scheme -->
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>fbFACEBOOK_APP_ID</string>
-			</array>
-		</dict>
 		<!-- Google OAuth URL scheme -->
 		<dict>
 			<key>CFBundleTypeRole</key>

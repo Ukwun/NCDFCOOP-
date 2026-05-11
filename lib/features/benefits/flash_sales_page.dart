@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// Flash Sales & Exclusive Deals Page
@@ -159,7 +161,43 @@ class FlashSalesPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          final messaging = FirebaseMessaging.instance;
+                          final settings = await messaging.requestPermission(
+                            alert: true,
+                            badge: true,
+                            sound: true,
+                            provisional: false,
+                          );
+
+                          if (settings.authorizationStatus ==
+                                  AuthorizationStatus.authorized ||
+                              settings.authorizationStatus ==
+                                  AuthorizationStatus.provisional) {
+                            await messaging.subscribeToTopic('flash_sales');
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Flash sale alerts enabled successfully.',
+                                ),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                            context.pushNamed('notifications');
+                            return;
+                          }
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Notification permission was not granted.',
+                              ),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           padding: const EdgeInsets.symmetric(vertical: 12),

@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/core/providers/rbac_providers.dart';
-import 'package:coop_commerce/features/home/role_screens/consumer_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/member_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/franchise_owner_home_screen_v2.dart';
 import 'package:coop_commerce/features/home/role_screens/institutional_buyer_home_screen_v2.dart';
 import 'package:coop_commerce/features/home/role_screens/warehouse_staff_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/admin_home_screen_v2.dart';
+import 'package:coop_commerce/features/dashboard/personalized_dashboard_screen.dart';
+import 'package:coop_commerce/features/selling/seller_home_screen.dart';
 
 /// Wrapper that renders the correct home screen based on user role
 class RoleAwareHomeScreen extends ConsumerWidget {
@@ -35,10 +36,14 @@ class RoleAwareHomeScreen extends ConsumerWidget {
   Widget _buildHomeScreenForRole(UserRole role) {
     switch (role) {
       case UserRole.wholesaleBuyer:
-        return const ConsumerHomeScreen();
+        return const PersonalizedDashboardScreen();
 
       case UserRole.coopMember:
+      case UserRole.premiumMember:
         return const MemberHomeScreen();
+
+      case UserRole.seller:
+        return const SellerHomeScreen();
 
       case UserRole.franchiseOwner:
         return const FranchiseOwnerHomeScreenV2();
@@ -66,9 +71,6 @@ class RoleAwareHomeScreen extends ConsumerWidget {
 
       case UserRole.superAdmin:
         return const AdminHomeScreenV2();
-
-      default:
-        return const ConsumerHomeScreen();
     }
   }
 }

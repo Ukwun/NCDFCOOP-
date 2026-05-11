@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
 
 /// Enhanced Order Tracking Screen - MVP with real-time status simulation
 class EnhancedOrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
 
   const EnhancedOrderTrackingScreen({Key? key, required this.orderId})
-    : super(key: key);
+      : super(key: key);
 
   @override
   ConsumerState<EnhancedOrderTrackingScreen> createState() =>
@@ -251,10 +252,11 @@ class _EnhancedOrderTrackingScreenState
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Opening tracker (mock)...'),
-                            ),
+                          final userId = ref.read(currentUserProvider)?.id ??
+                              'current_user';
+                          context.pushNamed(
+                            'shipment-tracking',
+                            queryParameters: {'userId': userId},
                           );
                         },
                         icon: const Icon(Icons.location_on),
@@ -271,10 +273,14 @@ class _EnhancedOrderTrackingScreenState
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Contacting seller (mock)...'),
-                          ),
+                        context.pushNamed(
+                          'messages',
+                          extra: {
+                            'orderId': widget.orderId,
+                            'contactType': 'seller_support',
+                            'initialMessage':
+                                'Hello, I need an update on order ${widget.orderId}.',
+                          },
                         );
                       },
                       icon: const Icon(Icons.chat_bubble),

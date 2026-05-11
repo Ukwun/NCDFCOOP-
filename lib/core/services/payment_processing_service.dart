@@ -403,23 +403,31 @@ class PaymentData {
   factory PaymentData.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
+    DateTime parseDate(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      if (value is String) {
+        return DateTime.tryParse(value) ?? DateTime.now();
+      }
+      return DateTime.now();
+    }
+
     return PaymentData(
-      paymentId: data['paymentId'] as String,
-      orderId: data['orderId'] as String,
-      buyerId: data['buyerId'] as String,
+      paymentId: (data['paymentId'] ?? doc.id) as String,
+      orderId: (data['orderId'] ?? '') as String,
+      buyerId: (data['buyerId'] ?? data['userId'] ?? '') as String,
       amount: (data['amount'] as num).toDouble(),
-      method: data['method'] as String,
-      paymentMethodId: data['paymentMethodId'] as String,
-      currency: data['currency'] as String,
-      status: data['status'] as String,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
-      processedAt: data['processedAt'] != null
-          ? (data['processedAt'] as Timestamp).toDate()
-          : null,
-      refundedAt: data['refundedAt'] != null
-          ? (data['refundedAt'] as Timestamp).toDate()
-          : null,
+      method: (data['method'] ?? 'unknown') as String,
+      paymentMethodId: (data['paymentMethodId'] ?? '') as String,
+      currency: (data['currency'] ?? 'NGN') as String,
+      status: (data['status'] ?? 'unknown') as String,
+      createdAt: parseDate(data['createdAt']),
+      updatedAt: parseDate(data['updatedAt']),
+      processedAt:
+          data['processedAt'] != null ? parseDate(data['processedAt']) : null,
+      refundedAt:
+          data['refundedAt'] != null ? parseDate(data['refundedAt']) : null,
       refundAmount: data['refundAmount'] != null
           ? (data['refundAmount'] as num).toDouble()
           : null,

@@ -20,8 +20,17 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
     final userId = user?.id ?? '';
     final checkoutState = ref.watch(checkoutFlowProvider);
     final cartItemsAsync = ref.watch(userCartItemsProvider(userId));
+    final cartState = ref.watch(cartProvider);
+    final cartSubtotal = cartState.subtotal > 0
+        ? cartState.subtotal
+        : cartState.items.fold<double>(
+            0.0,
+            (sum, item) =>
+                sum +
+                (item.memberPrice > 0 ? item.memberPrice : item.marketPrice),
+          );
     final orderCalcAsync = ref.watch(orderCalculationProvider({
-      'subtotal': 0.0,
+      'subtotal': cartSubtotal,
       'promoCode': checkoutState.promoCode,
     }));
 

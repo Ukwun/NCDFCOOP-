@@ -27,6 +27,16 @@ final sellerProductsProvider =
   return service.getSellerProducts(sellerId);
 });
 
+final sellerProductsForSellerProvider = FutureProvider.family<
+    List<SellerProduct>,
+    ({String userId, String? sellerProfileId})>((ref, params) async {
+  final service = ref.watch(sellerServiceProvider);
+  return service.getSellerProductsForSeller(
+    userId: params.userId,
+    sellerProfileId: params.sellerProfileId,
+  );
+});
+
 final sellerProductByIdProvider =
     FutureProvider.family<SellerProduct?, String>((ref, productId) async {
   final service = ref.watch(sellerServiceProvider);
