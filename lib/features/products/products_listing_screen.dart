@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +37,9 @@ class ProductsListingScreen extends ConsumerStatefulWidget {
 class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
   String viewType = 'grid'; // grid or list
   late ScrollController _scrollController;
+  final Map<String, Timer> _favoriteBadgeTimers = {};
+  final Set<String> _showFavoriteBadges = <String>{};
+  final Map<String, String> _favoriteBadgeLabels = <String, String>{};
   String searchQuery = '';
   String sortOption = 'popularity';
   double? minPriceFilter;
@@ -56,6 +61,10 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
 
   @override
   void dispose() {
+    for (final timer in _favoriteBadgeTimers.values) {
+      timer.cancel();
+    }
+    _favoriteBadgeTimers.clear();
     _scrollController.dispose();
     super.dispose();
   }
@@ -89,7 +98,9 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
     switch (role) {
       case UserRole.institutionalBuyer:
       case UserRole.institutionalApprover:
-        return product.visibleToInstitutions;
+        return product.visibleToInstitutions ||
+            product.visibleToWholesale ||
+            product.visibleToRetail;
       case UserRole.coopMember:
       case UserRole.premiumMember:
       case UserRole.wholesaleBuyer:
@@ -146,6 +157,25 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
     );
   }
 
+  void _showFavoriteBadge(String productId, String label) {
+    _favoriteBadgeTimers[productId]?.cancel();
+
+    if (mounted) {
+      setState(() {
+        _showFavoriteBadges.add(productId);
+        _favoriteBadgeLabels[productId] = label;
+      });
+    }
+
+    _favoriteBadgeTimers[productId] =
+        Timer(const Duration(milliseconds: 900), () {
+      if (!mounted) return;
+      setState(() {
+        _showFavoriteBadges.remove(productId);
+      });
+    });
+  }
+
   void _toggleFavorite(Product product) {
     final isFavorite = ref.read(wl.wishlistProvider).contains(product.id);
     final nowFavorite = ref.read(wl.wishlistProvider.notifier).toggleWishlist(
@@ -155,6 +185,8 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
           originalPrice: product.retailPrice,
           imageUrl: product.imageUrl,
         );
+
+    _showFavoriteBadge(product.id, nowFavorite ? 'Saved' : 'Removed');
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -172,6 +204,80 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
       // no-op guard for unexpected state
       return;
     }
+  }
+
+  Widget _buildFavoriteButton({
+    required Product product,
+    required bool isFavorite,
+    required double size,
+    required double iconSize,
+  }) {
+    final showBadge = _showFavoriteBadges.contains(product.id);
+
+    return GestureDetector(
+      onTap: () {
+        _toggleFavorite(product);
+      },
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: isFavorite
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                  color: isFavorite ? Colors.red : AppColors.border,
+                ),
+              ),
+              child: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : AppColors.muted,
+                size: iconSize,
+              ),
+            ),
+            Positioned(
+              top: -16,
+              right: -8,
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: showBadge ? 1 : 0,
+                  child: AnimatedScale(
+                    duration: const Duration(milliseconds: 180),
+                    scale: showBadge ? 1 : 0.8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        _favoriteBadgeLabels[product.id] ?? 'Saved',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -800,7 +906,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '₦${product.retailPrice.toStringAsFixed(0)}',
+                              '��${product.retailPrice.toStringAsFixed(0)}',
                               style: AppTextStyles.h4.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w700,
@@ -826,34 +932,11 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            GestureDetector(
-                              onTap: () {
-                                _toggleFavorite(product);
-                              },
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: isFavorite
-                                      ? Colors.red.withValues(alpha: 0.1)
-                                      : AppColors.background,
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.sm),
-                                  border: Border.all(
-                                    color: isFavorite
-                                        ? Colors.red
-                                        : AppColors.border,
-                                  ),
-                                ),
-                                child: Icon(
-                                  isFavorite
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color:
-                                      isFavorite ? Colors.red : AppColors.muted,
-                                  size: 16,
-                                ),
-                              ),
+                            _buildFavoriteButton(
+                              product: product,
+                              isFavorite: isFavorite,
+                              size: 28,
+                              iconSize: 16,
                             ),
                             const SizedBox(width: 6),
                             GestureDetector(
@@ -1027,7 +1110,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                       spacing: 8,
                       children: [
                         Text(
-                          '₦${product.retailPrice.toStringAsFixed(0)}',
+                          '��${product.retailPrice.toStringAsFixed(0)}',
                           style: AppTextStyles.h4.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w700,
@@ -1071,28 +1154,11 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      _toggleFavorite(product);
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: isFavorite
-                            ? Colors.red.withValues(alpha: 0.1)
-                            : AppColors.background,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        border: Border.all(
-                          color: isFavorite ? Colors.red : AppColors.border,
-                        ),
-                      ),
-                      child: Icon(
-                        isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: isFavorite ? Colors.red : AppColors.muted,
-                        size: 18,
-                      ),
-                    ),
+                  _buildFavoriteButton(
+                    product: product,
+                    isFavorite: isFavorite,
+                    size: 32,
+                    iconSize: 18,
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(

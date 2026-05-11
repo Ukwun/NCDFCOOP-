@@ -342,6 +342,9 @@ final productsByFiltersProvider =
 
     final sellerProducts = await _fetchApprovedSellerProducts();
     final merged = _mergeProducts(baseProducts, sellerProducts);
+    if (merged.isEmpty) {
+      return _applyProductFilters(_getMockProducts(), filters);
+    }
     return _applyProductFilters(merged, filters);
   } catch (e) {
     // Return merged mock + seller fallback when service fails
@@ -366,7 +369,8 @@ final allProductsProvider =
     );
 
     final sellerProducts = await _fetchApprovedSellerProducts();
-    return _mergeProducts(result.products, sellerProducts);
+    final merged = _mergeProducts(result.products, sellerProducts);
+    return merged.isEmpty ? _getMockProducts() : merged;
   } catch (e) {
     final sellerProducts = await _fetchApprovedSellerProducts();
     return _mergeProducts(_getMockProducts(), sellerProducts);
@@ -385,6 +389,14 @@ final productsByCategoryProvider = FutureProvider.autoDispose
       offset: 0,
       sortBy: 'popularity',
     );
+
+    if (result.products.isEmpty) {
+      final fallbackByCategory =
+          _getMockProducts().where((p) => p.categoryId == categoryId).toList();
+      return fallbackByCategory.isEmpty
+          ? _getMockProducts()
+          : fallbackByCategory;
+    }
 
     return result.products;
   } catch (e) {
@@ -407,6 +419,15 @@ final productSearchProvider = FutureProvider.autoDispose
       limit: productsPerPage,
       offset: 0,
     );
+
+    if (result.products.isEmpty) {
+      final query = searchQuery.toLowerCase();
+      return _getMockProducts()
+          .where((p) =>
+              p.name.toLowerCase().contains(query) ||
+              p.description.toLowerCase().contains(query))
+          .toList();
+    }
 
     return result.products;
   } catch (e) {

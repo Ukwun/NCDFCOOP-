@@ -623,34 +623,45 @@ List<Product> _getDefaultMockProducts() {
 /// - Consumer: visibleToRetail = true
 /// - Member: visibleToWholesale = true
 /// - Institutional: visibleToInstitutions = true
+bool _companyProductVisibleForRole(Map<String, dynamic> data, String role) {
+  final retailVisible = data['visibleToRetail'] != false;
+  final wholesaleVisible = data['visibleToWholesale'] == true;
+  final institutionalVisible = data['visibleToInstitutions'] == true;
+
+  if (role.contains('institutional')) {
+    // Graceful fallback: institutional users can still browse retail/wholesale
+    // catalog when institutional flags are missing on older seeded docs.
+    return institutionalVisible || wholesaleVisible || retailVisible;
+  }
+
+  if (role.contains('member') ||
+      role.contains('cooperative') ||
+      role.contains('wholesale')) {
+    return wholesaleVisible || retailVisible;
+  }
+
+  return retailVisible;
+}
+
 final roleAwareFeaturedProductsProvider =
     FutureProvider.family<List<Product>, String>((ref, userRole) async {
   try {
     final firestore = FirebaseFirestore.instance;
     final role = userRole.toLowerCase();
 
-    String visibilityField;
-    if (role.contains('member') || role.contains('cooperative')) {
-      visibilityField = 'visibleToWholesale';
-    } else if (role.contains('institutional')) {
-      visibilityField = 'visibleToInstitutions';
-    } else {
-      visibilityField = 'visibleToRetail';
-    }
+    final companySnapshot =
+        await firestore.collection('products').limit(60).get();
 
-    final companySnapshot = await firestore
-        .collection('products')
-        .where(visibilityField, isEqualTo: true)
-        .limit(18)
-        .get();
-
-    final merged = <String, Product>{
-      for (final doc in companySnapshot.docs)
-        doc.id: Product.fromFirestore({
-          ...doc.data(),
+    final merged = <String, Product>{};
+    for (final doc in companySnapshot.docs) {
+      final data = doc.data();
+      if (_companyProductVisibleForRole(data, role)) {
+        merged[doc.id] = Product.fromFirestore({
+          ...data,
           'id': doc.id,
-        }),
-    };
+        });
+      }
+    }
 
     // Seller listings are intended for cooperative members and wholesale buyers.
     final canSeeSellerProducts = role.contains('member') ||
@@ -708,20 +719,7 @@ final roleAwareProductsProvider =
     final firestore = FirebaseFirestore.instance;
     final role = userRole.toLowerCase();
 
-    // Determine which visibility flag to filter by
-    String visibilityField;
-    if (role.contains('member') || role.contains('cooperative')) {
-      visibilityField = 'visibleToWholesale';
-    } else if (role.contains('institutional')) {
-      visibilityField = 'visibleToInstitutions';
-    } else {
-      visibilityField = 'visibleToRetail';
-    }
-
-    final companyStream = firestore
-        .collection('products')
-        .where(visibilityField, isEqualTo: true)
-        .snapshots();
+    final companyStream = firestore.collection('products').snapshots();
 
     final sellerStream = (role.contains('member') ||
             role.contains('cooperative') ||
@@ -740,10 +738,13 @@ final roleAwareProductsProvider =
       final merged = <String, Product>{};
 
       for (final doc in latestCompany?.docs ?? const []) {
-        merged[doc.id] = Product.fromFirestore({
-          ...doc.data(),
-          'id': doc.id,
-        });
+        final data = doc.data();
+        if (_companyProductVisibleForRole(data, role)) {
+          merged[doc.id] = Product.fromFirestore({
+            ...data,
+            'id': doc.id,
+          });
+        }
       }
 
       for (final doc in latestSeller?.docs ?? const []) {

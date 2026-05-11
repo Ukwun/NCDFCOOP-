@@ -97,6 +97,7 @@ import 'package:coop_commerce/features/store_manager/inventory_health_screen.dar
 import 'package:coop_commerce/features/admin/analytics_dashboard_screen.dart';
 import 'package:coop_commerce/features/orders/invoice_preview_screen.dart';
 import 'package:coop_commerce/features/products/product_reviews_screen.dart';
+import 'package:coop_commerce/features/reviews/my_reviews_screen.dart';
 // Educational feature imports
 import 'package:coop_commerce/features/education/about_cooperatives_screen.dart';
 import 'package:coop_commerce/features/education/features_guide_screen.dart';
@@ -302,8 +303,9 @@ class AppRouter {
             state.uri.path == '/help-center' ||
             state.uri.path == '/role-selection';
 
-        // While auth state is loading, stay on splash
-        if (authState.isLoading) {
+        // If auth state is loading but we have a persisted user, proceed with authenticated flow
+        // This prevents the splash screen from hanging when Firebase auth stream is slow
+        if (authState.isLoading && currentUser == null) {
           if (!isOnPublicRoute) {
             return '/splash';
           }
@@ -311,7 +313,7 @@ class AppRouter {
         }
 
         // If auth state has an error, redirect to splash
-        if (authState.hasError) {
+        if (authState.hasError && currentUser == null) {
           debugPrint('Auth state error: ${authState.error}');
           if (!isOnPublicRoute) {
             return '/splash';
@@ -320,7 +322,7 @@ class AppRouter {
         }
 
         // Unauthenticated users can access public authentication routes
-        if (!isAuthenticated) {
+        if (!isAuthenticated && currentUser == null) {
           if (isOnPublicRoute) {
             return null;
           }
@@ -649,6 +651,14 @@ class AppRouter {
             final locationId = state.uri.queryParameters['locationId'];
             return ReorderManagementScreen(locationId: locationId);
           },
+        ),
+
+        // Phase 4: Product Reviews Route
+        GoRoute(
+          path: '/reviews',
+          name: 'my-reviews',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const MyReviewsScreen(),
         ),
 
         // Phase 4: Product Reviews Route
