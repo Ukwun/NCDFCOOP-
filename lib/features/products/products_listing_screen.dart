@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/product_providers.dart';
 import 'package:coop_commerce/core/providers/real_time_providers.dart';
+import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/models/product.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/cart_provider.dart';
+import 'package:coop_commerce/providers/wishlist_provider.dart' as wl;
 
 /// String extension for capitalize
 extension StringExtension on String {
@@ -68,6 +72,106 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
       sortOption = newSort;
     });
     ref.read(productFiltersProvider.notifier).setSortBy(newSort);
+  }
+
+  bool _isSellerMarketplaceProduct(Product product) {
+    return product.franchiseId == 'seller_marketplace' ||
+        product.uploadedBy.isNotEmpty;
+  }
+
+  bool _canCurrentRoleSeeProduct(Product product, UserRole role) {
+    if (_isSellerMarketplaceProduct(product)) {
+      return role == UserRole.coopMember ||
+          role == UserRole.premiumMember ||
+          role == UserRole.wholesaleBuyer;
+    }
+
+    switch (role) {
+      case UserRole.institutionalBuyer:
+      case UserRole.institutionalApprover:
+        return product.visibleToInstitutions;
+      case UserRole.coopMember:
+      case UserRole.premiumMember:
+      case UserRole.wholesaleBuyer:
+        return product.visibleToWholesale || product.visibleToRetail;
+      default:
+        return product.visibleToRetail;
+    }
+  }
+
+  double _getPriceForRole(Product product, UserRole role) {
+    switch (role) {
+      case UserRole.institutionalBuyer:
+      case UserRole.institutionalApprover:
+        return product.contractPrice > 0
+            ? product.contractPrice
+            : (product.wholesalePrice > 0
+                ? product.wholesalePrice
+                : product.retailPrice);
+      case UserRole.coopMember:
+      case UserRole.premiumMember:
+      case UserRole.wholesaleBuyer:
+        return product.wholesalePrice > 0
+            ? product.wholesalePrice
+            : product.retailPrice;
+      default:
+        return product.retailPrice;
+    }
+  }
+
+  Future<void> _addProductToCart(Product product) async {
+    if (product.stock <= 0) return;
+
+    final role = ref.read(currentRoleProvider);
+    final effectivePrice = _getPriceForRole(product, role);
+
+    final cartNotifier = ref.read(cartProvider.notifier);
+    await cartNotifier.addItem(
+      CartItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        productId: product.id,
+        productName: product.name,
+        memberPrice: effectivePrice,
+        marketPrice: product.retailPrice,
+        imageUrl: product.imageUrl,
+      ),
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.name} added to cart'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _toggleFavorite(Product product) {
+    final isFavorite = ref.read(wl.wishlistProvider).contains(product.id);
+    final nowFavorite = ref.read(wl.wishlistProvider.notifier).toggleWishlist(
+          productId: product.id,
+          productName: product.name,
+          price: product.retailPrice,
+          originalPrice: product.retailPrice,
+          imageUrl: product.imageUrl,
+        );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          nowFavorite
+              ? '${product.name} added to favorites'
+              : '${product.name} removed from favorites',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    if (isFavorite == nowFavorite) {
+      // no-op guard for unexpected state
+      return;
+    }
   }
 
   @override
@@ -359,10 +463,15 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
 
   Widget _buildProductsView() {
     final displayedProducts = ref.watch(productsByFiltersProvider);
+    final role = ref.watch(currentRoleProvider);
 
     return displayedProducts.when(
       data: (products) {
-        if (products.isEmpty) {
+        final visibleProducts = products
+            .where((product) => _canCurrentRoleSeeProduct(product, role))
+            .toList();
+
+        if (visibleProducts.isEmpty) {
           return SizedBox(
             height: 300,
             child: Center(
@@ -400,9 +509,9 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 16,
               ),
-              itemCount: products.length,
+              itemCount: visibleProducts.length,
               itemBuilder: (context, index) {
-                return _buildProductCard(products[index], ref);
+                return _buildProductCard(visibleProducts[index], ref);
               },
             ),
           );
@@ -410,7 +519,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
-              children: products.map((product) {
+              children: visibleProducts.map((product) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _buildProductListItem(product, ref),
@@ -714,20 +823,21 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                           ],
                         ),
                         GestureDetector(
-                          onTap: () {
-                            // Add to cart
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Added ${product.name} to cart'),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
+                          onTap: product.stock > 0
+                              ? () async {
+                                  await _addProductToCart(product);
+                                }
+                              : null,
+                          onLongPress: () {
+                            _toggleFavorite(product);
                           },
                           child: Container(
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
+                              color: product.stock > 0
+                                  ? AppColors.primary
+                                  : AppColors.muted,
                               borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                             child: Icon(
@@ -922,15 +1032,13 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
               padding: const EdgeInsets.all(12),
               child: GestureDetector(
                 onTap: product.stock > 0
-                    ? () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Added ${product.name} to cart'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
+                    ? () async {
+                        await _addProductToCart(product);
                       }
                     : null,
+                onLongPress: () {
+                  _toggleFavorite(product);
+                },
                 child: Container(
                   width: 32,
                   height: 32,
