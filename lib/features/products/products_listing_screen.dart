@@ -668,6 +668,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
     final inventoryStatus = ref.watch(
       productInventoryStatusProvider(product.id),
     );
+    final isFavorite = ref.watch(wl.isProductInWishlistProvider(product.id));
 
     return GestureDetector(
       onTap: () {
@@ -822,30 +823,66 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                             ),
                           ],
                         ),
-                        GestureDetector(
-                          onTap: product.stock > 0
-                              ? () async {
-                                  await _addProductToCart(product);
-                                }
-                              : null,
-                          onLongPress: () {
-                            _toggleFavorite(product);
-                          },
-                          child: Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: product.stock > 0
-                                  ? AppColors.primary
-                                  : AppColors.muted,
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                _toggleFavorite(product);
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: isFavorite
+                                      ? Colors.red.withValues(alpha: 0.1)
+                                      : AppColors.background,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.sm),
+                                  border: Border.all(
+                                    color: isFavorite
+                                        ? Colors.red
+                                        : AppColors.border,
+                                  ),
+                                ),
+                                child: Icon(
+                                  isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color:
+                                      isFavorite ? Colors.red : AppColors.muted,
+                                  size: 16,
+                                ),
+                              ),
                             ),
-                            child: Icon(
-                              Icons.add,
-                              color: AppColors.surface,
-                              size: 16,
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: product.stock > 0
+                                  ? () async {
+                                      await _addProductToCart(product);
+                                    }
+                                  : null,
+                              onLongPress: () {
+                                _toggleFavorite(product);
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: product.stock > 0
+                                      ? AppColors.primary
+                                      : AppColors.muted,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.sm),
+                                ),
+                                child: Icon(
+                                  Icons.add,
+                                  color: AppColors.surface,
+                                  size: 16,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -864,6 +901,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
     final inventoryStatus = ref.watch(
       productInventoryStatusProvider(product.id),
     );
+    final isFavorite = ref.watch(wl.isProductInWishlistProvider(product.id));
 
     return GestureDetector(
       onTap: () {
@@ -1027,32 +1065,62 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
               ),
             ),
 
-            // Add Button
+            // Action Buttons
             Padding(
               padding: const EdgeInsets.all(12),
-              child: GestureDetector(
-                onTap: product.stock > 0
-                    ? () async {
-                        await _addProductToCart(product);
-                      }
-                    : null,
-                onLongPress: () {
-                  _toggleFavorite(product);
-                },
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color:
-                        product.stock > 0 ? AppColors.primary : AppColors.muted,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      _toggleFavorite(product);
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isFavorite
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : AppColors.background,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(
+                          color: isFavorite ? Colors.red : AppColors.border,
+                        ),
+                      ),
+                      child: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: isFavorite ? Colors.red : AppColors.muted,
+                        size: 18,
+                      ),
+                    ),
                   ),
-                  child: Icon(
-                    Icons.add,
-                    color: AppColors.surface,
-                    size: 18,
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: product.stock > 0
+                        ? () async {
+                            await _addProductToCart(product);
+                          }
+                        : null,
+                    onLongPress: () {
+                      _toggleFavorite(product);
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: product.stock > 0
+                            ? AppColors.primary
+                            : AppColors.muted,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Icon(
+                        Icons.add,
+                        color: AppColors.surface,
+                        size: 18,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
