@@ -100,7 +100,7 @@ class _ConsumerBottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
           activeIcon: Icon(Icons.person),
-          label: 'Profile',
+          label: 'My CoopX',
         ),
       ],
       onTap: (index) => _navigateConsumer(context, index),
@@ -165,7 +165,7 @@ class _MemberBottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
           activeIcon: Icon(Icons.person),
-          label: 'Profile',
+          label: 'My CoopX',
         ),
       ],
       onTap: (index) => _navigateMember(context, index),
@@ -409,7 +409,7 @@ class _InstitutionalBottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
           activeIcon: Icon(Icons.person),
-          label: 'Profile',
+          label: 'My CoopX',
         ),
       ],
       onTap: (index) => _navigateInstitutional(context, index),

@@ -1,5 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+DateTime _parseDateTime(dynamic value, {DateTime? fallback}) {
+  if (value == null) return fallback ?? DateTime.now();
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  if (value is String) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null) return parsed;
+  }
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value);
+  }
+  return fallback ?? DateTime.now();
+}
+
+DateTime? _parseNullableDateTime(dynamic value) {
+  if (value == null) return null;
+  return _parseDateTime(value);
+}
+
 /// Represents a single price rule in the system
 class PricingRule {
   final String id;
@@ -36,12 +55,11 @@ class PricingRule {
         (e) => e.toString() == 'PricingMode.${map['mode'] ?? 'retail'}',
         orElse: () => PricingMode.retail,
       ),
-      effectiveDate:
-          (map['effectiveDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      expiryDate: (map['expiryDate'] as Timestamp?)?.toDate(),
+      effectiveDate: _parseDateTime(map['effectiveDate']),
+      expiryDate: _parseNullableDateTime(map['expiryDate']),
       isActive: map['isActive'] ?? true,
       createdBy: map['createdBy'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: _parseDateTime(map['createdAt']),
     );
   }
 
@@ -124,11 +142,10 @@ class ContractPricing {
       contractPrice: (map['contractPrice'] ?? 0.0).toDouble(),
       minimumOrderQuantity: map['minimumOrderQuantity'],
       casePackSize: map['casePackSize'],
-      effectiveDate:
-          (map['effectiveDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      expiryDate: (map['expiryDate'] as Timestamp?)?.toDate(),
+      effectiveDate: _parseDateTime(map['effectiveDate']),
+      expiryDate: _parseNullableDateTime(map['expiryDate']),
       isActive: map['isActive'] ?? true,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: _parseDateTime(map['createdAt']),
     );
   }
 
@@ -187,12 +204,12 @@ class Promotion {
       applicableProductIds:
           List<String>.from(map['applicableProductIds'] ?? []),
       applicableRoles: List<String>.from(map['applicableRoles'] ?? []),
-      startDate: (map['startDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      endDate: (map['endDate'] as Timestamp?)?.toDate(),
+      startDate: _parseDateTime(map['startDate']),
+      endDate: _parseNullableDateTime(map['endDate']),
       maxRedemptions: map['maxRedemptions'],
       isActive: map['isActive'] ?? true,
       createdBy: map['createdBy'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: _parseDateTime(map['createdAt']),
     );
   }
 
@@ -267,11 +284,10 @@ class EssentialBasketItem {
       productId: map['productId'] ?? '',
       maximumPrice: (map['maximumPrice'] ?? 0.0).toDouble(),
       category: map['category'] ?? '',
-      effectiveDate:
-          (map['effectiveDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      expiryDate: (map['expiryDate'] as Timestamp?)?.toDate(),
+      effectiveDate: _parseDateTime(map['effectiveDate']),
+      expiryDate: _parseNullableDateTime(map['expiryDate']),
       isActive: map['isActive'] ?? true,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: _parseDateTime(map['createdAt']),
     );
   }
 
@@ -342,11 +358,10 @@ class PriceOverride {
       ),
       requestedBy: map['requestedBy'] ?? '',
       approvedBy: map['approvedBy'],
-      requestedAt:
-          (map['requestedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      approvedAt: (map['approvedAt'] as Timestamp?)?.toDate(),
+      requestedAt: _parseDateTime(map['requestedAt']),
+      approvedAt: _parseNullableDateTime(map['approvedAt']),
       rejectionReason: map['rejectionReason'],
-      expiryDate: (map['expiryDate'] as Timestamp?)?.toDate(),
+      expiryDate: _parseNullableDateTime(map['expiryDate']),
     );
   }
 
@@ -412,7 +427,7 @@ class PriceAuditLog {
         orElse: () => PricingMode.retail,
       ),
       storeId: map['storeId'],
-      changedAt: (map['changedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      changedAt: _parseDateTime(map['changedAt']),
     );
   }
 

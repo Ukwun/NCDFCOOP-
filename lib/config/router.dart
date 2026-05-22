@@ -73,8 +73,10 @@ import 'package:coop_commerce/features/franchise/franchisee_product_management_s
 // Institutional feature imports
 import 'package:coop_commerce/features/institutional/institutional_procurement_home_screen.dart';
 import 'package:coop_commerce/features/institutional/institutional_po_creation_screen.dart';
+import 'package:coop_commerce/features/institutional/institutional_po_list_screen.dart';
 import 'package:coop_commerce/features/institutional/institutional_approval_workflow_screen.dart';
 import 'package:coop_commerce/features/institutional/institutional_invoice_screen.dart';
+import 'package:coop_commerce/features/institutional/institutional_budget_overview_screen.dart';
 // Admin feature imports
 import 'package:coop_commerce/features/admin/admin_control_tower_home_screen.dart';
 import 'package:coop_commerce/features/admin/admin_user_management_screen.dart';
@@ -114,21 +116,6 @@ import 'package:coop_commerce/features/inventory/reorder_management_screen.dart'
 import 'package:coop_commerce/features/shipping/shipment_tracking_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
-final _shellNavigatorHomeKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shellHome',
-);
-final _shellNavigatorOfferKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shellOffer',
-);
-final _shellNavigatorMessageKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shellMessage',
-);
-final _shellNavigatorCartKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shellCart',
-);
-final _shellNavigatorMyNCDFCOOPKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shellMyNCDFCOOP',
-);
 
 // ============================================================================
 // PERMISSION CHECK HELPER FUNCTION
@@ -169,6 +156,10 @@ const Map<String, Set<UserRole>> _routeRoleRequirements = {
   },
   '/institutional/purchase-orders/create': {UserRole.institutionalBuyer},
   '/institutional/invoices': {
+    UserRole.institutionalBuyer,
+    UserRole.institutionalApprover,
+  },
+  '/institutional/budget-overview': {
     UserRole.institutionalBuyer,
     UserRole.institutionalApprover,
   },
@@ -289,11 +280,12 @@ class AppRouter {
         final isAuthenticated = ref.watch(isAuthenticatedProvider);
         final authState = ref.watch(authStateProvider);
         final currentUser = ref.watch(global_auth.currentUserProvider);
+        final isOnSplash = state.uri.path == '/splash';
 
         final isOnPublicRoute = state.uri.path == '/welcome' ||
             state.uri.path == '/signin' ||
             state.uri.path.startsWith('/signup') ||
-            state.uri.path == '/splash' ||
+            isOnSplash ||
             state.uri.path.startsWith('/onboarding') ||
             state.uri.path == '/forgot-password' ||
             state.uri.path == '/create-new-password' ||
@@ -303,9 +295,20 @@ class AppRouter {
             state.uri.path == '/help-center' ||
             state.uri.path == '/role-selection';
 
+        // Hard failsafe: never allow indefinite stay on splash.
+        if (isOnSplash) {
+          if (currentUser != null) {
+            return currentUser.roleSelectionCompleted ? '/' : '/role-selection';
+          }
+
+          if (!authState.isLoading && !isAuthenticated) {
+            return '/welcome';
+          }
+        }
+
         // If auth state is loading but we have a persisted user, proceed with authenticated flow
         // This prevents the splash screen from hanging when Firebase auth stream is slow
-        if (authState.isLoading && currentUser == null) {
+        if (authState.isLoading && currentUser == null && !isAuthenticated) {
           if (!isOnPublicRoute) {
             return '/splash';
           }
@@ -313,7 +316,7 @@ class AppRouter {
         }
 
         // If auth state has an error, redirect to splash
-        if (authState.hasError && currentUser == null) {
+        if (authState.hasError && currentUser == null && !isAuthenticated) {
           debugPrint('Auth state error: ${authState.error}');
           if (!isOnPublicRoute) {
             return '/splash';
@@ -517,7 +520,9 @@ class AppRouter {
           path: '/search',
           name: 'search',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const SearchScreen(),
+          builder: (context, state) => SearchScreen(
+            initialQuery: state.uri.queryParameters['q'] ?? '',
+          ),
         ),
 
         // Member Benefits Route
@@ -740,7 +745,6 @@ class AppRouter {
           branches: [
             // Branch 1: Home
             StatefulShellBranch(
-              navigatorKey: _shellNavigatorHomeKey,
               routes: [
                 GoRoute(
                   path: '/',
@@ -752,7 +756,6 @@ class AppRouter {
             ),
             // Branch 2: Offers
             StatefulShellBranch(
-              navigatorKey: _shellNavigatorOfferKey,
               routes: [
                 GoRoute(
                   path: '/offers',
@@ -764,7 +767,6 @@ class AppRouter {
             ),
             // Branch 3: Messages
             StatefulShellBranch(
-              navigatorKey: _shellNavigatorMessageKey,
               routes: [
                 GoRoute(
                   path: '/messages',
@@ -776,7 +778,6 @@ class AppRouter {
             ),
             // Branch 4: Cart
             StatefulShellBranch(
-              navigatorKey: _shellNavigatorCartKey,
               routes: [
                 GoRoute(
                   path: '/cart',
@@ -788,7 +789,6 @@ class AppRouter {
             ),
             // Branch 5: My NCDFCOOP
             StatefulShellBranch(
-              navigatorKey: _shellNavigatorMyNCDFCOOPKey,
               routes: [
                 GoRoute(
                   path: '/my-ncdfcoop',
@@ -1452,12 +1452,7 @@ class AppRouter {
           name: 'institutional-po-list',
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Purchase Orders')),
-              body: const Center(
-                child: Text('Purchase Orders List - Coming Soon'),
-              ),
-            );
+            return const InstitutionalPOListScreen();
           },
         ),
         GoRoute(
@@ -1492,6 +1487,14 @@ class AppRouter {
           builder: (context, state) {
             final invoiceId = state.pathParameters['invoiceId'] ?? '';
             return InstitutionalInvoiceDetailScreen(invoiceId: invoiceId);
+          },
+        ),
+        GoRoute(
+          path: '/institutional/budget-overview',
+          name: 'institutional-budget-overview',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            return const InstitutionalBudgetOverviewScreen();
           },
         ),
 
