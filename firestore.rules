@@ -29,6 +29,18 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Resolve institution scope for institutional buyer checks
+    function currentInstitutionId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institutionId;
+    }
+
+    function isInstitutionScoped(institutionId) {
+      return isAuthenticated() && (
+        institutionId == request.auth.uid ||
+        institutionId == currentInstitutionId()
+      );
+    }
+
     // ==================== USERS COLLECTION ====================
     match /users/{userId} {
       // Users can only read/write their own document
@@ -145,19 +157,27 @@ service cloud.firestore {
 
     // ==================== SELLERS COLLECTION ====================
     match /sellers/{sellerId} {
-      // Temporary compatibility mode: app sessions may not always map to Firebase Auth users.
-      allow read: if true;
-      allow create: if true;
-      allow update: if true;
-      allow delete: if true;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthenticated() &&
+                       request.auth.uid == resource.data.userId;
+      allow delete: if false;
     }
 
     // ==================== SELLER PRODUCTS COLLECTION ====================
     match /seller_products/{productId} {
-      allow read: if true;
-      allow create: if true;
-      allow update: if true;
-      allow delete: if true;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                       (
+                         request.auth.uid == request.resource.data.sellerId ||
+                         request.auth.uid == request.resource.data.sellerUserId
+                       );
+      allow update: if isAuthenticated() &&
+                       (request.auth.uid == resource.data.sellerId ||
+                        request.auth.uid == resource.data.sellerUserId ||
+                        isAdmin());
+      allow delete: if isAuthenticated() && isAdmin();
     }
 
     // ==================== PRODUCT MODERATION ====================
@@ -315,41 +335,52 @@ service cloud.firestore {
 
     // ==================== MEMBERS COLLECTION ====================
     match /members/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow delete: if false;
     }
 
     // ==================== SAVINGS COLLECTION ====================
     match /savings/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow delete: if false;
     }
 
     match /savings_accounts/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
     }
 
     match /savings_transactions/{txId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
     }
 
     // ==================== WALLETS COLLECTION ====================
     match /wallets/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
     }
 
     match /wallet_transactions/{txId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
+    // ==================== AUDIT LOGS COLLECTION ====================
+    match /audit_logs/{logId} {
+      allow create: if true;
+      allow read: if isAuthenticated() && isAdmin();
+      allow update, delete: if false;
     }
 
     // ==================== SELLERS COLLECTION ====================
@@ -485,6 +516,79 @@ service cloud.firestore {
     match /promo_codes/{codeId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // ==================== PURCHASE ORDERS (B2B) ====================
+    match /purchase_orders/{poId} {
+      allow read: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        isInstitutionScoped(resource.data.institutionId) ||
+        (resource.data.approvalChain != null && resource.data.approvalChain.hasAny([request.auth.uid])) ||
+        isAdmin()
+      );
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        isInstitutionScoped(request.resource.data.institutionId);
+
+      allow update: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        (resource.data.approvalChain != null && resource.data.approvalChain.hasAny([request.auth.uid])) ||
+        isAdmin()
+      );
+
+      allow delete: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid || isAdmin()
+      );
+    }
+
+    // ==================== CONTRACT PRICING ====================
+    match /contract_prices/{contractId} {
+      allow read: if isAuthenticated() && (
+        isInstitutionScoped(resource.data.institutionId) || isAdmin()
+      );
+      allow create, update, delete: if isAuthenticated() && isAdmin();
+    }
+
+    // ==================== USER ACTIVITY COLLECTIONS ====================
+    match /user_activities/{activityId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+
+      allow update, delete: if false;
+    }
+
+    match /user_behavior_summaries/{summaryId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+
+      allow create, update: if isAuthenticated() &&
+        (request.auth.uid == request.resource.data.userId || isAdmin());
+
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+
+    match /user_personalization_profiles/{profileId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+
+      allow create, update: if isAuthenticated() &&
+        (request.auth.uid == request.resource.data.userId || isAdmin());
+
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+
+    match /user_purchase_history/{recordId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+
+      allow create, update: if isAuthenticated() &&
+        (request.auth.uid == request.resource.data.userId || isAdmin());
+
+      allow delete: if isAuthenticated() && isAdmin();
     }
 
     // ==================== DENY ALL BY DEFAULT ====================

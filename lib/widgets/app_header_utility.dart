@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/auth/role.dart';
+import 'package:coop_commerce/models/product.dart';
+import 'package:coop_commerce/core/providers/product_providers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import 'package:coop_commerce/features/welcome/auth_provider.dart'
     as welcome_auth;
 import 'package:coop_commerce/providers/auth_provider.dart' as global_auth;
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 
-/// ALIBABA-INSPIRED GLOBAL UTILITY HEADER
+/// Global utility header with role-aware shortcuts
 /// Infrastructure layer showing shared utilities + role-aware utilities
 /// Sits at the top of the app, persistent across all screens
 class AppHeaderUtility extends ConsumerWidget {
@@ -58,73 +63,18 @@ class AppHeaderUtility extends ConsumerWidget {
             builder: (context, constraints) {
               final compactLayout = constraints.maxWidth < 420;
 
-              final utilityIcons = Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                alignment:
-                    compactLayout ? WrapAlignment.start : WrapAlignment.end,
-                children: [
-                  GestureDetector(
-                    onTap: () => context.pushNamed('search'),
-                    child: Icon(
-                      Icons.search_outlined,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => context.pushNamed('notifications'),
-                    child: Stack(
-                      children: [
-                        Icon(
-                          Icons.notifications_outlined,
-                          size: 20,
-                          color: AppColors.primary,
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => context.pushNamed('settings'),
-                    child: Icon(
-                      Icons.settings_outlined,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => context.pushNamed('help-support'),
-                    child: Icon(
-                      Icons.help_outline,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _showLogoutConfirmation(context, ref),
-                    child: Icon(
-                      Icons.logout_outlined,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              );
-
               final profileRow = GestureDetector(
-                onTap: () => context.pushNamed('my-ncdfcoop'),
+                onTap: () {
+                  ProviderScope.containerOf(context, listen: false)
+                      .read(activityLoggerProvider.notifier)
+                      .logButtonTap(
+                        buttonName: 'header_profile',
+                        screenName: 'header_utility',
+                        context: 'profile_navigation',
+                        success: true,
+                      );
+                  context.pushNamed('my-ncdfcoop');
+                },
                 child: Row(
                   children: [
                     CircleAvatar(
@@ -169,37 +119,15 @@ class AppHeaderUtility extends ConsumerWidget {
                 ),
               );
 
-              final topRow = compactLayout
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: profileRow),
-                            const SizedBox(width: AppSpacing.sm),
-                            _buildRoleIndicator(context, role),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        utilityIcons,
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(child: profileRow),
-                        const SizedBox(width: AppSpacing.md),
-                        Flexible(child: _buildRoleIndicator(context, role)),
-                        const SizedBox(width: AppSpacing.md),
-                        utilityIcons,
-                      ],
-                    );
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              return Row(
                 children: [
-                  topRow,
-                  const SizedBox(height: AppSpacing.sm),
-                  _buildRoleSpecificUtilities(context, user, role),
+                  Expanded(child: profileRow),
+                  if (!compactLayout) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(child: _buildRoleIndicator(context, role)),
+                  ],
+                  const SizedBox(width: AppSpacing.sm),
+                  _HeaderQuickActions(maxWidth: constraints.maxWidth),
                 ],
               );
             },
@@ -300,15 +228,15 @@ class AppHeaderUtility extends ConsumerWidget {
               context: context,
               icon: Icons.verified_outlined,
               label: 'KYC Status',
-              onTap: () => context.pushNamed('profile'),
+              onTap: () => context.pushNamed('my-ncdfcoop'),
               description: 'View verification',
             ),
             _buildUtilityButton(
               context: context,
-              icon: Icons.account_balance_wallet_outlined,
-              label: 'Wallet',
-              onTap: () => context.pushNamed('payment-methods'),
-              description: 'Manage funds',
+              icon: Icons.how_to_vote_outlined,
+              label: 'Voting',
+              onTap: () => context.pushNamed('member-voting'),
+              description: 'Community voice',
             ),
             _buildUtilityButton(
               context: context,
@@ -319,10 +247,10 @@ class AppHeaderUtility extends ConsumerWidget {
             ),
             _buildUtilityButton(
               context: context,
-              icon: Icons.savings_outlined,
-              label: 'Savings',
-              onTap: () => context.pushNamed('member-benefits'),
-              description: 'View benefits',
+              icon: Icons.account_circle_outlined,
+              label: 'Profile',
+              onTap: () => context.pushNamed('my-ncdfcoop'),
+              description: 'Manage account',
             ),
           ],
         ),
@@ -357,7 +285,7 @@ class AppHeaderUtility extends ConsumerWidget {
               context: context,
               icon: Icons.sell_outlined,
               label: 'Sales',
-              onTap: () => context.pushNamed('orders'),
+              onTap: () => context.pushNamed('seller-sales-ledger'),
               description: 'View orders',
             ),
             _buildUtilityButton(
@@ -421,7 +349,7 @@ class AppHeaderUtility extends ConsumerWidget {
               context: context,
               icon: Icons.description_outlined,
               label: 'Invoices',
-              onTap: () => context.pushNamed('orders'),
+              onTap: () => context.pushNamed('institutional-invoices'),
               description: 'View docs',
             ),
           ],
@@ -564,14 +492,14 @@ class AppHeaderUtility extends ConsumerWidget {
               context: context,
               icon: Icons.analytics_outlined,
               label: 'Analytics',
-              onTap: () => context.pushNamed('notifications'),
+              onTap: () => context.pushNamed('admin-analytics'),
               description: 'View metrics',
             ),
             _buildUtilityButton(
               context: context,
               icon: Icons.security_outlined,
               label: 'Security',
-              onTap: () => context.pushNamed('settings'),
+              onTap: () => context.pushNamed('admin-audit-logs'),
               description: 'System security',
             ),
           ],
@@ -589,7 +517,17 @@ class AppHeaderUtility extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        ProviderScope.containerOf(context, listen: false)
+            .read(activityLoggerProvider.notifier)
+            .logButtonTap(
+              buttonName: 'header_utility_$label',
+              screenName: 'header_utility',
+              context: description,
+              success: true,
+            );
+        onTap();
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -730,4 +668,529 @@ class AppHeaderUtility extends ConsumerWidget {
       },
     );
   }
+}
+
+class _HeaderQuickActions extends ConsumerStatefulWidget {
+  const _HeaderQuickActions({required this.maxWidth});
+
+  final double maxWidth;
+
+  @override
+  ConsumerState<_HeaderQuickActions> createState() =>
+      _HeaderQuickActionsState();
+}
+
+class _HeaderQuickActionsState extends ConsumerState<_HeaderQuickActions> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  Timer? _debounce;
+  List<Product> _suggestions = const [];
+  bool _isLoadingSuggestions = false;
+  bool _isSearching = false;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _openSearch() {
+    ref.read(activityLoggerProvider.notifier).logButtonTap(
+          buttonName: 'header_search_open',
+          screenName: 'header_utility',
+          context: 'search_overlay',
+          success: true,
+        );
+    setState(() => _isSearching = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _closeSearch() {
+    _debounce?.cancel();
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    if (mounted) {
+      setState(() {
+        _isSearching = false;
+        _suggestions = const [];
+        _isLoadingSuggestions = false;
+      });
+    }
+  }
+
+  void _submitSearch() {
+    final query = _searchController.text.trim();
+    _searchFocusNode.unfocus();
+    ref.read(activityLoggerProvider.notifier).logButtonTap(
+          buttonName: 'header_search_submit',
+          screenName: 'header_utility',
+          context: query.isEmpty ? 'empty_query' : 'query_submitted',
+          success: true,
+        );
+    setState(() {
+      _suggestions = const [];
+    });
+    context.pushNamed(
+      'search',
+      queryParameters: query.isEmpty ? const {} : {'q': query},
+    );
+  }
+
+  void _onSearchChanged(String value) {
+    final query = value.trim();
+    _debounce?.cancel();
+
+    if (query.length < 2) {
+      setState(() {
+        _suggestions = const [];
+        _isLoadingSuggestions = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingSuggestions = true;
+    });
+
+    _debounce = Timer(const Duration(milliseconds: 260), () async {
+      final currentText = _searchController.text.trim();
+      if (currentText.length < 2) {
+        if (!mounted) return;
+        setState(() {
+          _suggestions = const [];
+          _isLoadingSuggestions = false;
+        });
+        return;
+      }
+
+      try {
+        final results = await ref
+            .read(productSearchProvider(currentText).future)
+            .timeout(const Duration(seconds: 5), onTimeout: () => <Product>[]);
+
+        if (!mounted || _searchController.text.trim() != currentText) return;
+
+        setState(() {
+          _suggestions = results.take(5).toList();
+          _isLoadingSuggestions = false;
+        });
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _suggestions = const [];
+          _isLoadingSuggestions = false;
+        });
+      }
+    });
+  }
+
+  void _onTapSuggestion(Product product) {
+    final productId = product.id.trim();
+    _searchFocusNode.unfocus();
+    if (productId.isEmpty) {
+      _searchController.text = product.name;
+      _searchController.selection = TextSelection.fromPosition(
+        TextPosition(offset: product.name.length),
+      );
+      _submitSearch();
+      return;
+    }
+
+    context.pushNamed(
+      'product-detail',
+      pathParameters: {'productId': productId},
+    );
+    setState(() {
+      _suggestions = const [];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final searchWidth = (widget.maxWidth * 0.62).clamp(220.0, 360.0);
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 260),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: animation,
+            axis: Axis.horizontal,
+            child: child,
+          ),
+        );
+      },
+      child: _isSearching
+          ? SizedBox(
+              key: const ValueKey('header-expanded-search'),
+              width: searchWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          textInputAction: TextInputAction.search,
+                          onChanged: _onSearchChanged,
+                          onSubmitted: (_) => _submitSearch(),
+                          decoration: InputDecoration(
+                            hintText: 'Search any product...',
+                            isDense: true,
+                            filled: true,
+                            fillColor: AppColors.background,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: AppColors.primary),
+                            ),
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: IconButton(
+                              onPressed: _submitSearch,
+                              icon: const Icon(Icons.arrow_forward_rounded),
+                              tooltip: 'Search now',
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          ref
+                              .read(activityLoggerProvider.notifier)
+                              .logButtonTap(
+                                buttonName: 'header_search_close',
+                                screenName: 'header_utility',
+                                context: 'search_overlay',
+                                success: true,
+                              );
+                          _closeSearch();
+                        },
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Close search',
+                      ),
+                    ],
+                  ),
+                  if (_isLoadingSuggestions || _suggestions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _isLoadingSuggestions
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              itemCount: _suggestions.length,
+                              separatorBuilder: (_, __) => const Divider(
+                                height: 1,
+                                color: AppColors.border,
+                              ),
+                              itemBuilder: (context, index) {
+                                final product = _suggestions[index];
+                                final query = _searchController.text.trim();
+                                return InkWell(
+                                  onTap: () => _onTapSuggestion(product),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _buildSuggestionThumbnail(product),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              _buildHighlightedText(
+                                                product.name,
+                                                query,
+                                                baseStyle: AppTextStyles
+                                                    .bodySmall
+                                                    .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                product.categoryId.isEmpty
+                                                    ? 'Product'
+                                                    : product.categoryId,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: AppTextStyles.labelSmall
+                                                    .copyWith(
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Wrap(
+                                                spacing: 6,
+                                                runSpacing: 4,
+                                                children: [
+                                                  _buildMetaChip(
+                                                    'Verified supplier',
+                                                  ),
+                                                  _buildMetaChip(
+                                                    _fastShippingText(product),
+                                                  ),
+                                                  _buildMetaChip(
+                                                    'MOQ ${product.minimumOrderQuantity}',
+                                                  ),
+                                                  _buildMetaChip(
+                                                    '⭐ ${product.rating.toStringAsFixed(1)}',
+                                                  ),
+                                                  _buildMetaChip(
+                                                    _estimateSoldText(product),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              _formatSuggestionPrice(product),
+                                              style: AppTextStyles.labelSmall
+                                                  .copyWith(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            const Icon(
+                                              Icons.arrow_forward_ios,
+                                              size: 12,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                ],
+              ),
+            )
+          : Row(
+              key: const ValueKey('header-action-icons'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: _openSearch,
+                  icon: const Icon(Icons.search_outlined),
+                  tooltip: 'Search',
+                ),
+                IconButton(
+                  onPressed: () {
+                    ref.read(activityLoggerProvider.notifier).logButtonTap(
+                          buttonName: 'header_notifications',
+                          screenName: 'header_utility',
+                          context: 'notifications_navigation',
+                          success: true,
+                        );
+                    context.pushNamed('notifications');
+                  },
+                  icon: const Icon(Icons.notifications_outlined),
+                  tooltip: 'Notifications',
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+Widget _buildMetaChip(String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: AppColors.background,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Text(
+      label,
+      style: AppTextStyles.labelSmall.copyWith(
+        fontSize: 9,
+        color: AppColors.textSecondary,
+      ),
+    ),
+  );
+}
+
+Widget _buildSuggestionThumbnail(Product product) {
+  final url = (product.imageUrl ?? '').trim();
+
+  Widget fallback() {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Icon(
+        Icons.shopping_bag_outlined,
+        size: 16,
+        color: AppColors.primary,
+      ),
+    );
+  }
+
+  if (url.isEmpty || url.contains('via.placeholder.com')) {
+    return fallback();
+  }
+
+  if (url.startsWith('assets/')) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Image.asset(
+        url,
+        width: 34,
+        height: 34,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback(),
+      ),
+    );
+  }
+
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(6),
+    child: CachedNetworkImage(
+      imageUrl: url,
+      width: 34,
+      height: 34,
+      fit: BoxFit.cover,
+      errorWidget: (_, __, ___) => fallback(),
+      placeholder: (_, __) => fallback(),
+    ),
+  );
+}
+
+Widget _buildHighlightedText(
+  String source,
+  String query, {
+  required TextStyle baseStyle,
+}) {
+  final normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.isEmpty) {
+    return Text(
+      source,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: baseStyle,
+    );
+  }
+
+  final sourceLower = source.toLowerCase();
+  final start = sourceLower.indexOf(normalizedQuery);
+  if (start < 0) {
+    return Text(
+      source,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: baseStyle,
+    );
+  }
+
+  final end = start + normalizedQuery.length;
+  return RichText(
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    text: TextSpan(
+      style: baseStyle,
+      children: [
+        if (start > 0) TextSpan(text: source.substring(0, start)),
+        TextSpan(
+          text: source.substring(start, end),
+          style: baseStyle.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        if (end < source.length) TextSpan(text: source.substring(end)),
+      ],
+    ),
+  );
+}
+
+String _estimateSoldText(Product product) {
+  final sold = product.stock <= 0 ? 25 : (product.stock * 2);
+  if (sold >= 1000) {
+    return '${(sold / 1000).toStringAsFixed(1)}k sold';
+  }
+  return '$sold sold';
+}
+
+String _fastShippingText(Product product) {
+  return product.stock > 20 ? 'Fast shipping' : 'Standard shipping';
+}
+
+String _formatSuggestionPrice(Product product) {
+  final value = product.wholesalePrice > 0
+      ? product.wholesalePrice
+      : (product.retailPrice > 0 ? product.retailPrice : 0);
+  if (value <= 0) {
+    return 'N/A';
+  }
+  return '₦${value.toStringAsFixed(0)}';
 }

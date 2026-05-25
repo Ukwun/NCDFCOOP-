@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:coop_commerce/core/services/approval_service.dart';
+import 'package:coop_commerce/core/services/local_cache_service.dart';
 import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
 import 'package:coop_commerce/core/services/payment_processing_service.dart';
 import 'package:coop_commerce/core/services/order_management_api_service.dart';
@@ -22,6 +23,92 @@ final paymentProcessingServiceProvider =
 
 final orderManagementServiceProvider =
     Provider((ref) => OrderManagementService());
+
+final _localCacheProvider = Provider<LocalCacheService>((ref) {
+  return LocalCacheService();
+});
+
+Map<String, dynamic> _serializeOrderForCache(OrderData order) {
+  int? toMillis(DateTime? dt) => dt?.millisecondsSinceEpoch;
+
+  return {
+    'orderId': order.orderId,
+    'buyerId': order.buyerId,
+    'items': order.items
+        .map((item) => {
+              'id': item.id,
+              'productId': item.productId,
+              'name': item.name,
+              'price': item.price,
+              'quantity': item.quantity,
+              'sku': item.sku,
+            })
+        .toList(),
+    'totalAmount': order.totalAmount,
+    'subtotal': order.subtotal,
+    'tax': order.tax,
+    'shippingCost': order.shippingCost,
+    'shippingAddress': order.shippingAddress,
+    'billingAddress': order.billingAddress,
+    'paymentMethodId': order.paymentMethodId,
+    'status': order.status,
+    'createdAt': order.createdAt.millisecondsSinceEpoch,
+    'updatedAt': order.updatedAt.millisecondsSinceEpoch,
+    'submittedAt': toMillis(order.submittedAt),
+    'approvedAt': toMillis(order.approvedAt),
+    'shippedAt': toMillis(order.shippedAt),
+    'deliveredAt': toMillis(order.deliveredAt),
+    'notes': order.notes,
+  };
+}
+
+OrderData? _deserializeOrderFromCache(Map<String, dynamic> data) {
+  DateTime? toDate(dynamic value) {
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    return null;
+  }
+
+  try {
+    final rawItems = (data['items'] as List<dynamic>? ?? const []);
+    final items = rawItems.whereType<Map>().map((item) {
+      final m = Map<String, dynamic>.from(item);
+      return OrderItem(
+        id: (m['id'] ?? '').toString(),
+        productId: (m['productId'] ?? '').toString(),
+        name: (m['name'] ?? '').toString(),
+        price: (m['price'] as num?)?.toDouble() ?? 0,
+        quantity: (m['quantity'] as int?) ?? 0,
+        sku: (m['sku'] ?? '').toString(),
+      );
+    }).toList();
+
+    return OrderData(
+      orderId: (data['orderId'] ?? '').toString(),
+      buyerId: (data['buyerId'] ?? '').toString(),
+      items: items,
+      totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0,
+      subtotal: (data['subtotal'] as num?)?.toDouble() ?? 0,
+      tax: (data['tax'] as num?)?.toDouble() ?? 0,
+      shippingCost: (data['shippingCost'] as num?)?.toDouble() ?? 0,
+      shippingAddress: (data['shippingAddress'] ?? '').toString(),
+      billingAddress: (data['billingAddress'] ?? '').toString(),
+      paymentMethodId: (data['paymentMethodId'] ?? '').toString(),
+      status: (data['status'] ?? 'pending').toString(),
+      createdAt: toDate(data['createdAt']) ?? DateTime.now(),
+      updatedAt: toDate(data['updatedAt']) ?? DateTime.now(),
+      submittedAt: toDate(data['submittedAt']),
+      approvedAt: toDate(data['approvedAt']),
+      shippedAt: toDate(data['shippedAt']),
+      deliveredAt: toDate(data['deliveredAt']),
+      notes: data['notes']?.toString(),
+    );
+  } catch (error) {
+    debugPrint('Failed to deserialize cached order: $error');
+    return null;
+  }
+}
 
 Stream<List<OrderData>> _mergeOrderSnapshots({
   required Stream<QuerySnapshot<Map<String, dynamic>>> primary,
@@ -281,8 +368,29 @@ final pendingApprovalsCountProvider =
 final userOrdersProvider =
     StreamProvider.family<List<OrderData>, String>((ref, buyerId) {
   final firestore = FirebaseFirestore.instance;
+  final cache = ref.watch(_localCacheProvider);
 
-  return _buyerOrdersStream(firestore, buyerId, limit: 50);
+  return (() async* {
+    try {
+      await for (final orders
+          in _buyerOrdersStream(firestore, buyerId, limit: 50)) {
+        await cache.cacheUserOrders(
+          buyerId,
+          orders.map(_serializeOrderForCache).toList(),
+        );
+        yield orders;
+      }
+    } catch (error) {
+      debugPrint('Orders stream failed, attempting cached fallback: $error');
+      final cached = await cache.getCachedUserOrders(buyerId);
+      final fallback = cached
+          .map(_deserializeOrderFromCache)
+          .whereType<OrderData>()
+          .toList();
+      fallback.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      yield fallback;
+    }
+  })();
 });
 
 /// Stream of specific order details

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/services/user_activity_service.dart';
 
@@ -13,6 +12,23 @@ final userActivityHistoryProvider =
   (ref, userId) async {
     final service = ref.watch(userActivityServiceProvider);
     return service.getUserActivityHistory(userId: userId);
+  },
+);
+
+/// Real-time user activity timeline
+final userActivityTimelineProvider =
+    StreamProvider.family<List<UserActivity>, String>(
+  (ref, userId) {
+    final service = ref.watch(userActivityServiceProvider);
+    return service.watchUserActivity(userId: userId, limit: 200);
+  },
+);
+
+/// Real-time global activity stream for admin observability
+final globalActivityTimelineProvider = StreamProvider<List<UserActivity>>(
+  (ref) {
+    final service = ref.watch(userActivityServiceProvider);
+    return service.watchGlobalActivity(limit: 1000);
   },
 );
 
@@ -40,6 +56,15 @@ final userFavoriteCategoriesProvider =
   (ref, userId) async {
     final service = ref.watch(userActivityServiceProvider);
     return service.getFavoriteCategories(userId);
+  },
+);
+
+/// Role-level activity summary for admin analytics surfaces.
+final roleBehaviorSummaryProvider =
+    FutureProvider.family<Map<String, dynamic>, String>(
+  (ref, role) async {
+    final service = ref.watch(userActivityServiceProvider);
+    return service.getRoleBehaviorSummary(role: role, days: 7);
   },
 );
 
@@ -106,6 +131,41 @@ class ActivityLoggerNotifier extends Notifier<void> {
         categories: categories,
       );
 
+  Future<void> logCheckoutStarted({
+    required double cartTotal,
+    required int itemCount,
+    String? paymentMethod,
+  }) =>
+      _service.logCheckoutStarted(
+        cartTotal: cartTotal,
+        itemCount: itemCount,
+        paymentMethod: paymentMethod,
+      );
+
+  Future<void> logPaymentResult({
+    required String orderId,
+    required bool success,
+    required double amount,
+    required String paymentMethod,
+    String? errorMessage,
+  }) =>
+      _service.logPaymentResult(
+        orderId: orderId,
+        success: success,
+        amount: amount,
+        paymentMethod: paymentMethod,
+        errorMessage: errorMessage,
+      );
+
+  Future<void> logFollowSeller({
+    required String sellerId,
+    String? sellerName,
+  }) =>
+      _service.logFollowSeller(
+        sellerId: sellerId,
+        sellerName: sellerName,
+      );
+
   Future<void> logAddToWishlist({
     required String productId,
     required String productName,
@@ -134,24 +194,37 @@ class ActivityLoggerNotifier extends Notifier<void> {
         reviewText: reviewText,
       );
 
-  /// Stub method for membership purchase logging
-  Future<void> logMembershipPurchase(
-      String membershipType, double amount) async {
-    // TODO: Implement membership purchase logging
-    debugPrint('📊 Membership purchase logged: $membershipType for ₦$amount');
-  }
+  /// Log membership purchase activity.
+  Future<void> logMembershipPurchase(String membershipType, double amount) =>
+      _service.logMembershipPurchase(
+        membershipType: membershipType,
+        amount: amount,
+      );
 
-  /// Stub method for login logging
-  Future<void> logLogin(String email) async {
-    // TODO: Implement login logging
-    debugPrint('📊 Login logged for: $email');
-  }
+  /// Log authentication sign-in.
+  Future<void> logLogin(String email) => _service.logLogin(method: 'email');
 
-  /// Stub method for logout logging
-  Future<void> logLogout() async {
-    // TODO: Implement logout logging
-    debugPrint('📊 Logout logged');
-  }
+  /// Log authentication sign-out.
+  Future<void> logLogout() => _service.logLogout(reason: 'user_initiated');
+
+  Future<void> logScreenView({
+    required String screenName,
+    String? route,
+  }) =>
+      _service.logScreenView(screenName: screenName, route: route);
+
+  Future<void> logButtonTap({
+    required String buttonName,
+    String? screenName,
+    String? context,
+    bool? success,
+  }) =>
+      _service.logButtonTap(
+        buttonName: buttonName,
+        screenName: screenName,
+        context: context,
+        success: success,
+      );
 }
 
 /// Activity logger notifier provider

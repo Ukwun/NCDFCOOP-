@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/auth_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:coop_commerce/features/welcome/auth_provider.dart'
+    as auth_controller;
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -14,8 +16,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _pushNotificationsEnabled = true;
   bool _orderUpdatesEnabled = true;
   bool _promotionsEnabled = true;
-  String _selectedTheme = 'light';
-  String _selectedLanguage = 'en';
+  String _selectedTheme = 'Light';
+  String _selectedLanguage = 'English';
 
   @override
   Widget build(BuildContext context) {
@@ -65,19 +67,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // Privacy & Support section
             _buildSectionHeader('Privacy & Support'),
             _buildLinkSetting('Privacy Policy', () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening privacy policy...')),
+              _openExternalLink(
+                'https://coopcommerce.app/privacy',
+                successMessage: 'Privacy Policy opened',
+                failureMessage: 'Unable to open Privacy Policy right now',
               );
             }),
             _buildLinkSetting('Terms of Service', () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening terms of service...')),
+              _openExternalLink(
+                'https://coopcommerce.app/terms',
+                successMessage: 'Terms of Service opened',
+                failureMessage: 'Unable to open Terms of Service right now',
               );
             }),
             _buildLinkSetting('Help & Support', () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening help center...')),
-              );
+              context.push('/help-support');
             }),
             const Divider(height: 32),
 
@@ -264,23 +268,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-
-              // Clear the current user from the auth provider
-              ref.read(currentUserProvider.notifier).clearUser();
-
-              // Navigate back to login screen
-              if (context.mounted) {
-                context.go('/');
-              }
-
-              // Show success message
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Logged out successfully'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+              try {
+                await ref
+                    .read(auth_controller.authControllerProvider.notifier)
+                    .signOut();
+                if (context.mounted) {
+                  context.go('/signin');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout failed: $e')),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(
@@ -294,5 +294,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openExternalLink(
+    String url, {
+    required String successMessage,
+    required String failureMessage,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final uri = Uri.parse(url);
+
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(content: Text(launched ? successMessage : failureMessage)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(failureMessage)));
+    }
   }
 }

@@ -86,6 +86,11 @@ import 'package:coop_commerce/features/admin/price_override_admin_dashboard.dart
 // Warehouse feature imports
 import 'package:coop_commerce/features/warehouse/warehouse_packing_slip_screen.dart';
 import 'package:coop_commerce/features/warehouse/warehouse_shipment_creation_screen.dart';
+import 'package:coop_commerce/features/warehouse/warehouse_home_screen.dart';
+import 'package:coop_commerce/features/warehouse/priority_tasks_screen.dart';
+import 'package:coop_commerce/features/warehouse/warehouse_pick_workflow_screen.dart';
+import 'package:coop_commerce/features/driver/driver_app_screen.dart';
+import 'package:coop_commerce/features/driver/driver_route_map_screen.dart';
 // Institutional Approver feature imports
 import 'package:coop_commerce/features/institutional/approval_dashboard_screen.dart';
 import 'package:coop_commerce/features/institutional/po_approval_interface_screen.dart';
@@ -100,6 +105,7 @@ import 'package:coop_commerce/features/admin/analytics_dashboard_screen.dart';
 import 'package:coop_commerce/features/orders/invoice_preview_screen.dart';
 import 'package:coop_commerce/features/products/product_reviews_screen.dart';
 import 'package:coop_commerce/features/reviews/my_reviews_screen.dart';
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 // Educational feature imports
 import 'package:coop_commerce/features/education/about_cooperatives_screen.dart';
 import 'package:coop_commerce/features/education/features_guide_screen.dart';
@@ -116,6 +122,36 @@ import 'package:coop_commerce/features/inventory/reorder_management_screen.dart'
 import 'package:coop_commerce/features/shipping/shipment_tracking_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
+
+class _ActivityRouteObserver extends NavigatorObserver {
+  _ActivityRouteObserver(this.ref);
+
+  final WidgetRef ref;
+
+  void _logRoute(Route<dynamic>? route) {
+    if (route == null) return;
+
+    final routeName = route.settings.name;
+    if (routeName == null || routeName.isEmpty) return;
+
+    ref.read(activityLoggerProvider.notifier).logScreenView(
+          screenName: routeName,
+          route: routeName,
+        );
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _logRoute(route);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _logRoute(newRoute);
+  }
+}
 
 // ============================================================================
 // PERMISSION CHECK HELPER FUNCTION
@@ -217,10 +253,16 @@ bool _userHasPermissionForRoute(String path, Set<UserRole> userRoles) {
 /// Helper to check if user has a specific role in the current context
 /// Note: This is used in route redirects where context access is limited
 bool _hasRole(BuildContext context, UserRole requiredRole) {
-  // This is a placeholder - in real implementation, you'd extract user info from context
-  // For now, we return true to allow the router logic to handle it
-  // Implementation will use AuthStateProvider when available
-  return true;
+  try {
+    final container = ProviderScope.containerOf(context, listen: false);
+    final currentUser = container.read(global_auth.currentUserProvider);
+    if (currentUser == null) {
+      return false;
+    }
+    return currentUser.roles.contains(requiredRole);
+  } catch (_) {
+    return false;
+  }
 }
 
 // ============================================================================
@@ -276,6 +318,7 @@ class AppRouter {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
       initialLocation: '/splash',
+      observers: [_ActivityRouteObserver(ref)],
       redirect: (context, state) {
         final isAuthenticated = ref.watch(isAuthenticatedProvider);
         final authState = ref.watch(authStateProvider);
@@ -1503,37 +1546,19 @@ class AppRouter {
           path: '/warehouse',
           name: 'warehouse-dashboard',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Warehouse Dashboard')),
-              body: const Center(
-                child: Text('Warehouse Dashboard - Coming Soon'),
-              ),
-            );
-          },
+          builder: (context, state) => const WarehouseHomeScreen(),
         ),
         GoRoute(
           path: '/warehouse/tasks',
           name: 'warehouse-tasks',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Warehouse Tasks')),
-              body: const Center(child: Text('Warehouse Tasks - Coming Soon')),
-            );
-          },
+          builder: (context, state) => const PriorityTasksScreen(),
         ),
         GoRoute(
           path: '/warehouse/pick/:taskId',
           name: 'warehouse-pick-task',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            final taskId = state.pathParameters['taskId'] ?? '';
-            return Scaffold(
-              appBar: AppBar(title: const Text('Pick Task')),
-              body: Center(child: Text('Pick Task: $taskId - Coming Soon')),
-            );
-          },
+          builder: (context, state) => const WarehousePickWorkflowScreen(),
         ),
         GoRoute(
           path: '/warehouse/packing-slip',
@@ -1702,35 +1727,19 @@ class AppRouter {
           path: '/driver',
           name: 'driver-dashboard',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Driver Dashboard')),
-              body: const Center(child: Text('Driver Dashboard - Coming Soon')),
-            );
-          },
+          builder: (context, state) => const DriverAppScreen(),
         ),
         GoRoute(
           path: '/driver/route',
           name: 'driver-route',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Today\'s Route')),
-              body: const Center(child: Text('Today\'s Route - Coming Soon')),
-            );
-          },
+          builder: (context, state) => const DriverRouteMapScreen(),
         ),
         GoRoute(
           path: '/driver/deliveries/:deliveryId',
           name: 'driver-delivery-detail',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            final deliveryId = state.pathParameters['deliveryId'] ?? '';
-            return Scaffold(
-              appBar: AppBar(title: const Text('Delivery Details')),
-              body: Center(child: Text('Delivery: $deliveryId - Coming Soon')),
-            );
-          },
+          builder: (context, state) => const DriverAppScreen(),
         ),
 
         // ADMIN ROUTES - Requires admin, superAdmin
@@ -1813,49 +1822,25 @@ class AppRouter {
           path: '/admin/pricing',
           name: 'admin-pricing',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Pricing Management')),
-              body: const Center(
-                child: Text('Pricing Management - Coming Soon'),
-              ),
-            );
-          },
+          builder: (context, state) => const PriceOverrideAdminDashboard(),
         ),
         GoRoute(
           path: '/admin/orders',
           name: 'admin-orders',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Order Management')),
-              body: const Center(child: Text('Order Management - Coming Soon')),
-            );
-          },
+          builder: (context, state) => const AdminControlTowerHomeScreen(),
         ),
         GoRoute(
           path: '/admin/franchises',
           name: 'admin-franchises',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Franchise Management')),
-              body: const Center(
-                child: Text('Franchise Management - Coming Soon'),
-              ),
-            );
-          },
+          builder: (context, state) => const AdminUserManagementScreen(),
         ),
         GoRoute(
           path: '/admin/audit',
           name: 'admin-audit',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Audit Logs')),
-              body: const Center(child: Text('Audit Logs - Coming Soon')),
-            );
-          },
+          builder: (context, state) => const AdminAuditLogBrowserScreen(),
         ),
         GoRoute(
           path: '/admin/analytics',

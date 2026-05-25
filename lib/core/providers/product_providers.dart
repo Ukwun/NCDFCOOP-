@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/services/product_service.dart';
+import 'package:coop_commerce/core/services/local_cache_service.dart';
 import 'package:coop_commerce/core/audit/audit_service.dart';
 import 'package:coop_commerce/models/product.dart';
 
@@ -10,6 +11,10 @@ import 'package:coop_commerce/models/product.dart';
 final productServiceProvider = Provider((ref) {
   final auditService = AuditService();
   return ProductService(auditService);
+});
+
+final _localCacheProvider = Provider<LocalCacheService>((ref) {
+  return LocalCacheService();
 });
 
 const int productsPerPage = 20;
@@ -241,6 +246,27 @@ Future<List<Product>> _fetchApprovedSellerProducts() async {
   }
 }
 
+Future<List<Product>> _fetchSeededCatalogProducts() async {
+  try {
+    final firestore = FirebaseFirestore.instance;
+    final snapshot = await firestore.collection('products').limit(300).get();
+
+    return snapshot.docs.map((doc) {
+      final data = Map<String, dynamic>.from(doc.data());
+      data['id'] = data['id'] ?? doc.id;
+
+      // Seeded documents sometimes omit role visibility flags.
+      data['visibleToRetail'] = data['visibleToRetail'] ?? true;
+      data['visibleToWholesale'] = data['visibleToWholesale'] ?? true;
+      data['visibleToInstitutions'] = data['visibleToInstitutions'] ?? true;
+
+      return Product.fromFirestore(data);
+    }).toList();
+  } catch (_) {
+    return const [];
+  }
+}
+
 List<Product> _mergeProducts(
     List<Product> baseProducts, List<Product> sellerProducts) {
   final merged = <String, Product>{
@@ -308,6 +334,7 @@ final productsByFiltersProvider =
     FutureProvider.autoDispose<List<Product>>((ref) async {
   final filters = ref.watch(productFiltersProvider);
   final productService = ref.watch(productServiceProvider);
+  final cache = ref.watch(_localCacheProvider);
 
   try {
     List<Product> baseProducts;
@@ -347,6 +374,12 @@ final productsByFiltersProvider =
     }
     return _applyProductFilters(merged, filters);
   } catch (e) {
+    final cached = await cache.getCachedProducts();
+    if (cached.isNotEmpty) {
+      final cachedProducts = cached.map(Product.fromJson).toList();
+      return _applyProductFilters(cachedProducts, filters);
+    }
+
     // Return merged mock + seller fallback when service fails
     final sellerProducts = await _fetchApprovedSellerProducts();
     final merged = _mergeProducts(_getMockProducts(), sellerProducts);
@@ -359,6 +392,8 @@ final productsByFiltersProvider =
 /// Get all products
 final allProductsProvider =
     FutureProvider.autoDispose<List<Product>>((ref) async {
+  final cache = ref.watch(_localCacheProvider);
+
   try {
     final productService = ref.watch(productServiceProvider);
 
@@ -368,12 +403,27 @@ final allProductsProvider =
       sortBy: 'popularity',
     );
 
+    final seededProducts = await _fetchSeededCatalogProducts();
     final sellerProducts = await _fetchApprovedSellerProducts();
-    final merged = _mergeProducts(result.products, sellerProducts);
-    return merged.isEmpty ? _getMockProducts() : merged;
+    final merged = _mergeProducts(
+      _mergeProducts(result.products, seededProducts),
+      sellerProducts,
+    );
+    final output = merged.isEmpty ? _getMockProducts() : merged;
+    await cache.cacheProducts(output.map((p) => p.toJson()).toList());
+    return output;
   } catch (e) {
+    final cached = await cache.getCachedProducts();
+    if (cached.isNotEmpty) {
+      return cached.map(Product.fromJson).toList();
+    }
+
+    final seededProducts = await _fetchSeededCatalogProducts();
     final sellerProducts = await _fetchApprovedSellerProducts();
-    return _mergeProducts(_getMockProducts(), sellerProducts);
+    return _mergeProducts(
+      _mergeProducts(_getMockProducts(), seededProducts),
+      sellerProducts,
+    );
   }
 });
 

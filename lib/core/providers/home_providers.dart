@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/models/product.dart';
+import 'package:coop_commerce/core/services/local_cache_service.dart';
 
 // ==================== MEMBER HOME PROVIDERS ====================
 
@@ -32,8 +33,12 @@ class MemberData {
 
   factory MemberData.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    return MemberData.fromMap(doc.id, data);
+  }
+
+  factory MemberData.fromMap(String memberId, Map<String, dynamic> data) {
     return MemberData(
-      memberId: doc.id,
+      memberId: memberId,
       tier: data['tier'] ?? 'bronze',
       rewardsPoints: data['rewardsPoints'] ?? 0,
       lifetimePoints: data['lifetimePoints'] ?? 0,
@@ -47,6 +52,10 @@ class MemberData {
   }
 }
 
+final _localCacheProvider = Provider<LocalCacheService>((ref) {
+  return LocalCacheService();
+});
+
 /// Watch member data and rewards (using FutureProvider for better error handling)
 final memberDataProvider =
     FutureProvider.family<MemberData?, String>((ref, userId) async {
@@ -55,21 +64,48 @@ final memberDataProvider =
     return null;
   }
 
+  final cache = ref.watch(_localCacheProvider);
+
   try {
     final firestore = FirebaseFirestore.instance;
     final doc = await firestore.collection('members').doc(userId).get();
 
     if (doc.exists) {
+      final data = doc.data();
+      if (data != null) {
+        await cache.cacheMemberData(userId, {
+          ...data,
+          'memberId': doc.id,
+          'memberSince':
+              (data['memberSince'] as Timestamp?)?.millisecondsSinceEpoch,
+        });
+      }
       return MemberData.fromFirestore(doc);
     } else {
       // Log warning but return null (not mock)
       print('⚠️ No member document for $userId in Firestore');
-      return null;
+      final cached = await cache.getCachedMemberData(userId);
+      if (cached == null) return null;
+      final memberSinceMs = cached['memberSince'] as int?;
+      return MemberData.fromMap(userId, {
+        ...cached,
+        'memberSince': memberSinceMs == null
+            ? null
+            : Timestamp.fromMillisecondsSinceEpoch(memberSinceMs),
+      });
     }
   } catch (e) {
     // Log error but return null (not mock)
     print('❌ Error fetching member data: $e');
-    return null;
+    final cached = await cache.getCachedMemberData(userId);
+    if (cached == null) return null;
+    final memberSinceMs = cached['memberSince'] as int?;
+    return MemberData.fromMap(userId, {
+      ...cached,
+      'memberSince': memberSinceMs == null
+          ? null
+          : Timestamp.fromMillisecondsSinceEpoch(memberSinceMs),
+    });
   }
 });
 

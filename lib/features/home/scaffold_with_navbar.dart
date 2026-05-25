@@ -6,6 +6,7 @@ import 'package:coop_commerce/core/providers/real_time_providers.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/features/search/search_screen.dart';
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 import 'package:coop_commerce/widgets/app_header_utility.dart';
 
 class ScaffoldWithNavBar extends ConsumerWidget {
@@ -44,7 +45,15 @@ class ScaffoldWithNavBar extends ConsumerWidget {
           else
             _CompactUtilityHeader(
               title: compactHeaderTitle,
-              onProfileTap: () => context.pushNamed('my-ncdfcoop'),
+              onProfileTap: () {
+                ref.read(activityLoggerProvider.notifier).logButtonTap(
+                      buttonName: 'compact_header_profile',
+                      screenName: 'compact_header',
+                      context: 'profile_navigation',
+                      success: true,
+                    );
+                context.pushNamed('my-ncdfcoop');
+              },
             ),
           // Main Content
           Expanded(child: navigationShell),
@@ -52,7 +61,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (int index) => _onTap(context, index),
+        onDestinationSelected: (int index) => _onTap(context, ref, index),
         backgroundColor: surfaceColor,
         indicatorColor: AppColors.primary.withValues(alpha: 0.2),
         destinations: destinations,
@@ -72,20 +81,19 @@ class ScaffoldWithNavBar extends ConsumerWidget {
           label: 'Home',
         ),
         NavigationDestination(
-          icon: Icon(Icons.account_balance_wallet_outlined),
-          selectedIcon:
-              Icon(Icons.account_balance_wallet, color: AppColors.primary),
-          label: 'Wallet',
+          icon: Icon(Icons.category_outlined),
+          selectedIcon: Icon(Icons.category, color: AppColors.primary),
+          label: 'Categories',
         ),
         NavigationDestination(
-          icon: Icon(Icons.savings_outlined),
-          selectedIcon: Icon(Icons.savings, color: AppColors.primary),
-          label: 'Savings',
+          icon: Icon(Icons.chat_bubble_outline),
+          selectedIcon: Icon(Icons.chat_bubble, color: AppColors.primary),
+          label: 'Messenger',
         ),
         NavigationDestination(
-          icon: Icon(Icons.trending_up_outlined),
-          selectedIcon: Icon(Icons.trending_up, color: AppColors.primary),
-          label: 'Investments',
+          icon: Icon(Icons.shopping_cart_outlined),
+          selectedIcon: Icon(Icons.shopping_cart, color: AppColors.primary),
+          label: 'Cart',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
@@ -252,7 +260,14 @@ class ScaffoldWithNavBar extends ConsumerWidget {
     );
   }
 
-  void _onTap(BuildContext context, int index) {
+  void _onTap(BuildContext context, WidgetRef ref, int index) {
+    ref.read(activityLoggerProvider.notifier).logButtonTap(
+          buttonName: 'bottom_nav_$index',
+          screenName: 'bottom_navigation',
+          context: 'role_tab_switch',
+          success: true,
+        );
+
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
@@ -260,7 +275,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
   }
 }
 
-class _CompactUtilityHeader extends StatefulWidget {
+class _CompactUtilityHeader extends ConsumerStatefulWidget {
   const _CompactUtilityHeader({
     required this.title,
     required this.onProfileTap,
@@ -270,10 +285,11 @@ class _CompactUtilityHeader extends StatefulWidget {
   final VoidCallback onProfileTap;
 
   @override
-  State<_CompactUtilityHeader> createState() => _CompactUtilityHeaderState();
+  ConsumerState<_CompactUtilityHeader> createState() =>
+      _CompactUtilityHeaderState();
 }
 
-class _CompactUtilityHeaderState extends State<_CompactUtilityHeader> {
+class _CompactUtilityHeaderState extends ConsumerState<_CompactUtilityHeader> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   bool _isSearching = false;
@@ -286,6 +302,13 @@ class _CompactUtilityHeaderState extends State<_CompactUtilityHeader> {
   }
 
   void _openSearch() {
+    ref.read(activityLoggerProvider.notifier).logButtonTap(
+          buttonName: 'compact_header_search_open',
+          screenName: 'compact_header',
+          context: 'search_overlay',
+          success: true,
+        );
+
     Navigator.of(context).push(
       PageRouteBuilder(
         fullscreenDialog: true,
@@ -323,6 +346,13 @@ class _CompactUtilityHeaderState extends State<_CompactUtilityHeader> {
   void _submitSearch() {
     final query = _searchController.text.trim();
     _searchFocusNode.unfocus();
+
+    ref.read(activityLoggerProvider.notifier).logButtonTap(
+          buttonName: 'compact_header_search_submit',
+          screenName: 'compact_header',
+          context: query.isEmpty ? 'empty_query' : 'query_submitted',
+          success: true,
+        );
 
     context.pushNamed(
       'search',
@@ -407,7 +437,15 @@ class _CompactUtilityHeaderState extends State<_CompactUtilityHeader> {
             const SizedBox(width: 6),
             if (_isSearching)
               IconButton(
-                onPressed: _closeSearch,
+                onPressed: () {
+                  ref.read(activityLoggerProvider.notifier).logButtonTap(
+                        buttonName: 'compact_header_search_close',
+                        screenName: 'compact_header',
+                        context: 'search_overlay',
+                        success: true,
+                      );
+                  _closeSearch();
+                },
                 icon: const Icon(Icons.close),
                 tooltip: 'Close search',
               )
@@ -418,7 +456,15 @@ class _CompactUtilityHeaderState extends State<_CompactUtilityHeader> {
                 tooltip: 'Search',
               ),
               IconButton(
-                onPressed: () => context.pushNamed('notifications'),
+                onPressed: () {
+                  ref.read(activityLoggerProvider.notifier).logButtonTap(
+                        buttonName: 'compact_header_notifications',
+                        screenName: 'compact_header',
+                        context: 'notifications_navigation',
+                        success: true,
+                      );
+                  context.pushNamed('notifications');
+                },
                 icon: const Icon(Icons.notifications_outlined),
                 tooltip: 'Notifications',
               ),
