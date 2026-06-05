@@ -371,6 +371,21 @@ final deliveryETAUpdateProvider =
 // ===================== 5. NOTIFICATIONS (Real-Time) =====================
 // Events → Users (live)
 
+/// Real-time unread messenger message count for a user
+final unreadMessengerCountProvider =
+    StreamProvider.autoDispose.family<int, String>(
+  (ref, userId) {
+    final firestore = FirebaseFirestore.instance;
+
+    return firestore
+        .collection('messenger_threads')
+        .where('participantIds', arrayContains: userId)
+        .where('unreadBy', arrayContains: userId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  },
+);
+
 /// Real-time unread notification count with live updates
 final unreadNotificationCountProvider =
     StreamProvider.autoDispose.family<int, String>(

@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -20,9 +22,57 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.GOOGLE_OAUTH_REVERSED_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fbapi20130228</string>
+		<string>fbappevents</string>
+		<string>fbauth2</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access for video calls and product verification</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show nearby products and delivery partners</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photos to upload profile pictures and items for sale</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>FlutterSceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -41,41 +91,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	
-	<!-- URL Schemes for OAuth callbacks -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<!-- Google OAuth URL scheme -->
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.GOOGLE_OAUTH_REVERSED_CLIENT_ID</string>
-			</array>
-		</dict>
-	</array>
-	
-	<!-- LSApplicationQueriesSchemes for Facebook OAuth -->
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>fbapi</string>
-		<string>fbapi20130228</string>
-		<string>fbappevents</string>
-		<string>fbauth2</string>
-		<string>fb-messenger-share-api</string>
-	</array>
-	
-	<!-- Privacy permissions -->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need access to your photos to upload profile pictures and items for sale</string>
-	<key>NSCameraUsageDescription</key>
-	<string>We need camera access for video calls and product verification</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We need your location to show nearby products and delivery partners</string>
 </dict>
 </plist>

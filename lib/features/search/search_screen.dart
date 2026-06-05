@@ -24,7 +24,9 @@ class _SearchIntentAction {
 
 /// Search screen for browsing products with real-time search
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.initialQuery = ''});
+
+  final String initialQuery;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -36,6 +38,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialQuery.isNotEmpty) {
+      _searchController.text = widget.initialQuery;
+    }
     _searchController.addListener(_updateSearchQuery);
   }
 
