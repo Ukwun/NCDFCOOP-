@@ -160,6 +160,15 @@ class SellerHomeScreen extends ConsumerWidget {
             return SellerDashboardScreen(
               businessName: sellerProfile.businessName,
               products: products,
+              onProfileTap: () => context.pushNamed('my-ncdfcoop'),
+              onSalesLedgerTap: () => context.pushNamed('seller-sales-ledger'),
+              onRefreshTap: () {
+                ref.invalidate(
+                  sellerProductsForSellerProvider(
+                    (userId: user.id, sellerProfileId: sellerProfile.id),
+                  ),
+                );
+              },
               onAddNewProduct: () async {
                 final added = await context.pushNamed<bool>(
                   'seller-add-product',
@@ -198,6 +207,33 @@ class SellerHomeScreen extends ConsumerWidget {
                               'Quantity: ${product.quantity} | MOQ: ${product.moq}'),
                           Text('Status: ${product.status.displayName}'),
                           const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                if ((product.id ?? '').isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Product is not ready for editing yet.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                context.pushNamed(
+                                  'seller-product-detail-edit',
+                                  pathParameters: {'productId': product.id!},
+                                  extra: {'editable': true},
+                                );
+                              },
+                              icon: const Icon(Icons.edit_outlined),
+                              label: const Text('Edit Product'),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(

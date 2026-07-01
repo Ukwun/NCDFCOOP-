@@ -40,6 +40,12 @@ class Product {
   /// Get the default display price (retail price for consumers)
   double get price => retailPrice;
 
+  /// Normalized image URL for rendering.
+  String get displayImageUrl => _normalizeImageField(imageUrl) ?? '';
+
+  /// True when product has a usable image path/URL.
+  bool get hasDisplayImage => displayImageUrl.isNotEmpty;
+
   /// Get the price appropriate for a specific user role
   /// Consumer → Retail price
   /// Member → Wholesale price
@@ -92,6 +98,14 @@ class Product {
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    final imageCandidate = json['imageUrl'] ??
+        json['image'] ??
+        json['thumbnailUrl'] ??
+        json['imagePath'] ??
+        ((json['images'] is List && (json['images'] as List).isNotEmpty)
+            ? (json['images'] as List).first
+            : null);
+
     return Product(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -100,7 +114,7 @@ class Product {
       wholesalePrice: (json['wholesalePrice'] ?? 0).toDouble(),
       contractPrice: (json['contractPrice'] ?? 0).toDouble(),
       categoryId: json['categoryId'] ?? '',
-      imageUrl: json['imageUrl'],
+      imageUrl: _normalizeImageField(imageCandidate),
       stock: json['stock'] ?? 0,
       minimumOrderQuantity: json['minimumOrderQuantity'] ?? 1,
       rating: (json['rating'] ?? 0).toDouble(),
@@ -182,4 +196,17 @@ class Product {
 
   @override
   String toString() => 'Product(id: $id, name: $name, retail: ₦$retailPrice)';
+
+  static String? _normalizeImageField(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+
+    final lower = text.toLowerCase();
+    if (lower == 'null' || lower == 'n/a' || lower == 'none') {
+      return null;
+    }
+
+    return text;
+  }
 }

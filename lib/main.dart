@@ -14,6 +14,7 @@ import 'package:coop_commerce/features/welcome/auth_provider.dart';
 import 'package:coop_commerce/providers/app_settings_provider.dart';
 import 'package:coop_commerce/providers/app_initializer_provider.dart';
 import 'package:coop_commerce/services/local_search_preferences_service.dart';
+import 'package:coop_commerce/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +26,9 @@ void main() async {
   // Initialize Firebase - with error handling
   try {
     print('🔥 Initializing Firebase...');
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     try {
       await FirebaseAppCheck.instance.activate(
         androidProvider:
@@ -43,6 +46,7 @@ void main() async {
     // Don't crash - let the app run anyway
   }
 
+  serviceLocator.initialize();
   runApp(const ProviderScope(child: MyApp()));
 }
 

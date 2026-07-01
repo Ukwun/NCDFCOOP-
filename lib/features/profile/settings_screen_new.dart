@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/features/welcome/auth_provider.dart'
+    as auth_controller;
 import '../../theme/app_theme.dart';
 import '../../providers/app_settings_provider.dart';
 
@@ -139,9 +141,9 @@ class SettingsScreen extends ConsumerWidget {
         child: Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
-          ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
         ),
       ),
     );
@@ -253,15 +255,22 @@ class SettingsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               context.pop();
-              context.go('/welcome');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Logged out successfully'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              try {
+                await ref
+                    .read(auth_controller.authControllerProvider.notifier)
+                    .signOut();
+                if (context.mounted) {
+                  context.go('/signin');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout failed: $e')),
+                  );
+                }
+              }
             },
             child: const Text('Logout'),
           ),

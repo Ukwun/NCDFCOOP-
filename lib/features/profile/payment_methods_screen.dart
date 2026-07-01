@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 
 class PaymentMethod {
@@ -19,6 +22,17 @@ class PaymentMethod {
 
   bool get isDefault => _isDefault;
 
+  factory PaymentMethod.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return PaymentMethod(
+      id: doc.id,
+      type: (data['type'] ?? 'Card').toString(),
+      lastFourDigits: (data['lastFour'] ?? '----').toString(),
+      cardName: (data['displayName'] ?? 'Payment Method').toString(),
+      isDefault: data['isDefault'] == true,
+    );
+  }
+
   /// Create a copy with modified properties
   PaymentMethod copyWith({
     String? id,
@@ -37,59 +51,43 @@ class PaymentMethod {
   }
 }
 
-class PaymentMethodsScreen extends StatefulWidget {
+class PaymentMethodsScreen extends ConsumerStatefulWidget {
   const PaymentMethodsScreen({super.key});
 
   @override
-  State<PaymentMethodsScreen> createState() => _PaymentMethodsScreenState();
+  ConsumerState<PaymentMethodsScreen> createState() =>
+      _PaymentMethodsScreenState();
 }
 
-class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
-  late List<PaymentMethod> paymentMethods;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializePaymentMethods();
-  }
-
-  void _initializePaymentMethods() {
-    paymentMethods = [
-      PaymentMethod(
-        id: '1',
-        type: 'Card',
-        lastFourDigits: '4242',
-        cardName: 'Visa - Personal',
-        isDefault: true,
-      ),
-      PaymentMethod(
-        id: '2',
-        type: 'Card',
-        lastFourDigits: '5555',
-        cardName: 'Mastercard - Work',
-        isDefault: false,
-      ),
-      PaymentMethod(
-        id: '3',
-        type: 'Wallet',
-        lastFourDigits: 'Balance',
-        cardName: 'Cooperative Wallet',
-        isDefault: false,
-      ),
-    ];
-  }
-
-  void _setAsDefault(String id) {
-    setState(() {
-      paymentMethods = paymentMethods.map((method) {
-        if (method.id == id) {
-          return method.copyWith(isDefault: true);
-        } else if (method.isDefault) {
-          return method.copyWith(isDefault: false);
-        }
-        return method;
-      }).toList();
+class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
+  Stream<List<PaymentMethod>> _paymentMethodsStream(String userId) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('paymentMethods')
+        .snapshots()
+        .map((snapshot) {
+      final methods = snapshot.docs.map(PaymentMethod.fromFirestore).toList();
+      methods.sort((a, b) {
+        if (a.isDefault == b.isDefault) return a.cardName.compareTo(b.cardName);
+        return a.isDefault ? -1 : 1;
+      });
+      return methods;
     });
+  }
+
+  Future<void> _setAsDefault(String userId, String id) async {
+    final ref = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('paymentMethods');
+    final snapshot = await ref.get();
+    final batch = FirebaseFirestore.instance.batch();
+    for (final doc in snapshot.docs) {
+      batch.update(doc.reference, {'isDefault': doc.id == id});
+    }
+    await batch.commit();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Default payment method updated'),
@@ -98,10 +96,14 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     );
   }
 
-  void _removePaymentMethod(String id) {
-    setState(() {
-      paymentMethods.removeWhere((m) => m.id == id);
-    });
+  Future<void> _removePaymentMethod(String userId, String id) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('paymentMethods')
+        .doc(id)
+        .delete();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Payment method removed'),
@@ -110,10 +112,12 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     );
   }
 
-  void _addPaymentMethod() {
+  Future<void> _addPaymentMethod() async {
+    await context.pushNamed('add-payment-method');
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Add payment method - Coming soon'),
+        content: Text('Returned from add payment method screen'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -121,17 +125,51 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    final userId = user?.id ?? '';
+
+    if (userId.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(title: const Text('Payment Methods')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_outline, color: AppColors.textLight, size: 40),
+                const SizedBox(height: 10),
+                Text(
+                  'Please sign in to manage payment methods.',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textLight),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            _buildPaymentMethods(),
-            _buildAddButton(),
-            const SizedBox(height: 24),
-          ],
-        ),
+      body: StreamBuilder<List<PaymentMethod>>(
+        stream: _paymentMethodsStream(userId),
+        builder: (context, snapshot) {
+          final paymentMethods = snapshot.data ?? const <PaymentMethod>[];
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildHeader(context),
+                _buildPaymentMethods(paymentMethods, userId),
+                _buildAddButton(),
+                const SizedBox(height: 24),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -214,19 +252,45 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     );
   }
 
-  Widget _buildPaymentMethods() {
+  Widget _buildPaymentMethods(
+      List<PaymentMethod> paymentMethods, String userId) {
+    if (paymentMethods.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.credit_card_off_outlined,
+                color: AppColors.textLight, size: 36),
+            const SizedBox(height: 8),
+            Text(
+              'No payment methods saved yet',
+              style:
+                  AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         children: paymentMethods.map((method) {
-          return _buildPaymentCard(method);
+          return _buildPaymentCard(method, userId);
         }).toList(),
       ),
     );
   }
 
-  Widget _buildPaymentCard(PaymentMethod method) {
-    final isCard = method.type == 'Card';
+  Widget _buildPaymentCard(PaymentMethod method, String userId) {
+    final type = method.type.toLowerCase();
+    final isCard = type == 'card' || type.contains('card');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -313,7 +377,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => _setAsDefault(method.id),
+                  onTap: () => _setAsDefault(userId, method.id),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
@@ -336,7 +400,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () => _removePaymentMethod(method.id),
+                onTap: () => _removePaymentMethod(userId, method.id),
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

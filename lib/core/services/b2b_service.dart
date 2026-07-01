@@ -46,7 +46,8 @@ class PurchaseOrderService {
         id: '', // Firestore will generate
         institutionId: institutionId,
         institutionName: institutionName,
-        status: 'draft',
+        // Called from submit flows, so create directly in pending state.
+        status: 'pending',
         lineItems: lineItems,
         subtotal: subtotal,
         taxAmount: taxAmount,

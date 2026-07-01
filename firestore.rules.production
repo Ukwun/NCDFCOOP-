@@ -43,6 +43,15 @@ service cloud.firestore {
       return hasRole('institutional');
     }
 
+    /// Resolve institution scope from profile
+    function currentInstitutionId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institutionId;
+    }
+
+    function isInstitutionScoped(institutionId) {
+      return institutionId == request.auth.uid || institutionId == currentInstitutionId();
+    }
+
     // ========================================================================
     // USERS COLLECTION - PII PROTECTION
     // ========================================================================
@@ -202,6 +211,44 @@ service cloud.firestore {
 
       // Only admin can approve/reject
       allow update: if isAuthenticated() && isAdmin();
+    }
+
+    // ========================================================================
+    // PURCHASE ORDERS (B2B)
+    // ========================================================================
+
+    match /purchase_orders/{poId} {
+      allow read: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        isInstitutionScoped(resource.data.institutionId) ||
+        (resource.data.approvalChain != null && resource.data.approvalChain.hasAny([request.auth.uid])) ||
+        isAdmin()
+      );
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        isInstitutionScoped(request.resource.data.institutionId);
+
+      allow update: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        (resource.data.approvalChain != null && resource.data.approvalChain.hasAny([request.auth.uid])) ||
+        isAdmin()
+      );
+
+      allow delete: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid || isAdmin()
+      );
+    }
+
+    // ========================================================================
+    // CONTRACT PRICING
+    // ========================================================================
+
+    match /contract_prices/{contractId} {
+      allow read: if isAuthenticated() && (
+        isInstitutionScoped(resource.data.institutionId) || isAdmin()
+      );
+      allow create, update, delete: if isAuthenticated() && isAdmin();
     }
 
     // ========================================================================

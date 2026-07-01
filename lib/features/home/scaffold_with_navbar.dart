@@ -32,9 +32,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
       messengerBadgeCount: messengerUnreadCount,
     );
     final showFullUtilityHeader = !_isWholesale(role);
-    final compactHeaderTitle = _isInstitutional(role)
-        ? 'Institutional Procurement'
-        : 'Wholesale Marketplace';
+    const compactHeaderTitle = 'Wholesale Marketplace';
 
     return Scaffold(
       body: Column(
@@ -202,7 +200,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
   }
 
   bool _isMember(UserRole role) {
-    return role == UserRole.coopMember || role == UserRole.premiumMember;
+    return role == UserRole.coopMember;
   }
 
   bool _isSeller(UserRole role) {
@@ -210,14 +208,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
   }
 
   bool _isWholesale(UserRole role) {
-    return role == UserRole.wholesaleBuyer ||
-        role == UserRole.institutionalBuyer ||
-        role == UserRole.institutionalApprover;
-  }
-
-  bool _isInstitutional(UserRole role) {
-    return role == UserRole.institutionalBuyer ||
-        role == UserRole.institutionalApprover;
+    return role == UserRole.wholesaleBuyer;
   }
 
   Widget _buildIconWithBadge({

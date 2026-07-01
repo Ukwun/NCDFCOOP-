@@ -60,6 +60,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     final isAuthenticated = ref.read(isAuthenticatedProvider);
     final currentUser = ref.read(global_auth.currentUserProvider);
+    final authState = ref.read(authStateProvider);
 
     // Prefer persisted app user context first; Firebase stream can lag on some devices.
     if (currentUser != null) {
@@ -70,6 +71,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       } else {
         // Role selected, go to home
         context.go('/');
+      }
+      return;
+    }
+
+    // If Firebase says authenticated but app-level user context is not ready yet,
+    // avoid routing to '/' because redirect guards can bounce back to splash.
+    if (isAuthenticated && currentUser == null) {
+      _hasNavigated = true;
+      if (authState.isLoading) {
+        context.go('/welcome');
+      } else {
+        context.go('/signin');
       }
       return;
     }

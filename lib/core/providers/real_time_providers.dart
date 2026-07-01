@@ -371,6 +371,257 @@ final deliveryETAUpdateProvider =
 // ===================== 5. NOTIFICATIONS (Real-Time) =====================
 // Events → Users (live)
 
+/// Real-time conversation previews for Messenger.
+final messengerConversationsProvider = StreamProvider.autoDispose
+    .family<List<MessengerConversationPreview>, String>(
+  (ref, userId) {
+    final firestore = FirebaseFirestore.instance;
+
+    return firestore
+        .collection('conversations')
+        .where('participantIds', arrayContains: userId)
+        .snapshots()
+        .map((snapshot) {
+      final conversations = snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            if (_isConversationArchivedForUser(data, userId)) {
+              return null;
+            }
+            final updatedAt = _readConversationTime(data);
+
+            return MessengerConversationPreview(
+              id: doc.id,
+              title: _readConversationTitle(data, userId),
+              lastMessage: _readLastMessage(data),
+              unreadCount: _readUnreadCountForUser(data, userId),
+              updatedAt: updatedAt,
+              isOnline: _readOnlineStatus(data, userId),
+              avatarText: _readAvatarText(data, userId),
+            );
+          })
+          .whereType<MessengerConversationPreview>()
+          .toList();
+
+      conversations.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      return conversations;
+    }).handleError((_) {
+      // Keep UI stable on permission/index/schema issues.
+      return <MessengerConversationPreview>[];
+    });
+  },
+);
+
+/// Real-time message stream for a conversation thread.
+final messengerConversationMessagesProvider = StreamProvider.autoDispose
+    .family<List<MessengerConversationMessage>, String>(
+  (ref, conversationId) {
+    final firestore = FirebaseFirestore.instance;
+
+    return firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .orderBy('createdAt')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+
+        return MessengerConversationMessage(
+          id: doc.id,
+          conversationId: conversationId,
+          senderId: data['senderId']?.toString() ?? '',
+          senderName: data['senderName']?.toString(),
+          senderAvatar: data['senderAvatar']?.toString(),
+          text: data['text']?.toString() ?? '',
+          createdAt:
+              (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        );
+      }).toList();
+    }).handleError((_) {
+      return <MessengerConversationMessage>[];
+    });
+  },
+);
+
+/// Real-time unread conversation count for Messenger badge.
+/// Expected conversation schema:
+/// - participantIds: list of user ids
+/// - unreadByUser: map of user id to count (preferred)
+/// Optional fallback schema supported:
+/// - unreadCounts: map of user id to count
+/// - unreadCount: num (single conversation-level unread count)
+final unreadMessengerCountProvider =
+    StreamProvider.autoDispose.family<int, String>(
+  (ref, userId) {
+    final firestore = FirebaseFirestore.instance;
+
+    return firestore
+        .collection('conversations')
+        .where('participantIds', arrayContains: userId)
+        .snapshots()
+        .map((snapshot) {
+      int totalUnread = 0;
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (_isConversationArchivedForUser(data, userId)) {
+          continue;
+        }
+        totalUnread += _readUnreadCountForUser(data, userId);
+      }
+
+      return totalUnread;
+    }).handleError((_) {
+      // Keep UI stable on permission/index/schema issues.
+      return 0;
+    });
+  },
+);
+
+int _readUnreadCountForUser(Map<String, dynamic> data, String userId) {
+  final unreadByUser = data['unreadByUser'];
+  if (unreadByUser is Map) {
+    final raw = unreadByUser[userId];
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      return int.tryParse(raw) ?? 0;
+    }
+  }
+
+  final unreadCounts = data['unreadCounts'];
+  if (unreadCounts is Map) {
+    final raw = unreadCounts[userId];
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      return int.tryParse(raw) ?? 0;
+    }
+  }
+
+  final fallbackUnread = data['unreadCount'];
+  if (fallbackUnread is num) {
+    return fallbackUnread.toInt();
+  }
+  if (fallbackUnread is String) {
+    return int.tryParse(fallbackUnread) ?? 0;
+  }
+
+  return 0;
+}
+
+DateTime _readConversationTime(Map<String, dynamic> data) {
+  final updatedAt = data['updatedAt'];
+  if (updatedAt is Timestamp) {
+    return updatedAt.toDate();
+  }
+
+  final lastMessageAt = data['lastMessageAt'];
+  if (lastMessageAt is Timestamp) {
+    return lastMessageAt.toDate();
+  }
+
+  final createdAt = data['createdAt'];
+  if (createdAt is Timestamp) {
+    return createdAt.toDate();
+  }
+
+  return DateTime.now();
+}
+
+String _readConversationTitle(Map<String, dynamic> data, String userId) {
+  final title = data['title'];
+  if (title is String && title.trim().isNotEmpty) {
+    return title;
+  }
+
+  final participantNames = data['participantNames'];
+  if (participantNames is Map) {
+    for (final entry in participantNames.entries) {
+      if (entry.key.toString() != userId && entry.value is String) {
+        final otherName = (entry.value as String).trim();
+        if (otherName.isNotEmpty) {
+          return otherName;
+        }
+      }
+    }
+  }
+
+  return 'Conversation';
+}
+
+String _readLastMessage(Map<String, dynamic> data) {
+  final text = data['lastMessageText'];
+  if (text is String && text.trim().isNotEmpty) {
+    return text;
+  }
+
+  final fallback = data['lastMessage'];
+  if (fallback is String && fallback.trim().isNotEmpty) {
+    return fallback;
+  }
+
+  return 'Start conversation';
+}
+
+bool _readOnlineStatus(Map<String, dynamic> data, String userId) {
+  final participantOnline = data['participantOnline'];
+  if (participantOnline is Map) {
+    for (final entry in participantOnline.entries) {
+      if (entry.key.toString() != userId && entry.value is bool) {
+        return entry.value as bool;
+      }
+    }
+  }
+
+  return false;
+}
+
+String _readAvatarText(Map<String, dynamic> data, String userId) {
+  final participantAvatars = data['participantAvatars'];
+  if (participantAvatars is Map) {
+    for (final entry in participantAvatars.entries) {
+      if (entry.key.toString() != userId && entry.value is String) {
+        final avatar = (entry.value as String).trim();
+        if (avatar.isNotEmpty) {
+          return avatar;
+        }
+      }
+    }
+  }
+
+  final avatar = data['avatar'];
+  if (avatar is String && avatar.trim().isNotEmpty) {
+    return avatar;
+  }
+
+  return '💬';
+}
+
+bool _isConversationArchivedForUser(Map<String, dynamic> data, String userId) {
+  final archivedByUser = data['archivedByUser'];
+  if (archivedByUser is Map) {
+    final raw = archivedByUser[userId];
+    if (raw is bool && raw) {
+      return true;
+    }
+    if (raw is String && raw.toLowerCase() == 'true') {
+      return true;
+    }
+  }
+
+  final archivedFor = data['archivedFor'];
+  if (archivedFor is List) {
+    return archivedFor.map((e) => e.toString()).contains(userId);
+  }
+
+  return false;
+}
+
 /// Real-time unread notification count with live updates
 final unreadNotificationCountProvider =
     StreamProvider.autoDispose.family<int, String>(
@@ -616,5 +867,45 @@ class ImportantNotification {
     this.priority = 'normal',
     this.hasNew = false,
     required this.timestamp,
+  });
+}
+
+class MessengerConversationPreview {
+  final String id;
+  final String title;
+  final String lastMessage;
+  final int unreadCount;
+  final DateTime updatedAt;
+  final bool isOnline;
+  final String avatarText;
+
+  MessengerConversationPreview({
+    required this.id,
+    required this.title,
+    required this.lastMessage,
+    required this.unreadCount,
+    required this.updatedAt,
+    required this.isOnline,
+    required this.avatarText,
+  });
+}
+
+class MessengerConversationMessage {
+  final String id;
+  final String conversationId;
+  final String senderId;
+  final String? senderName;
+  final String? senderAvatar;
+  final String text;
+  final DateTime createdAt;
+
+  MessengerConversationMessage({
+    required this.id,
+    required this.conversationId,
+    required this.senderId,
+    this.senderName,
+    this.senderAvatar,
+    required this.text,
+    required this.createdAt,
   });
 }

@@ -32,13 +32,21 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    final rolesList = (json['roles'] as List<dynamic>?)
+    final marketplaceRole = json['marketplaceRole']?.toString();
+    final rawRoles = json['roles'] as List<dynamic>? ??
+        (marketplaceRole == null ? null : <dynamic>[marketplaceRole]);
+    final rolesList = rawRoles
             ?.map((r) => UserRole.values.firstWhere(
                   (role) => role.name == r,
                   orElse: () => UserRole.wholesaleBuyer,
                 ))
+            .where((role) => role.isSupported)
             .toList() ??
         [UserRole.wholesaleBuyer];
+
+    if (rolesList.isEmpty) {
+      rolesList.add(UserRole.wholesaleBuyer);
+    }
 
     final contextsMap = <UserRole, UserContext>{};
     if (json['contexts'] is Map) {
@@ -47,7 +55,9 @@ class User {
           final role = UserRole.values.firstWhere(
             (r) => r.name == entry.key,
           );
-          contextsMap[role] = UserContext.fromJson(entry.value);
+          if (role.isSupported) {
+            contextsMap[role] = UserContext.fromJson(entry.value);
+          }
         } catch (_) {}
       }
     }

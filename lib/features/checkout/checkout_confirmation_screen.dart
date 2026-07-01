@@ -103,11 +103,13 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   child: _buildPaymentButton(
                     context: context,
+                    ref: ref,
                     orderId: orderId,
                     customerId: userId,
                     customerEmail: user?.email ?? '',
                     customerName: customerName,
                     totalAmount: calculation.total,
+                    cartItems: cartState.items,
                   ),
                 );
               },
@@ -428,11 +430,13 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
   /// Supports both card payments and bank transfers
   Widget _buildPaymentButton({
     required BuildContext context,
+    required WidgetRef ref,
     required String orderId,
     required String customerId,
     required String customerEmail,
     required String customerName,
     required double totalAmount,
+    required List<CartItem> cartItems,
   }) {
     return FlutterwavePaymentButton(
       orderId: orderId,
@@ -450,6 +454,28 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
         );
       },
       onCardPaymentSuccess: (reference) {
+        final activityLogger = ref.read(activityLoggerProvider.notifier);
+        final productIds = cartItems.map((item) => item.productId).toList();
+        final productNames = cartItems.map((item) => item.productName).toList();
+        final categories = List<String>.generate(
+          cartItems.length,
+          (_) => 'general',
+        );
+
+        activityLogger.logPurchase(
+          orderId: orderId,
+          productIds: productIds,
+          productNames: productNames,
+          totalAmount: totalAmount,
+          categories: categories,
+        );
+        activityLogger.logPaymentResult(
+          orderId: orderId,
+          success: true,
+          amount: totalAmount,
+          paymentMethod: 'flutterwave_card',
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content:
@@ -474,6 +500,13 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
         });
       },
       onBankTransferDetails: (bankDetails) {
+        final activityLogger = ref.read(activityLoggerProvider.notifier);
+        activityLogger.logCheckoutStarted(
+          cartTotal: totalAmount,
+          itemCount: cartItems.length,
+          paymentMethod: 'bank_transfer',
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -497,6 +530,15 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
         });
       },
       onPaymentFailed: () {
+        final activityLogger = ref.read(activityLoggerProvider.notifier);
+        activityLogger.logPaymentResult(
+          orderId: orderId,
+          success: false,
+          amount: totalAmount,
+          paymentMethod: 'flutterwave_card',
+          errorMessage: 'Payment was cancelled or failed by gateway.',
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('❌ Payment cancelled or failed'),

@@ -12,7 +12,7 @@ class PersonalizedDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
-    
+
     if (currentUser == null) {
       return Scaffold(
         appBar: AppBar(
@@ -47,7 +47,7 @@ class PersonalizedDashboardScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Recommended for you
-            _buildRecommendedProductsSection(ref, currentUser.id),
+            _buildRecommendedProductsSection(context, ref, currentUser.id),
             const SizedBox(height: AppSpacing.lg),
 
             // Quick actions
@@ -93,7 +93,8 @@ class PersonalizedDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInsightsSection(BuildContext context, WidgetRef ref, String userId) {
+  Widget _buildInsightsSection(
+      BuildContext context, WidgetRef ref, String userId) {
     final summary = ref.watch(todayBehaviorSummaryProvider(userId));
 
     return summary.when(
@@ -294,7 +295,8 @@ class PersonalizedDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecommendedProductsSection(WidgetRef ref, String userId) {
+  Widget _buildRecommendedProductsSection(
+      BuildContext context, WidgetRef ref, String userId) {
     final recommended = ref.watch(userRecommendedProductsProvider(userId));
 
     return recommended.when(
@@ -320,7 +322,7 @@ class PersonalizedDashboardScreen extends ConsumerWidget {
                   ),
                   TextButton(
                     onPressed: () {
-                      // Navigate to browse more recommendations
+                      context.pushNamed('products');
                     },
                     child: const Text('See All'),
                   ),

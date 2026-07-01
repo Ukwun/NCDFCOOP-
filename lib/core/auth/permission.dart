@@ -26,6 +26,14 @@ enum Permission {
   viewFranchiseInventory,
   viewFranchiseSales,
 
+  // Seller permissions
+  manageSellerProfile,
+  manageSellerProducts,
+  manageSellerInventory,
+  fulfillSellerOrders,
+  viewSellerEarnings,
+  requestSellerPayout,
+
   // Institutional permissions
   viewInstitutionalProducts,
   viewContractPricing,
@@ -55,11 +63,20 @@ enum Permission {
 /// Maps each role to its permissions
 final rolePermissions = <UserRole, Set<Permission>>{
   UserRole.wholesaleBuyer: {
-    Permission.viewRetailProducts,
-    Permission.viewRetailPrices,
-    Permission.createRetailOrder,
+    Permission.viewWholesaleProducts,
+    Permission.viewWholesalePrices,
+    Permission.createWholesaleOrder,
+    Permission.viewWholesaleOrders,
     Permission.trackRetailOrder,
     Permission.addMoneyToAccount,
+  },
+  UserRole.seller: {
+    Permission.manageSellerProfile,
+    Permission.manageSellerProducts,
+    Permission.manageSellerInventory,
+    Permission.fulfillSellerOrders,
+    Permission.viewSellerEarnings,
+    Permission.requestSellerPayout,
   },
   UserRole.coopMember: {
     Permission.viewRetailProducts,
@@ -179,6 +196,12 @@ extension PermissionX on Permission {
       Permission.updateFranchiseInventory => 'Update franchise inventory',
       Permission.viewFranchiseInventory => 'View franchise inventory',
       Permission.viewFranchiseSales => 'View franchise sales',
+      Permission.manageSellerProfile => 'Manage seller profile',
+      Permission.manageSellerProducts => 'Manage seller products',
+      Permission.manageSellerInventory => 'Manage seller inventory',
+      Permission.fulfillSellerOrders => 'Fulfill seller orders',
+      Permission.viewSellerEarnings => 'View seller earnings',
+      Permission.requestSellerPayout => 'Request seller payout',
       Permission.viewInstitutionalProducts => 'View institutional products',
       Permission.viewContractPricing => 'View contract pricing',
       Permission.createPurchaseOrder => 'Create purchase orders',

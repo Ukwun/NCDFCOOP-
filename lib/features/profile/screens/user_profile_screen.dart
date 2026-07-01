@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/features/welcome/auth_provider.dart'
+    as auth_controller;
 import 'package:coop_commerce/theme/app_theme.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -309,7 +312,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildMembershipSection() {
     return Padding(
-      padding: const EdgeIntml.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -549,14 +552,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             title: 'Logout',
             subtitle: 'Sign out of your account',
             color: Colors.red,
-            onTap: () {
-              // TODO: Call auth provider logout
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('👋 Logging out...'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+            onTap: () async {
+              try {
+                await ProviderScope.containerOf(context)
+                    .read(auth_controller.authControllerProvider.notifier)
+                    .signOut();
+                if (context.mounted) {
+                  context.go('/signin');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout failed: $e')),
+                  );
+                }
+              }
             },
           ),
         ],

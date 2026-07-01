@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_settings_provider.dart';
 import '../welcome/auth_provider.dart' as auth_controller;
@@ -242,96 +243,190 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _submitPasswordChange({
+    required BuildContext context,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-user',
+        message: 'No authenticated user found.',
+      );
+    }
+
+    final supportsPassword =
+        user.providerData.any((p) => p.providerId == 'password');
+
+    if (!supportsPassword || user.email == null) {
+      throw FirebaseAuthException(
+        code: 'password-provider-not-enabled',
+        message:
+            'This account is signed in with a social provider. Use reset password from login.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+  }
+
   void _changePassword(BuildContext context) {
     final oldPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Change Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: oldPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Current Password',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Change Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: oldPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Current Password',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'New Password',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed:
+                  isSubmitting ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: newPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'New Password',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: confirmPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Confirm Password',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final currentPassword = oldPasswordController.text.trim();
+                      final newPassword = newPasswordController.text.trim();
+                      final confirmPassword =
+                          confirmPasswordController.text.trim();
+
+                      if (currentPassword.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Enter your current password')),
+                        );
+                        return;
+                      }
+
+                      if (newPassword.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Please enter a new password')),
+                        );
+                        return;
+                      }
+
+                      if (newPassword != confirmPassword) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Passwords do not match')),
+                        );
+                        return;
+                      }
+
+                      if (newPassword.length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Password must be at least 8 characters')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSubmitting = true);
+                      try {
+                        await _submitPasswordChange(
+                          context: context,
+                          currentPassword: currentPassword,
+                          newPassword: newPassword,
+                        );
+
+                        if (!dialogContext.mounted || !context.mounted) return;
+                        Navigator.pop(dialogContext);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password changed successfully'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      } on FirebaseAuthException catch (e) {
+                        if (!context.mounted) return;
+                        final msg = switch (e.code) {
+                          'wrong-password' => 'Current password is incorrect.',
+                          'weak-password' => 'New password is too weak.',
+                          'requires-recent-login' =>
+                            'Please sign in again and retry password change.',
+                          'password-provider-not-enabled' =>
+                            'This account uses social login. Use "Forgot Password" from sign-in.',
+                          _ => e.message ?? 'Failed to change password.',
+                        };
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(msg)),
+                        );
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to change password.'),
+                          ),
+                        );
+                      } finally {
+                        if (dialogContext.mounted) {
+                          setDialogState(() => isSubmitting = false);
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Change Password'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newPassword = newPasswordController.text.trim();
-              final confirmPassword = confirmPasswordController.text.trim();
-
-              if (newPassword.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a new password')),
-                );
-                return;
-              }
-
-              if (newPassword != confirmPassword) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Passwords do not match')),
-                );
-                return;
-              }
-
-              if (newPassword.length < 8) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Password must be at least 8 characters')),
-                );
-                return;
-              }
-
-              Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('✅ Password changed successfully'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            child: const Text('Change Password'),
-          ),
-        ],
       ),
     );
   }
@@ -342,7 +437,7 @@ class SettingsScreen extends ConsumerWidget {
       {'code': 'fr', 'name': 'Français'},
       {'code': 'yo', 'name': 'Yoruba'},
       {'code': 'ha', 'name': 'Hausa'},
-      {'cod': 'ig', 'name': 'Igbo'},
+      {'code': 'ig', 'name': 'Igbo'},
     ];
 
     showDialog(
@@ -413,14 +508,19 @@ class SettingsScreen extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               context.pop();
-              await ref
-                  .read(auth_controller.authControllerProvider.notifier)
-                  .signOut();
-              if (context.mounted) {
-                _showSavedFeedback(context, 'Logged out successfully');
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  context.go('/welcome');
-                });
+              try {
+                await ref
+                    .read(auth_controller.authControllerProvider.notifier)
+                    .signOut();
+                if (context.mounted) {
+                  context.go('/signin');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout failed: $e')),
+                  );
+                }
               }
             },
             child: const Text('Logout'),

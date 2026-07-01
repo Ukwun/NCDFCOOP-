@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api/auth_service.dart';
 import '../../core/api/service_locator.dart';
@@ -213,7 +214,7 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<void> signOut() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
+    try {
       // Log logout activity before clearing
       await ref.read(activityLoggerProvider.notifier).logLogout();
       // Logout from service
@@ -222,12 +223,22 @@ class AuthController extends AsyncNotifier<void> {
       await UserPersistence.clearUser();
       // Clear the global current user provider
       ref.read(global_auth.currentUserProvider.notifier).clearUser();
-      return;
-    });
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
   }
 
   /// Update user's selected role during onboarding
   Future<void> selectUserRole(UserRole selectedRole) async {
+    if (!selectedRole.isSupported) {
+      throw ArgumentError.value(
+        selectedRole.name,
+        'selectedRole',
+        'Only seller, member, and wholesale buyer roles are supported.',
+      );
+    }
     print('🔷 selectUserRole called with: ${selectedRole.name}');
 
     // Get current user
@@ -238,6 +249,24 @@ class AuthController extends AsyncNotifier<void> {
       print('❌ No user logged in');
       throw Exception('No user logged in');
     }
+
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null || firebaseUser.uid != currentUser.id) {
+      throw StateError(
+          'Your secure session has expired. Please sign in again.');
+    }
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.id)
+        .set(
+      {
+        'marketplaceRole': selectedRole.name,
+        'roleSelectionCompleted': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
 
     // Update user's roles to include the selected role + mark role selection as completed
     final updatedUser = currentUser.copyWith(

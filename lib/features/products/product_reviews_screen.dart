@@ -5,6 +5,7 @@ import 'package:coop_commerce/core/services/product_review_service.dart';
 import 'package:coop_commerce/core/services/review_activity_logger.dart';
 import 'package:coop_commerce/core/services/activity_tracking_service.dart';
 import 'package:coop_commerce/core/error_handling.dart';
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 
 class ProductReviewsScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -485,11 +486,17 @@ class _AddReviewDialogState extends ConsumerState<AddReviewDialog> {
     setState(() => _isSubmitting = true);
 
     try {
+      final authUser = FirebaseAuth.instance.currentUser;
+      if (authUser == null) {
+        context.showWarningSnackBar('Please log in to submit a review');
+        return;
+      }
+
       final service = ref.read(productReviewServiceProvider);
       await service.submitReview(
         productId: widget.productId,
-        userId: 'user_001', // TODO: Get from auth provider
-        userName: 'John Doe', // TODO: Get from auth provider
+        userId: authUser.uid,
+        userName: authUser.displayName ?? authUser.email ?? 'Verified User',
         rating: _rating,
         title: _titleController.text,
         comment: _commentController.text,
@@ -498,6 +505,15 @@ class _AddReviewDialogState extends ConsumerState<AddReviewDialog> {
 
       // Log review activity
       try {
+        final activityLogger = ref.read(activityLoggerProvider.notifier);
+        await activityLogger.logProductReview(
+          productId: widget.productId,
+          productName: 'Product (ID: ${widget.productId})',
+          category: 'Uncategorized',
+          rating: _rating.toDouble(),
+          reviewText: _commentController.text,
+        );
+
         final reviewLogger = ReviewActivityLogger(ActivityTrackingService());
         await reviewLogger.logReviewSubmitted(
           productId: widget.productId,

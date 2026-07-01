@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/features/welcome/auth_provider.dart'
+    as auth_controller;
+import 'package:coop_commerce/core/auth/role.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 
@@ -10,13 +13,12 @@ class MyNCDFCOOPScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final isInstitutionalUser =
+        user?.hasRole(UserRole.institutionalBuyer) == true ||
+            user?.hasRole(UserRole.institutionalApprover) == true;
 
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: Text('My NCDFCOOP Profile'),
-        elevation: 0,
-      ),
       body: ListView(
         padding: EdgeInsets.only(bottom: 80),
         children: [
@@ -49,6 +51,68 @@ class MyNCDFCOOPScreen extends ConsumerWidget {
                   style: TextStyle(color: Colors.white70),
                 ),
               ],
+            ),
+          ),
+          SizedBox(height: 12),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.card_membership,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Membership Status',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          '${user?.membershipTier ?? 'Bronze'} Member',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.pushNamed('membership'),
+                    child: Text('Manage'),
+                  ),
+                ],
+              ),
             ),
           ),
           SizedBox(height: 16),
@@ -151,6 +215,8 @@ class MyNCDFCOOPScreen extends ConsumerWidget {
                   trailing: Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () => context.pushNamed('payment-methods'),
                 ),
+                if (isInstitutionalUser)
+                  _buildInstitutionalToolsSection(context),
                 ListTile(
                   leading: Icon(Icons.favorite),
                   title: Text('Wishlist'),
@@ -178,13 +244,23 @@ class MyNCDFCOOPScreen extends ConsumerWidget {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red),
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('✅ Logged out'),
-                                backgroundColor: Colors.green),
-                          );
+                          try {
+                            await ref
+                                .read(auth_controller
+                                    .authControllerProvider.notifier)
+                                .signOut();
+                            if (context.mounted) {
+                              context.go('/signin');
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Logout failed: $e')),
+                              );
+                            }
+                          }
                         },
                         child: Text('Logout'),
                       ),
@@ -202,6 +278,54 @@ class MyNCDFCOOPScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInstitutionalToolsSection(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Institutional Tools',
+            style: AppTextStyles.h4.copyWith(
+              color: AppColors.text,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.pie_chart_outline),
+          title: Text('Monthly Budget Overview'),
+          trailing: Icon(Icons.arrow_forward_ios, size: 14),
+          onTap: () => context.pushNamed('institutional-budget-overview'),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.group_outlined),
+          title: Text('Manage Approvers'),
+          trailing: Icon(Icons.arrow_forward_ios, size: 14),
+          onTap: () => context.pushNamed('approval-dashboard'),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.settings_outlined),
+          title: Text('Account Settings'),
+          trailing: Icon(Icons.arrow_forward_ios, size: 14),
+          onTap: () => context.pushNamed('settings'),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.help_outline),
+          title: Text('Help & Support'),
+          trailing: Icon(Icons.arrow_forward_ios, size: 14),
+          onTap: () => context.pushNamed('help-support'),
+        ),
+        const Divider(height: 24),
+      ],
     );
   }
 }

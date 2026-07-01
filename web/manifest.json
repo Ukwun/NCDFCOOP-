@@ -1,12 +1,12 @@
 {
-    "name": "coop_commerce",
-    "short_name": "coop_commerce",
+    "name": "NCDFCOOP Marketplace",
+    "short_name": "NCDFCOOP",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0B6B3A",
+    "description": "A trusted marketplace for sellers, cooperative members, and wholesale buyers.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

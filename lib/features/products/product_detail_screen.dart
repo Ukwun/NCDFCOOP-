@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
@@ -32,6 +33,21 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int quantity = 1;
+
+  bool _shouldUseSimpleProductDetail(Map<String, dynamic> productData) {
+    final hasLegacyKeys = productData.containsKey('price') ||
+        productData.containsKey('original') ||
+        productData.containsKey('image') ||
+        productData.containsKey('company') ||
+        productData.containsKey('size');
+    final hasRealProductKeys = productData.containsKey('retailPrice') ||
+        productData.containsKey('wholesalePrice') ||
+        productData.containsKey('contractPrice') ||
+        productData.containsKey('categoryId') ||
+        productData.containsKey('imageUrl');
+
+    return hasLegacyKeys && !hasRealProductKeys;
+  }
 
   Future<void> _addItemToCart({
     required String productId,
@@ -566,11 +582,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   Widget _buildProductImage(String? imagePath) {
+    final safePath = (imagePath ?? '').trim();
     return Image(
-      image: imagePath != null && imagePath.startsWith('assets/')
-          ? AssetImage(imagePath)
-          : imagePath != null
-              ? NetworkImage(imagePath)
+      image: safePath.startsWith('assets/')
+          ? AssetImage(safePath)
+          : safePath.isNotEmpty
+              ? NetworkImage(safePath)
               : AssetImage('assets/images/Groceries1.png') as ImageProvider,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
@@ -613,8 +630,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
       if (widget.productData != null) {
         productName = widget.productData!['name'] ?? productName;
-        category = widget.productData!['category'] ?? category;
-        price = (widget.productData!['price'] as num?)?.toDouble() ?? 0;
+        category = (widget.productData!['category'] ??
+                widget.productData!['categoryId']) ??
+            category;
+        final rawPrice = widget.productData!['price'] ??
+            widget.productData!['contractPrice'] ??
+            widget.productData!['wholesalePrice'] ??
+            widget.productData!['retailPrice'];
+        price = (rawPrice as num?)?.toDouble() ?? 0;
       }
 
       await activityLogger.logProductView(
@@ -632,8 +655,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // If product data was passed from category screen, use it directly
-    if (widget.productData != null) {
+    // Legacy/demo cards still pass a simplified map shape that does not align
+    // with the real Product model used elsewhere in the app.
+    if (widget.productData != null &&
+        _shouldUseSimpleProductDetail(widget.productData!)) {
       return _buildSimpleProductDetail(widget.productData!);
     }
 
@@ -736,10 +761,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () {
+            onPressed: () async {
+              await Clipboard.setData(
+                ClipboardData(
+                  text: 'https://coopcommerce.app/product/${widget.productId}',
+                ),
+              );
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Share functionality coming soon'),
+                  content: Text('Product link copied to clipboard'),
                   duration: Duration(seconds: 2),
                 ),
               );
@@ -1062,8 +1093,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1073,8 +1106,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 style: AppTextStyles.h4,
                               ),
                               const SizedBox(height: 8),
-                              Row(
+                              Wrap(
                                 spacing: 8,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Text(
                                     product.rating.toStringAsFixed(1),
@@ -1083,18 +1118,21 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     ),
                                   ),
                                   Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: List.generate(
-                                        5,
-                                        (i) => Icon(
-                                              Icons.star,
-                                              size: 16,
-                                              color: i < product.rating.toInt()
-                                                  ? Colors.amber
-                                                  : AppColors.border,
-                                            )),
+                                      5,
+                                      (i) => Icon(
+                                        Icons.star,
+                                        size: 16,
+                                        color: i < product.rating.toInt()
+                                            ? Colors.amber
+                                            : AppColors.border,
+                                      ),
+                                    ),
                                   ),
                                   Text(
                                     '(Based on verified purchases)',
+                                    softWrap: true,
                                     style: AppTextStyles.bodySmall.copyWith(
                                       color: AppColors.muted,
                                     ),
@@ -1555,10 +1593,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('✓ Store followed')),
-                    );
+                  onTap: () async {
+                    try {
+                      final activityLogger =
+                          ref.read(activityLoggerProvider.notifier);
+                      await activityLogger.logFollowSeller(
+                        sellerId: 'coop-commerce-seller',
+                        sellerName: 'Coop Commerce Seller',
+                      );
+                    } catch (_) {
+                      // Non-blocking: navigation should still proceed.
+                    }
+
+                    if (!mounted) {
+                      return;
+                    }
+
+                    context.pushNamed('products');
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -2028,16 +2079,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   top: Radius.circular(AppRadius.lg),
                 ),
                 color: AppColors.background,
-                image: product.imageUrl != null
+                image: product.hasDisplayImage
                     ? DecorationImage(
-                        image: product.imageUrl!.startsWith('assets/')
-                            ? AssetImage(product.imageUrl!)
-                            : NetworkImage(product.imageUrl!) as ImageProvider,
+                        image: product.displayImageUrl.startsWith('assets/')
+                            ? AssetImage(product.displayImageUrl)
+                            : NetworkImage(product.displayImageUrl)
+                                as ImageProvider,
                         fit: BoxFit.cover,
                       )
                     : null,
               ),
-              child: product.imageUrl == null
+              child: !product.hasDisplayImage
                   ? Icon(Icons.shopping_basket,
                       color: AppColors.muted, size: 30)
                   : null,

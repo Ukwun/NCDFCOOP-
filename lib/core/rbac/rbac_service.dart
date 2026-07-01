@@ -23,12 +23,26 @@ class RBACService {
       'manage_cart',
       'place_orders',
       'track_orders',
+      'view_wholesale_pricing',
+      'request_bulk_quote',
+      'message_sellers',
       'view_profile',
       'update_profile',
       'manage_addresses',
       'rate_products',
       'customer_support',
       'add_money_to_account',
+    },
+    UserRole.seller: {
+      'manage_seller_profile',
+      'manage_products',
+      'manage_inventory',
+      'manage_orders',
+      'fulfill_orders',
+      'message_buyers',
+      'view_sales',
+      'view_earnings',
+      'request_payout',
     },
     UserRole.coopMember: {
       'browse_products',
@@ -155,7 +169,7 @@ class RBACService {
 
   /// Check if user has permission for a feature (checking any role)
   bool hasFeatureAccess(List<UserRole> roles, String feature) {
-    for (final role in roles) {
+    for (final role in roles.where((role) => role.isSupported)) {
       final features = roleFeatures[role] ?? {};
       if (features.contains(feature)) {
         return true;
@@ -167,7 +181,7 @@ class RBACService {
   /// Get all features for a user's roles (union of all features)
   Set<String> getFeaturesForRoles(List<UserRole> roles) {
     final allFeatures = <String>{};
-    for (final role in roles) {
+    for (final role in roles.where((role) => role.isSupported)) {
       allFeatures.addAll(roleFeatures[role] ?? {});
     }
     return allFeatures;
@@ -187,38 +201,23 @@ class RBACService {
 
   /// Check if role can access dashboard
   bool canAccessDashboard(List<UserRole> roles) {
-    return hasFeatureAccess(roles, 'view_analytics') ||
-        roles.contains(UserRole.franchiseOwner) ||
-        roles.contains(UserRole.warehouseStaff) ||
-        roles.contains(UserRole.deliveryDriver) ||
-        roles.contains(UserRole.admin) ||
-        roles.contains(UserRole.superAdmin);
+    return roles.contains(UserRole.seller);
   }
 
   /// Check if role can manage users
   bool canManageUsers(List<UserRole> roles) {
-    return roles.contains(UserRole.admin) ||
-        roles.contains(UserRole.superAdmin) ||
-        (roles.contains(UserRole.franchiseOwner) &&
-            hasFeatureAccess(roles, 'manage_staff'));
+    return false;
   }
 
   /// Check if role can view pricing
   bool canViewPricing(List<UserRole> roles) {
-    return roles.contains(UserRole.franchiseOwner) ||
-        roles.contains(UserRole.institutionalBuyer) ||
-        roles.contains(UserRole.admin) ||
-        roles.contains(UserRole.superAdmin);
+    return roles.any((role) => role.isSupported);
   }
 
   /// Check if role can place orders
   bool canPlaceOrders(List<UserRole> roles) {
     return roles.contains(UserRole.wholesaleBuyer) ||
-        roles.contains(UserRole.coopMember) ||
-        roles.contains(UserRole.premiumMember) ||
-        roles.contains(UserRole.franchiseOwner) ||
-        roles.contains(UserRole.institutionalBuyer) ||
-        roles.contains(UserRole.institutionalApprover);
+        roles.contains(UserRole.coopMember);
   }
 
   /// Get permission level for a resource
@@ -276,18 +275,7 @@ class RBACService {
 
   /// Validate role transition
   bool canTransitionToRole(List<UserRole> currentRoles, UserRole targetRole) {
-    // Admins can change anyone's role
-    if (currentRoles.contains(UserRole.admin) ||
-        currentRoles.contains(UserRole.superAdmin)) {
-      return true;
-    }
-
-    // Users cannot escalate their own roles
-    if (currentRoles.contains(targetRole)) {
-      return true; // Reassigning same role is allowed
-    }
-
-    return false;
+    return targetRole.isSupported && currentRoles.contains(targetRole);
   }
 
   /// Get role hierarchy (for admin purposes)
@@ -313,8 +301,9 @@ class RBACService {
 
   /// Get highest role in list
   static UserRole getHighestRole(List<UserRole> roles) {
-    if (roles.isEmpty) return UserRole.wholesaleBuyer;
-    return roles.reduce(
+    final supported = roles.where((role) => role.isSupported).toList();
+    if (supported.isEmpty) return UserRole.wholesaleBuyer;
+    return supported.reduce(
         (a, b) => (roleHierarchy[a] ?? 0) >= (roleHierarchy[b] ?? 0) ? a : b);
   }
 }

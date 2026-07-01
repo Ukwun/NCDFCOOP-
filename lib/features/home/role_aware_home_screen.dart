@@ -4,12 +4,8 @@ import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/core/providers/rbac_providers.dart';
 import 'package:coop_commerce/features/home/role_screens/member_home_screen.dart';
-import 'package:coop_commerce/features/home/role_screens/franchise_owner_home_screen_v2.dart';
-import 'package:coop_commerce/features/home/role_screens/institutional_buyer_home_screen_v2.dart';
-import 'package:coop_commerce/features/home/role_screens/warehouse_staff_home_screen.dart';
-import 'package:coop_commerce/features/home/role_screens/admin_home_screen_v2.dart';
-import 'package:coop_commerce/features/dashboard/personalized_dashboard_screen.dart';
 import 'package:coop_commerce/features/selling/seller_home_screen.dart';
+import 'package:coop_commerce/features/home/role_screens/wholesale_buyer_home_screen.dart';
 
 /// Wrapper that renders the correct home screen based on user role
 class RoleAwareHomeScreen extends ConsumerWidget {
@@ -36,41 +32,25 @@ class RoleAwareHomeScreen extends ConsumerWidget {
   Widget _buildHomeScreenForRole(UserRole role) {
     switch (role) {
       case UserRole.wholesaleBuyer:
-        return const PersonalizedDashboardScreen();
+        return const WholesaleBuyerHomeScreen();
 
       case UserRole.coopMember:
-      case UserRole.premiumMember:
         return const MemberHomeScreen();
 
       case UserRole.seller:
         return const SellerHomeScreen();
 
+      case UserRole.premiumMember:
       case UserRole.franchiseOwner:
-        return const FranchiseOwnerHomeScreenV2();
-
       case UserRole.storeManager:
-        return const FranchiseOwnerHomeScreenV2(); // Same UI as franchise owner
-
       case UserRole.storeStaff:
-        return const WarehouseStaffHomeScreen(); // Similar task-based UI
-
       case UserRole.institutionalBuyer:
-        return const InstitutionalBuyerHomeScreenV2();
-
       case UserRole.institutionalApprover:
-        return const InstitutionalBuyerHomeScreenV2(); // Similar approval flows
-
       case UserRole.warehouseStaff:
-        return const WarehouseStaffHomeScreen();
-
       case UserRole.deliveryDriver:
-        return const WarehouseStaffHomeScreen(); // Similar logistics UI
-
       case UserRole.admin:
-        return const AdminHomeScreenV2();
-
       case UserRole.superAdmin:
-        return const AdminHomeScreenV2();
+        return const WholesaleBuyerHomeScreen();
     }
   }
 }

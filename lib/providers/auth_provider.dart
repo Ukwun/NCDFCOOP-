@@ -40,9 +40,10 @@ final currentUserProvider = NotifierProvider<UserNotifier, User?>(() {
 /// Currently active role (for multi-role users)
 final currentRoleProvider = Provider<UserRole>((ref) {
   final user = ref.watch(currentUserProvider);
-  return user?.roles.isNotEmpty == true
-      ? user!.roles.first
-      : UserRole.wholesaleBuyer;
+  for (final role in user?.roles ?? const <UserRole>[]) {
+    if (role.isSupported) return role;
+  }
+  return UserRole.wholesaleBuyer;
 });
 
 /// Current context for the active role
@@ -133,15 +134,12 @@ final getPermissionsForRoleProvider =
 
 /// Check if user is admin
 final isAdminProvider = Provider<bool>((ref) {
-  final user = ref.watch(currentUserProvider);
-  return user?.roles.contains(UserRole.admin) == true ||
-      user?.roles.contains(UserRole.superAdmin) == true;
+  return false;
 });
 
 /// Check if user is super admin
 final isSuperAdminProvider = Provider<bool>((ref) {
-  final user = ref.watch(currentUserProvider);
-  return user?.roles.contains(UserRole.superAdmin) == true;
+  return false;
 });
 
 // ============================================================================

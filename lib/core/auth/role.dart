@@ -16,6 +16,15 @@ enum UserRole {
 }
 
 extension UserRoleX on UserRole {
+  /// The only marketplace identities that may be assigned or activated.
+  static const Set<UserRole> supportedRoles = {
+    UserRole.seller,
+    UserRole.coopMember,
+    UserRole.wholesaleBuyer,
+  };
+
+  bool get isSupported => supportedRoles.contains(this);
+
   /// Display name for UI
   String get displayName {
     return switch (this) {
@@ -61,11 +70,7 @@ extension UserRoleX on UserRole {
 
   /// Whether this is a wholesale-related role
   bool get isWholesale {
-    return [
-      UserRole.franchiseOwner,
-      UserRole.storeManager,
-      UserRole.storeStaff,
-    ].contains(this);
+    return this == UserRole.wholesaleBuyer;
   }
 
   /// Whether this is an institutional role

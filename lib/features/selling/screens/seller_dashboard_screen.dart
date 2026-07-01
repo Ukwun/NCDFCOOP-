@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:coop_commerce/core/intelligence/role_commerce_intelligence.dart';
 import '../../../theme/app_theme.dart';
 import '../../../core/models/seller_models.dart';
 
@@ -9,6 +10,9 @@ class SellerDashboardScreen extends StatefulWidget {
   final List<SellerProduct> products;
   final VoidCallback onAddNewProduct;
   final ValueChanged<SellerProduct> onProductTap;
+  final VoidCallback? onProfileTap;
+  final VoidCallback? onSalesLedgerTap;
+  final VoidCallback? onRefreshTap;
 
   const SellerDashboardScreen({
     super.key,
@@ -16,6 +20,9 @@ class SellerDashboardScreen extends StatefulWidget {
     required this.products,
     required this.onAddNewProduct,
     required this.onProductTap,
+    this.onProfileTap,
+    this.onSalesLedgerTap,
+    this.onRefreshTap,
   });
 
   @override
@@ -42,6 +49,8 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final snapshot = RoleCommerceIntelligence.seller(widget.products);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(),
@@ -69,6 +78,8 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
                       color: AppColors.textLight,
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  _buildRelationshipPanel(snapshot),
                 ],
               ),
             ),
@@ -119,24 +130,25 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
         ),
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Center(
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              child: Icon(
-                Icons.account_circle_outlined,
-                color: AppColors.primary,
-                size: 20,
-              ),
-            ),
+        if (widget.onSalesLedgerTap != null)
+          IconButton(
+            onPressed: widget.onSalesLedgerTap,
+            icon: const Icon(Icons.receipt_long_outlined),
+            tooltip: 'Sales ledger',
           ),
-        ),
+        if (widget.onRefreshTap != null)
+          IconButton(
+            onPressed: widget.onRefreshTap,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+        if (widget.onProfileTap != null)
+          IconButton(
+            onPressed: widget.onProfileTap,
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'Profile',
+          ),
+        const SizedBox(width: 8),
       ],
     );
   }
@@ -238,6 +250,147 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildRelationshipPanel(RoleRelationshipSnapshot snapshot) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.hub_outlined, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Buyer Relationship Intelligence',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _badge(
+                'Bulk-ready ${snapshot.bulkReadySkus}',
+                Icons.inventory,
+                onTap: () => _runBadgeAction(
+                  'bulk-ready stock update',
+                  widget.onAddNewProduct,
+                ),
+              ),
+              _badge(
+                'Restock risk ${snapshot.restockRiskSkus}',
+                Icons.trending_down,
+                onTap: () => _runBadgeAction(
+                  'restock workflow',
+                  widget.onAddNewProduct,
+                ),
+              ),
+              _badge(
+                'Approved/trusted ${snapshot.trustQualifiedSkus}',
+                Icons.verified,
+                onTap: () => _runBadgeAction(
+                  'approval status refresh',
+                  widget.onRefreshTap,
+                ),
+              ),
+              _badge(
+                'Price edge ${snapshot.valueSpreadPercent.toStringAsFixed(1)}%',
+                Icons.savings_outlined,
+                onTap: () => _runBadgeAction(
+                  'price edge insights',
+                  widget.onSalesLedgerTap ?? widget.onRefreshTap,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            snapshot.narrative,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _badge(
+    String label,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _runBadgeAction(String label, VoidCallback? action) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening $label...'),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
+
+    if (action == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Action is temporarily unavailable. Please retry.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      action();
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Action failed. Please try again.'),
+        ),
+      );
+    }
   }
 
   Widget _buildFilterTabs() {

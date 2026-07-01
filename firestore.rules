@@ -26,7 +26,31 @@ service cloud.firestore {
     
     // Helper function to check if user is admin
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.role == 'superAdmin'
+      );
+    }
+
+    // Identity, authorization, verification and financial fields are managed
+    // by trusted server code only. Clients may edit ordinary profile fields.
+    function hasPrivilegedUserFields(data) {
+      return data.keys().hasAny([
+        'role', 'roles', 'permissions', 'admin', 'isAdmin',
+        'membershipStatus', 'membershipTier', 'sellerStatus',
+        'verificationStatus', 'creditLimit', 'creditUsed',
+        'institutionId', 'franchiseId', 'warehouseId', 'storeId'
+      ]);
+    }
+
+    function changesPrivilegedUserFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'role', 'roles', 'permissions', 'admin', 'isAdmin',
+        'membershipStatus', 'membershipTier', 'sellerStatus',
+        'verificationStatus', 'creditLimit', 'creditUsed',
+        'institutionId', 'franchiseId', 'warehouseId', 'storeId'
+      ]);
     }
 
     // Resolve institution scope for institutional buyer checks
@@ -45,9 +69,16 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can only read/write their own document
       allow read: if isAuthenticated() && isOwner(userId);
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && isOwner(userId)
+                    && !hasPrivilegedUserFields(request.resource.data)
+                    && request.resource.data.marketplaceRole in
+                       ['seller', 'coopMember', 'wholesaleBuyer'];
+      allow update: if isAuthenticated() && isOwner(userId)
+                    && !changesPrivilegedUserFields()
+                    && request.resource.data.marketplaceRole in
+                       ['seller', 'coopMember', 'wholesaleBuyer'];
       allow delete: if isAuthenticated() && isOwner(userId);
+      allow create, update, delete: if isAdmin();
       
       // Subcollection: User addresses
       match /addresses/{addressId} {

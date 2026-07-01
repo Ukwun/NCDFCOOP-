@@ -146,8 +146,8 @@ class HomeScreen extends ConsumerWidget {
                     // Member Tier Mini Card
                     MiniMemberTierCard(
                       currentPoints: 2450,
-                      currentTier: 'GOLD',
-                      onTap: () => context.push('/member/loyalty'),
+                      currentTier: 'MEMBER',
+                      onTap: () => context.push('/profile'),
                     ),
                   ],
                 ),

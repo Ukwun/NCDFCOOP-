@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/features/user_intelligence/providers/user_intelligence_providers.dart';
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 
 /// Seller Profile Screen with Reputation
 /// Shows seller information, reputation metrics, and products
@@ -121,7 +124,7 @@ class SellerProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // Action Buttons
-                _buildActionButtons(context),
+                _buildActionButtons(context, ref),
 
                 const SizedBox(height: 24),
 
@@ -428,14 +431,50 @@ class SellerProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () {
+            onPressed: () async {
+              final currentUser =
+                  firebase_auth.FirebaseAuth.instance.currentUser;
+              if (currentUser == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please log in to follow sellers')),
+                );
+                return;
+              }
+
+              await ref
+                  .read(relationshipManagementProvider.notifier)
+                  .setRelationship(
+                    userId: currentUser.uid,
+                    relatedUserId: sellerId,
+                    relationshipType: 'followed_seller',
+                    notes: 'Followed from seller profile',
+                  );
+
+              await ref
+                  .read(interactionLoggingProvider.notifier)
+                  .logInteraction(
+                    fromUserId: currentUser.uid,
+                    toUserId: sellerId,
+                    fromUserRole: 'buyer',
+                    toUserRole: 'seller',
+                    type: 'follow_seller',
+                    isPositive: true,
+                  );
+
+              await ref.read(activityLoggerProvider.notifier).logFollowSeller(
+                    sellerId: sellerId,
+                    sellerName: 'Premium Seller Co',
+                  );
+
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Following seller...')),
+                const SnackBar(content: Text('✅ Seller followed successfully')),
               );
             },
             icon: const Icon(Icons.person_add),
@@ -448,9 +487,16 @@ class SellerProfileScreen extends ConsumerWidget {
         const SizedBox(width: 12),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () {
+            onPressed: () async {
+              await Clipboard.setData(
+                ClipboardData(
+                  text: 'https://coopcommerce.app/seller/$sellerId',
+                ),
+              );
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sharing seller...')),
+                const SnackBar(
+                    content: Text('Seller link copied to clipboard')),
               );
             },
             icon: const Icon(Icons.share),

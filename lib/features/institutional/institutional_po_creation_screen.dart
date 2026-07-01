@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/b2b_providers.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/models/b2b_models.dart';
 
 /// Purchase Order creation form screen
 class InstitutionalPOCreationScreen extends ConsumerStatefulWidget {
@@ -21,6 +25,7 @@ class _POCreationScreenState
   String? _selectedContractId;
   DateTime? _requiredDeliveryDate;
   final List<POLineItem> _lineItems = [];
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -40,8 +45,13 @@ class _POCreationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final contractsAsync =
-        ref.watch(institutionContractPricesProvider('institution_id'));
+    final currentUser = ref.watch(currentUserProvider);
+    final currentContext = ref.watch(currentContextProvider);
+    final institutionId =
+        currentContext?.institutionId ?? currentUser?.id ?? '';
+    final contractsAsync = institutionId.isEmpty
+        ? const AsyncValue<List<ContractPrice>>.data(<ContractPrice>[])
+        : ref.watch(institutionContractPricesProvider(institutionId));
 
     return Scaffold(
       appBar: AppBar(
@@ -85,7 +95,42 @@ class _POCreationScreenState
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+                ),
+                child: Text(
+                  'Contract pricing is currently restricted for this account. You can still create a purchase order manually.',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: Colors.orange[900]),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildHeaderSection(),
+              const SizedBox(height: 24),
+              _buildContractSection(const <ContractPrice>[]),
+              const SizedBox(height: 24),
+              _buildLineItemsSection(),
+              const SizedBox(height: 24),
+              _buildDeliverySection(),
+              const SizedBox(height: 24),
+              _buildTermsSection(),
+              const SizedBox(height: 24),
+              _buildSummarySection(),
+              const SizedBox(height: 24),
+              _buildActionButtons(context),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -114,7 +159,7 @@ class _POCreationScreenState
     );
   }
 
-  Widget _buildContractSection(List<dynamic> contracts) {
+  Widget _buildContractSection(List<ContractPrice> contracts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -128,7 +173,7 @@ class _POCreationScreenState
           items: contracts
               .map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
                     value: c.id,
-                    child: Text(c.name ?? 'Unnamed Contract'),
+                    child: Text(c.productName),
                   ))
               .toList(),
           onChanged: (value) {
@@ -348,8 +393,14 @@ class _POCreationScreenState
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: _lineItems.isEmpty ? null : _submitPO,
-            child: const Text('Submit PO'),
+            onPressed: (_lineItems.isEmpty || _isSubmitting) ? null : _submitPO,
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Submit PO'),
           ),
         ),
       ],
@@ -369,11 +420,85 @@ class _POCreationScreenState
   }
 
   Future<void> _submitPO() async {
-    // TODO: Implement PO submission to Firebase
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('PO submitted successfully')),
-    );
-    Navigator.pop(context);
+    final currentUser = ref.read(currentUserProvider);
+    final currentContext = ref.read(currentContextProvider);
+    final institutionId = currentContext?.institutionId ?? currentUser?.id;
+
+    if (currentUser == null || institutionId == null || institutionId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Missing institutional account context. Please sign in again.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final service = ref.read(purchaseOrderServiceProvider);
+      final lineItems = _lineItems
+          .map(
+            (item) => PurchaseOrderLineItem(
+              productId: item.productId,
+              productName: item.productName,
+              sku:
+                  'SKU-${item.productId.substring(0, item.productId.length > 8 ? 8 : item.productId.length)}',
+              quantity: item.quantity.toDouble(),
+              unit: 'unit',
+              unitPrice: item.unitPrice,
+              totalPrice: item.unitPrice * item.quantity,
+              minimumOrderQuantity: 1,
+              casePack: 1,
+            ),
+          )
+          .toList();
+
+      final poId = await service.createPurchaseOrder(
+        institutionId: institutionId,
+        institutionName: currentUser.name,
+        lineItems: lineItems,
+        expectedDeliveryDate: _requiredDeliveryDate ??
+            DateTime.now().add(const Duration(days: 7)),
+        deliveryAddress: _deliveryAddressController.text.trim(),
+        specialInstructions: _notesController.text.trim(),
+        createdBy: currentUser.id,
+        approvalChain: <String>[currentUser.id],
+        paymentTerms: 'Net 30',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Purchase order submitted in real time (ID: $poId). Status: Pending approval.',
+          ),
+        ),
+      );
+      context.goNamed('institutional-po-list');
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+      final isPermission = e.code == 'permission-denied' ||
+          e.message?.toLowerCase().contains('permission') == true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isPermission
+                ? 'You do not yet have create-PO permission in backend rules for this account. Contact admin or update Firestore rules for institutional buyers.'
+                : 'Failed to submit purchase order: ${e.message ?? e.code}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit purchase order: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 }
 

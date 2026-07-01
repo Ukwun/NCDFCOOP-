@@ -900,45 +900,50 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
 
                     // Price Section
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '��${product.retailPrice.toStringAsFixed(0)}',
-                              style: AppTextStyles.h4.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            // Show rating
-                            Row(
-                              spacing: 4,
-                              children: [
-                                Icon(Icons.star_rounded,
-                                    size: 12, color: Colors.amber),
-                                Text(
-                                  product.rating.toStringAsFixed(1),
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.muted,
-                                    fontSize: 10,
-                                  ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '₦${product.retailPrice.toStringAsFixed(0)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.h4.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                              // Show rating
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.star_rounded,
+                                      size: 12, color: Colors.amber),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    product.rating.toStringAsFixed(1),
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.muted,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 6),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _buildFavoriteButton(
                               product: product,
                               isFavorite: isFavorite,
-                              size: 28,
+                              size: 26,
                               iconSize: 16,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 4),
                             GestureDetector(
                               onTap: product.stock > 0
                                   ? () async {
@@ -949,8 +954,8 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                                 _toggleFavorite(product);
                               },
                               child: Container(
-                                width: 28,
-                                height: 28,
+                                width: 26,
+                                height: 26,
                                 decoration: BoxDecoration(
                                   color: product.stock > 0
                                       ? AppColors.primary

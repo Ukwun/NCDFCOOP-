@@ -324,6 +324,15 @@ class AppRouter {
         final authState = ref.watch(authStateProvider);
         final currentUser = ref.watch(global_auth.currentUserProvider);
         final isOnSplash = state.uri.path == '/splash';
+        const retiredRolePrefixes = <String>[
+          '/admin',
+          '/franchise',
+          '/franchisee',
+          '/institutional',
+          '/warehouse',
+          '/driver',
+          '/store-manager',
+        ];
 
         final isOnPublicRoute = state.uri.path == '/welcome' ||
             state.uri.path == '/signin' ||
@@ -387,6 +396,9 @@ class AppRouter {
         // Check role-based permissions for protected routes
         if (currentUser != null && !isOnPublicRoute) {
           final currentPath = state.uri.path;
+          if (retiredRolePrefixes.any(currentPath.startsWith)) {
+            return '/';
+          }
           final userRolesSet = currentUser.roles.toSet();
 
           // Skip permission check for non-protected routes

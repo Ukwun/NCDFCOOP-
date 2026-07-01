@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/product.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../core/providers/home_providers.dart';
+import '../../../core/intelligence/role_commerce_intelligence.dart';
 import '../../../providers/savings_provider.dart';
 
 /// MEMBER HOME SCREEN
@@ -82,41 +84,20 @@ class MemberHomeScreen extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // DEBUG: Clear role identifier
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    color: Colors.purple[800],
-                    child: Text(
-                      '♥️ MEMBER HOME (Loyalty Focused)',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  // ═════════════════════════════════════════════════
-                  // 1. LOYALTY CARD - CENTER PIECE (Tier + Points)
-                  // ═════════════════════════════════════════════════
-                  _buildLoyaltyCard(context, displayData, user),
+                  _buildRecentlyBrowsedProductsSection(context, featuredAsync),
+
+                  const SizedBox(height: 16),
+
+                  _buildPlaceholderProductsSection(context, featuredAsync),
+
+                  const SizedBox(height: 24),
+
+                  _buildRoleRelationshipIntelligence(context, featuredAsync),
 
                   const SizedBox(height: 24),
 
                   // ═════════════════════════════════════════════════
-                  // 2. SAVINGS & IMPACT - Show member value
-                  // ═════════════════════════════════════════════════
-                  _buildSavingsAndImpactSection(
-                    context,
-                    ref,
-                    displayData,
-                    user?.id ?? '',
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ═════════════════════════════════════════════════
-                  // 3. QUICK ACTIONS - Points & Rewards
+                  // 2. QUICK ACTIONS - Points & Rewards
                   // ═════════════════════════════════════════════════
                   _buildLoyaltyActionsGrid(context, ref, user?.id ?? ''),
 
@@ -174,9 +155,62 @@ class MemberHomeScreen extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(
-              child: Text('Error loading member data: $err'),
-            ),
+            error: (err, _) {
+              final fallbackData = user != null
+                  ? MemberData(
+                      memberId: user.id,
+                      tier: 'bronze',
+                      rewardsPoints: 0,
+                      lifetimePoints: 0,
+                      memberSince: DateTime.now(),
+                      isActive: true,
+                      discountPercentage: 0.0,
+                      ordersCount: 0,
+                      totalSpent: 0.0,
+                    )
+                  : null;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Text(
+                        'Some member data is temporarily unavailable. You can still browse and buy products.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.orange.shade900,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _buildRecentlyBrowsedProductsSection(context, featuredAsync),
+                  const SizedBox(height: 16),
+                  _buildPlaceholderProductsSection(context, featuredAsync),
+                  const SizedBox(height: 24),
+                  _buildLoyaltyActionsGrid(context, ref, user?.id ?? ''),
+                  const SizedBox(height: 24),
+                  _buildVotingEngagementSection(context),
+                  const SizedBox(height: 24),
+                  _buildTransparencyReportsSection(context),
+                  const SizedBox(height: 24),
+                  const SizedBox(height: 80),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -185,9 +219,288 @@ class MemberHomeScreen extends ConsumerWidget {
 
   // Helper Methods (continued from build method)
 
+  Widget _buildRecentlyBrowsedProductsSection(
+    BuildContext context,
+    AsyncValue<List<Product>> featuredAsync,
+  ) {
+    return _buildHorizontalProductSection(
+      context: context,
+      featuredAsync: featuredAsync,
+      title: 'Recently Browsed Products',
+      emptyMessage: 'No recently browsed products yet',
+      maxItems: 6,
+      showActionButton: false,
+    );
+  }
+
+  Widget _buildRoleRelationshipIntelligence(
+    BuildContext context,
+    AsyncValue<List<Product>> featuredAsync,
+  ) {
+    return featuredAsync.when(
+      data: (products) {
+        final snapshot = RoleCommerceIntelligence.member(products);
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.hub_outlined, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Role Intelligence: Member x Seller x Wholesale',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _insightPill(
+                    'Live SKUs ${snapshot.actionableSkus}',
+                    Icons.inventory_2_outlined,
+                    onTap: () => _handleInsightTap(
+                      context,
+                      routeName: 'products',
+                      label: 'product catalog',
+                    ),
+                  ),
+                  _insightPill(
+                    'Restock risk ${snapshot.restockRiskSkus}',
+                    Icons.trending_down,
+                    onTap: () => _handleInsightTap(
+                      context,
+                      routeName: 'products',
+                      label: 'restock watchlist',
+                    ),
+                  ),
+                  _insightPill(
+                    'Trust picks ${snapshot.trustQualifiedSkus}',
+                    Icons.verified_outlined,
+                    onTap: () => _handleInsightTap(
+                      context,
+                      routeName: 'my-rewards',
+                      label: 'trusted picks',
+                    ),
+                  ),
+                  _insightPill(
+                    'Avg member edge ${snapshot.valueSpreadPercent.toStringAsFixed(1)}%',
+                    Icons.savings_outlined,
+                    onTap: () => _handleInsightTap(
+                      context,
+                      routeName: 'membership',
+                      label: 'membership savings',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                snapshot.narrative,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _insightPill(
+    String label,
+    IconData icon, {
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleInsightTap(
+    BuildContext context, {
+    required String routeName,
+    required String label,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening $label...'),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
+
+    try {
+      context.pushNamed(routeName);
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Action is temporarily unavailable. Please retry.'),
+        ),
+      );
+    }
+  }
+
+  Widget _buildPlaceholderProductsSection(
+    BuildContext context,
+    AsyncValue<List<Product>> featuredAsync,
+  ) {
+    return _buildHorizontalProductSection(
+      context: context,
+      featuredAsync: featuredAsync,
+      title: 'Recommended For You',
+      emptyMessage: 'Products will appear here shortly',
+      maxItems: 8,
+      showActionButton: true,
+    );
+  }
+
+  Widget _buildHorizontalProductSection({
+    required BuildContext context,
+    required AsyncValue<List<Product>> featuredAsync,
+    required String title,
+    required String emptyMessage,
+    required int maxItems,
+    required bool showActionButton,
+  }) {
+    return featuredAsync.when(
+      data: (products) {
+        final sectionProducts = products
+            .where(
+              (product) =>
+                  product.id.trim().isNotEmpty &&
+                  product.name.trim().isNotEmpty,
+            )
+            .take(maxItems)
+            .toList();
+        if (sectionProducts.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              emptyMessage,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textLight,
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => context.pushNamed('products'),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: const Icon(Icons.arrow_forward, size: 16),
+                    label: const Text('See all'),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 294,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: sectionProducts.length,
+                itemBuilder: (context, index) {
+                  final product = sectionProducts[index];
+                  return _ProductPlaceholderCard(
+                    product: product,
+                    showActionButton: showActionButton,
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: SizedBox(
+            height: 60, child: Center(child: CircularProgressIndicator())),
+      ),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Text(
+          'Unable to load products right now',
+          style: AppTextStyles.bodyMedium.copyWith(color: Colors.red),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLoyaltyCard(BuildContext context, dynamic data, dynamic user) {
-    final tier = (data?.tier ?? 'BRONZE').toUpperCase();
     final points = data?.rewardsPoints ?? 0;
+    final tier = data?.tier ?? user?.membershipTier ?? 'bronze';
     final tierColor = _getTierColor(tier);
 
     return Container(
@@ -218,14 +531,14 @@ class MemberHomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Your Tier',
+                    'Membership Status',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: Colors.white70,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    tier,
+                    'View in Profile',
                     style: AppTextStyles.h1.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
@@ -246,6 +559,18 @@ class MemberHomeScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => context.pushNamed('my-ncdfcoop'),
+              icon: const Icon(Icons.person_outline, color: Colors.white),
+              label: const Text(
+                'Tier details in profile',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           Container(
@@ -717,44 +1042,6 @@ class MemberHomeScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-
-          // Row 2: Quick Deposit and Withdrawal
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _showDepositDialog(context, ref, userId),
-                  child: _ActionButton(
-                    icon: Icons.add_circle_outline,
-                    label: 'Quick\nDeposit',
-                    color: Colors.green,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _showWithdrawDialog(context, ref, userId),
-                  child: _ActionButton(
-                    icon: Icons.remove_circle_outline,
-                    label: 'Quick\nWithdraw',
-                    color: Colors.orange,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => context.pushNamed('member-savings'),
-                  child: _ActionButton(
-                    icon: Icons.trending_up,
-                    label: 'My\nSavings',
-                    color: Colors.teal,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -889,28 +1176,32 @@ class MemberHomeScreen extends ConsumerWidget {
     AsyncValue<List<Product>> featuredAsync,
   ) {
     return featuredAsync.when(
-      data: (products) => products.isEmpty
-          ? Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'No exclusive deals available',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textLight,
-                ),
-              ),
-            )
-          : SizedBox(
-              height: 220,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
+      data: (products) {
+        final validProducts =
+            products.where((product) => product.id.trim().isNotEmpty).toList();
+        return validProducts.isEmpty
+            ? Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  return _ProductCard(product: product, context: context);
-                },
-              ),
-            ),
+                child: Text(
+                  'No exclusive deals available',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textLight,
+                  ),
+                ),
+              )
+            : SizedBox(
+                height: 252,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: validProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = validProducts[index];
+                    return _ProductCard(product: product, context: context);
+                  },
+                ),
+              );
+      },
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16),
         child: SizedBox(
@@ -933,34 +1224,38 @@ class MemberHomeScreen extends ConsumerWidget {
     AsyncValue<List<Product>> featuredAsync,
   ) {
     return featuredAsync.when(
-      data: (products) => products.isEmpty
-          ? Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'No products available for members',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textLight,
+      data: (products) {
+        final validProducts =
+            products.where((product) => product.id.trim().isNotEmpty).toList();
+        return validProducts.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'No products available for members',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textLight,
+                  ),
                 ),
-              ),
-            )
-          : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
+              )
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.67,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: validProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = validProducts[index];
+                    return _ProductGridItem(product: product, context: context);
+                  },
                 ),
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  return _ProductGridItem(product: product, context: context);
-                },
-              ),
-            ),
+              );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Text(
         'Error loading products',
@@ -1114,43 +1409,107 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final savings = _computeSavingsPercent(product);
+    final soldText = _estimateSoldText(product);
+
     return GestureDetector(
-      onTap: () => context.goNamed(
-        'product-detail',
-        pathParameters: {'productId': product.id},
-      ),
+      onTap: () {
+        final productId = product.id.trim();
+        if (productId.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product details are unavailable.')),
+          );
+          return;
+        }
+        context.goNamed(
+          'product-detail',
+          pathParameters: {'productId': productId},
+        );
+      },
       child: Container(
-        width: 140,
+        width: 168,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            SizedBox(
+              height: 112,
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
                   ),
                 ),
-                child: product.imageUrl != null
-                    ? Image(
-                        image: product.imageUrl!.startsWith('assets/')
-                            ? AssetImage(product.imageUrl!)
-                            : NetworkImage(product.imageUrl!) as ImageProvider,
-                        fit: BoxFit.cover,
-                      )
-                    : Icon(Icons.image, color: Colors.grey[300]),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: _ProductImage(imageUrl: product.imageUrl),
+                    ),
+                    Positioned(
+                      left: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD84315),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Top Deal',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          soldText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1162,12 +1521,62 @@ class _ProductCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
+                  if (product.retailPrice > 0)
+                    Text(
+                      '₦${product.retailPrice.toStringAsFixed(0)}',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textLight,
+                        fontSize: 10,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
                   Text(
-                    '₦${product.wholesalePrice.toStringAsFixed(0)}',
+                    _formatProductPrice(product),
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.primary,
+                      color: const Color(0xFFD84315),
                       fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (savings > 0)
+                    Text(
+                      'Save $savings%',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.green.shade700,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  const SizedBox(height: 2),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        final productId = product.id.trim();
+                        if (productId.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Product details are unavailable.'),
+                            ),
+                          );
+                          return;
+                        }
+                        context.goNamed(
+                          'product-detail',
+                          pathParameters: {'productId': productId},
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 24),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                      ),
+                      child: const Text(
+                        'View Details',
+                        style: TextStyle(fontSize: 11),
+                      ),
                     ),
                   ),
                 ],
@@ -1188,16 +1597,35 @@ class _ProductGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final savings = _computeSavingsPercent(product);
+    final soldText = _estimateSoldText(product);
+
     return GestureDetector(
-      onTap: () => context.goNamed(
-        'product-detail',
-        pathParameters: {'productId': product.id},
-      ),
+      onTap: () {
+        final productId = product.id.trim();
+        if (productId.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product details are unavailable.')),
+          );
+          return;
+        }
+        context.goNamed(
+          'product-detail',
+          pathParameters: {'productId': productId},
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1207,18 +1635,62 @@ class _ProductGridItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
+                    topLeft: Radius.circular(10),
+                    topRight: Radius.circular(10),
                   ),
                 ),
-                child: product.imageUrl != null
-                    ? Image(
-                        image: product.imageUrl!.startsWith('assets/')
-                            ? AssetImage(product.imageUrl!)
-                            : NetworkImage(product.imageUrl!) as ImageProvider,
-                        fit: BoxFit.cover,
-                      )
-                    : Icon(Icons.image, color: Colors.grey[300]),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: _ProductImage(imageUrl: product.imageUrl),
+                    ),
+                    Positioned(
+                      left: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD84315),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text(
+                          'Hot',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.58),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          soldText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(
@@ -1231,15 +1703,63 @@ class _ProductGridItem extends StatelessWidget {
                     style: AppTextStyles.bodySmall.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
+                  if (product.retailPrice > 0)
+                    Text(
+                      '₦${product.retailPrice.toStringAsFixed(0)}',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textLight,
+                        fontSize: 10,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
                   Text(
-                    '₦${product.wholesalePrice.toStringAsFixed(0)}',
+                    _formatProductPrice(product),
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.primary,
+                      color: const Color(0xFFD84315),
                       fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (savings > 0)
+                    Text(
+                      'Save $savings%',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.green.shade700,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final productId = product.id.trim();
+                        if (productId.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Product details are unavailable.'),
+                            ),
+                          );
+                          return;
+                        }
+                        context.goNamed(
+                          'product-detail',
+                          pathParameters: {'productId': productId},
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        backgroundColor: const Color(0xFFD84315),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Buy'),
                     ),
                   ),
                 ],
@@ -1250,4 +1770,296 @@ class _ProductGridItem extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ProductPlaceholderCard extends StatelessWidget {
+  final Product product;
+  final bool showActionButton;
+
+  const _ProductPlaceholderCard({
+    required this.product,
+    required this.showActionButton,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final savings = _computeSavingsPercent(product);
+
+    return GestureDetector(
+      onTap: () {
+        final productId = product.id.trim();
+        if (productId.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product details are unavailable.')),
+          );
+          return;
+        }
+        context.goNamed(
+          'product-detail',
+          pathParameters: {'productId': productId},
+        );
+      },
+      child: Container(
+        width: 188,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(14),
+                topRight: Radius.circular(14),
+              ),
+              child: Container(
+                height: 136,
+                width: double.infinity,
+                color: Colors.grey.shade100,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: _ProductImage(imageUrl: product.imageUrl),
+                    ),
+                    Positioned(
+                      left: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Member Deal',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    product.categoryId.isEmpty
+                        ? 'General Merchandise'
+                        : product.categoryId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textLight,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _formatProductPrice(product),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: const Color(0xFFD84315),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (savings > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Save $savings% vs retail',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.green.shade700,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  if (showActionButton)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          final productId = product.id.trim();
+                          if (productId.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Product details are unavailable.'),
+                              ),
+                            );
+                            return;
+                          }
+                          context.goNamed(
+                            'product-detail',
+                            pathParameters: {'productId': productId},
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD84315),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 34),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: const Icon(Icons.shopping_bag_outlined, size: 15),
+                        label: const Text('View & Buy'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductImage extends StatelessWidget {
+  final String? imageUrl;
+
+  const _ProductImage({this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl?.trim() ?? '';
+
+    if (url.isEmpty) {
+      return _buildFallbackProductVisual();
+    }
+
+    if (url.startsWith('assets/')) {
+      return Image.asset(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildFallbackProductVisual(),
+      );
+    }
+
+    // Avoid known unstable placeholder hosts that can throw SSL handshake errors on-device.
+    if (url.contains('via.placeholder.com')) {
+      return _buildFallbackProductVisual();
+    }
+
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      fadeInDuration: const Duration(milliseconds: 180),
+      placeholder: (context, _) => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFF3F4F6), Color(0xFFE5E7EB)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      errorWidget: (context, _, __) => _buildFallbackProductVisual(),
+    );
+  }
+
+  Widget _buildFallbackProductVisual() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF8FAFC), Color(0xFFE5E7EB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inventory_2_outlined,
+                color: Colors.grey.shade500, size: 28),
+            const SizedBox(height: 6),
+            Text(
+              'COOPX PRODUCT',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatProductPrice(Product product) {
+  final memberPrice = product.wholesalePrice > 0
+      ? product.wholesalePrice
+      : (product.retailPrice > 0 ? product.retailPrice : 0);
+
+  if (memberPrice <= 0) {
+    return 'Price on request';
+  }
+
+  return '₦${memberPrice.toStringAsFixed(0)}';
+}
+
+int _computeSavingsPercent(Product product) {
+  if (product.retailPrice <= 0 || product.wholesalePrice <= 0) {
+    return 0;
+  }
+
+  final savings = ((product.retailPrice - product.wholesalePrice) /
+          product.retailPrice *
+          100)
+      .round();
+  return savings.clamp(0, 99);
+}
+
+String _estimateSoldText(Product product) {
+  final base = product.stock <= 0 ? 86 : product.stock * 3;
+  if (base >= 1000) {
+    return '${(base / 1000).toStringAsFixed(1)}k sold';
+  }
+  return '$base sold';
 }

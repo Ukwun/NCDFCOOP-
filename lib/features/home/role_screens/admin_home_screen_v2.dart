@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 
@@ -29,7 +30,7 @@ class AdminHomeScreenV2 extends ConsumerWidget {
               _buildPlatformKPIs(),
 
               // Admin Actions
-              _buildAdminActions(),
+              _buildAdminActions(context),
 
               // User Activity
               _buildUserActivitySection(),
@@ -259,7 +260,7 @@ class AdminHomeScreenV2 extends ConsumerWidget {
     );
   }
 
-  Widget _buildAdminActions() {
+  Widget _buildAdminActions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -277,6 +278,7 @@ class AdminHomeScreenV2 extends ConsumerWidget {
                   icon: Icons.people_outline,
                   label: 'User Mgmt',
                   color: Colors.blue,
+                  onTap: () => context.pushNamed('admin-users'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -285,6 +287,7 @@ class AdminHomeScreenV2 extends ConsumerWidget {
                   icon: Icons.storage_outlined,
                   label: 'Database',
                   color: Colors.purple,
+                  onTap: () => context.pushNamed('admin-dashboard'),
                 ),
               ),
             ],
@@ -297,6 +300,7 @@ class AdminHomeScreenV2 extends ConsumerWidget {
                   icon: Icons.security_outlined,
                   label: 'Permissions',
                   color: Colors.green,
+                  onTap: () => context.pushNamed('admin-approvals'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -305,6 +309,7 @@ class AdminHomeScreenV2 extends ConsumerWidget {
                   icon: Icons.assessment_outlined,
                   label: 'Reports',
                   color: Colors.orange,
+                  onTap: () => context.pushNamed('admin-analytics'),
                 ),
               ),
             ],
@@ -568,36 +573,41 @@ class _AdminActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final VoidCallback onTap;
 
   const _AdminActionButton({
     required this.icon,
     required this.label,
     required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

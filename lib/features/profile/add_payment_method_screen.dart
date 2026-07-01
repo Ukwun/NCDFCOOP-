@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
-import 'package:coop_commerce/core/providers/checkout_flow_provider.dart';
 
 class AddPaymentMethodScreen extends ConsumerStatefulWidget {
   const AddPaymentMethodScreen({super.key});
@@ -87,13 +86,23 @@ class _AddPaymentMethodScreenState
 
       final cardNumber = _cardNumberController.text.replaceAll(' ', '');
       final lastFour = cardNumber.substring(cardNumber.length - 4);
-
-      // Save to Firebase
-      await FirebaseFirestore.instance
+      final methodsRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.id)
-          .collection('payment_methods')
-          .add({
+          .collection('paymentMethods');
+
+      if (_isDefault) {
+        final existingDefaults =
+            await methodsRef.where('isDefault', isEqualTo: true).get();
+        final batch = FirebaseFirestore.instance.batch();
+        for (final doc in existingDefaults.docs) {
+          batch.update(doc.reference, {'isDefault': false});
+        }
+        await batch.commit();
+      }
+
+      // Save to Firebase
+      await methodsRef.add({
         'type': _selectedPaymentType,
         'displayName':
             '${_selectedPaymentType == 'credit_card' ? 'Credit' : 'Debit'} Card - $lastFour',
@@ -106,23 +115,6 @@ class _AddPaymentMethodScreenState
       });
 
       if (!mounted) return;
-
-      // If marked as default, unset other defaults
-      if (_isDefault) {
-        final batch = FirebaseFirestore.instance.batch();
-        final methods = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.id)
-            .collection('payment_methods')
-            .get();
-
-        for (final doc in methods.docs) {
-          if (doc.get('isDefault') == true) {
-            batch.update(doc.reference, {'isDefault': false});
-          }
-        }
-        await batch.commit();
-      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

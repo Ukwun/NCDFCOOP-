@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 
 class FAQItem {
@@ -131,13 +132,61 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     });
   }
 
-  void _contactSupport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Contacting support team - Coming soon'),
-        duration: Duration(seconds: 2),
-      ),
+  Future<void> _contactSupport() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.call_outlined),
+                title: const Text('Call Support'),
+                subtitle: const Text('+234 800 000 0000'),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await _openExternal(Uri.parse('tel:+2348000000000'));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.email_outlined),
+                title: const Text('Email Support'),
+                subtitle: const Text('support@coopcommerce.ng'),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await _openExternal(Uri.parse(
+                    'mailto:support@coopcommerce.ng?subject=Coop%20Commerce%20Support',
+                  ));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_bubble_outline),
+                title: const Text('In-app Chat'),
+                subtitle: const Text('Open customer chat channel'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  if (context.mounted) {
+                    context.pushNamed('messages');
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Future<void> _openExternal(Uri uri) async {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open ${uri.scheme} link on this device'),
+        ),
+      );
+    }
   }
 
   @override

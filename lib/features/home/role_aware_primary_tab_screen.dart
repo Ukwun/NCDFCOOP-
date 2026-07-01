@@ -8,6 +8,7 @@ import 'package:coop_commerce/features/offers/offers_screen.dart';
 import 'package:coop_commerce/features/products/products_listing_screen.dart';
 import 'package:coop_commerce/features/profile/payment_methods_screen.dart';
 import 'package:coop_commerce/features/selling/seller_home_screen.dart';
+import 'package:coop_commerce/features/home/role_screens/wholesale_buyer_home_screen.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -32,14 +33,14 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
     }
 
     if (_isWholesale(role)) {
-      return _buildWholesaleTab(tabIndex);
+      return _buildWholesaleTab(tabIndex, role);
     }
 
     return _buildDefaultTab(tabIndex);
   }
 
   bool _isMember(UserRole role) {
-    return role == UserRole.coopMember || role == UserRole.premiumMember;
+    return role == UserRole.coopMember;
   }
 
   bool _isSeller(UserRole role) {
@@ -47,9 +48,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
   }
 
   bool _isWholesale(UserRole role) {
-    return role == UserRole.wholesaleBuyer ||
-        role == UserRole.institutionalBuyer ||
-        role == UserRole.institutionalApprover;
+    return role == UserRole.wholesaleBuyer;
   }
 
   Widget _buildMemberTab(int index) {
@@ -57,11 +56,11 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 0:
         return const RoleAwareHomeScreen();
       case 1:
-        return const PaymentMethodsScreen();
+        return const ProductsListingScreen(title: 'Categories');
       case 2:
-        return const _MemberSavingsTabScreen();
+        return const MessagesScreen();
       case 3:
-        return const _MemberInvestmentsTabScreen();
+        return const CartScreen();
       case 4:
         return const MyNCDFCOOPScreen();
       default:
@@ -86,20 +85,20 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildWholesaleTab(int index) {
+  Widget _buildWholesaleTab(int index, UserRole role) {
     switch (index) {
       case 0:
-        return const PersonalizedDashboardScreen();
+        return const WholesaleBuyerHomeScreen();
       case 1:
-        return const _WholesalePortfolioTabScreen();
+        return const ProductsListingScreen(title: 'Categories');
       case 2:
-        return const ProductsListingScreen(title: 'Bulk Investments');
+        return const MessagesScreen();
       case 3:
-        return const AnalyticsDashboardShell();
+        return const CartScreen();
       case 4:
         return const MyNCDFCOOPScreen();
       default:
-        return const PersonalizedDashboardScreen();
+        return const WholesaleBuyerHomeScreen();
     }
   }
 

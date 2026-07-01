@@ -41,6 +41,7 @@ class ServiceLocator {
 
   /// Initialize services
   void initialize() {
+    if (_initialized) return;
     try {
       debugPrint('🔄 ServiceLocator initializing...');
       _localStorage = LocalStorage();

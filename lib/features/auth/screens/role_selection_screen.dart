@@ -50,7 +50,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
       icon: Icons.person_outlined,
     ),
     _RoleOptionModel(
-      role: UserRole.institutionalBuyer,
+      role: UserRole.wholesaleBuyer,
       title: '🛒 Wholesale Buyer',
       subtitle: 'Buy in bulk with wholesale pricing',
       description:

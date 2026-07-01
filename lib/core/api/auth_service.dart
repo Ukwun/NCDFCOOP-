@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'api_client.dart';
@@ -82,25 +85,128 @@ class AuthService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+  static const bool _mockAuthRequested = bool.fromEnvironment(
+    'ENABLE_MOCK_AUTH',
+    defaultValue: false,
+  );
+
+  /// Mock identities are deliberately opt-in and debug-only. A production
+  /// outage must never authenticate a fabricated user or infer permissions
+  /// from an email address.
+  bool get _allowMockAuth => kDebugMode && _mockAuthRequested;
+
+  void _requireMockAuthEnabled() {
+    if (!_allowMockAuth) {
+      throw StateError(
+        'Authentication service is unavailable. Please try again shortly.',
+      );
+    }
+  }
+
+  Future<User> _firebaseUserToAppUser(
+    firebase_auth.User firebaseUser, {
+    String? fallbackName,
+  }) async {
+    final profileRef =
+        FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid);
+    final snapshot = await profileRef.get();
+    final existing = snapshot.data();
+    final idToken = await firebaseUser.getIdToken();
+    final profile = <String, dynamic>{
+      ...?existing,
+      'id': firebaseUser.uid,
+      'email': firebaseUser.email ?? existing?['email'] ?? '',
+      'name': firebaseUser.displayName ??
+          existing?['name'] ??
+          fallbackName ??
+          'NCDFCOOP User',
+      'photoUrl': firebaseUser.photoURL ?? existing?['photoUrl'],
+      'token': idToken,
+      'marketplaceRole': existing?['marketplaceRole'] ?? 'wholesaleBuyer',
+    };
+
+    if (!snapshot.exists) {
+      await profileRef.set({
+        'id': profile['id'],
+        'email': profile['email'],
+        'name': profile['name'],
+        'photoUrl': profile['photoUrl'],
+        'marketplaceRole': profile['marketplaceRole'],
+        'roleSelectionCompleted': false,
+        'onboardingCompleted': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } else if (existing?['marketplaceRole'] == null) {
+      await profileRef.update({
+        'marketplaceRole': 'wholesaleBuyer',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    final user = User.fromJson(profile).copyWith(token: idToken);
+    _apiClient.setAuthToken(idToken ?? '');
+    await _localStorage.saveToken(idToken ?? '');
+    await _localStorage.saveUser(user);
+    _latestUser = user;
+    _authStateController.add(user);
+    return user;
+  }
+
+  Future<User> _loginWithFirebase(LoginRequest request) async {
+    final credential =
+        await firebase_auth.FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: request.email.trim(),
+      password: request.password,
+    );
+    return _firebaseUserToAppUser(credential.user!);
+  }
+
+  Future<User> _registerWithFirebase(RegisterRequest request) async {
+    final credential = await firebase_auth.FirebaseAuth.instance
+        .createUserWithEmailAndPassword(
+      email: request.email.trim(),
+      password: request.password,
+    );
+    await credential.user!.updateDisplayName(request.name);
+    return _firebaseUserToAppUser(
+      credential.user!,
+      fallbackName: request.name,
+    );
+  }
+
   // Stream controller for real-time auth state
   final _authStateController = StreamController<User?>.broadcast();
-  Stream<User?> get authStateChanges => _authStateController.stream;
+  User? _latestUser;
+  Stream<User?> get authStateChanges async* {
+    yield _latestUser;
+    yield* _authStateController.stream;
+  }
 
   AuthService(
     this._apiClient,
     this._localStorage, {
     AuditLogService? auditLogService,
-  }) : _auditLogService = auditLogService ?? AuditLogService();
+  }) : _auditLogService = auditLogService ?? AuditLogService() {
+    unawaited(initialize());
+  }
 
   /// Initialize auth state from storage
   Future<void> initialize() async {
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null) {
+      await _firebaseUserToAppUser(firebaseUser);
+      return;
+    }
     final token = await _localStorage.getToken();
     final user = await _localStorage.getUser();
 
     if (token != null && user != null) {
+      _latestUser = user;
       _apiClient.setAuthToken(token);
       _authStateController.add(user);
     } else {
+      _latestUser = null;
       _authStateController.add(null);
     }
   }
@@ -125,6 +231,7 @@ class AuthService {
     String? photoUrl,
     bool rememberMe = true,
   }) async {
+    _requireMockAuthEnabled();
     try {
       print('📱 Creating mock user for $provider provider...');
       await Future.delayed(const Duration(milliseconds: 500));
@@ -172,6 +279,9 @@ class AuthService {
 
   /// Login user - tries real backend first, falls back to mock
   Future<User> login(LoginRequest request, {bool rememberMe = false}) async {
+    if (!_allowMockAuth) {
+      return _loginWithFirebase(request);
+    }
     try {
       // Try real backend first
       if (!ApiClient.isMockBackend) {
@@ -232,6 +342,7 @@ class AuthService {
 
   /// Mock login for offline/development
   Future<User> _loginWithMock(LoginRequest request, bool rememberMe) async {
+    _requireMockAuthEnabled();
     try {
       await Future.delayed(const Duration(seconds: 1));
 
@@ -304,6 +415,9 @@ class AuthService {
     RegisterRequest request, {
     bool rememberMe = false,
   }) async {
+    if (!_allowMockAuth) {
+      return _registerWithFirebase(request);
+    }
     try {
       // Try real backend first
       if (!ApiClient.isMockBackend) {
@@ -366,6 +480,7 @@ class AuthService {
     RegisterRequest request,
     bool rememberMe,
   ) async {
+    _requireMockAuthEnabled();
     try {
       await Future.delayed(const Duration(seconds: 1));
 
@@ -428,6 +543,7 @@ class AuthService {
   /// Logout user - tries real backend first
   Future<void> logout({String? userId}) async {
     try {
+      await firebase_auth.FirebaseAuth.instance.signOut();
       print('🚪 Logging out user...');
 
       // Try real backend logout first

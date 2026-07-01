@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/checkout_flow_provider.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/cart_provider.dart';
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 
 class CheckoutPaymentScreen extends ConsumerWidget {
   const CheckoutPaymentScreen({super.key});
@@ -275,7 +277,17 @@ class CheckoutPaymentScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: checkoutState.selectedPaymentMethod == null
                       ? null
-                      : () {
+                      : () async {
+                          final cartState = ref.read(cartProvider);
+                          final activityLogger =
+                              ref.read(activityLoggerProvider.notifier);
+                          await activityLogger.logCheckoutStarted(
+                            cartTotal: cartState.totalPrice,
+                            itemCount: cartState.itemCount,
+                            paymentMethod:
+                                checkoutState.selectedPaymentMethod?.type,
+                          );
+
                           ref.read(checkoutFlowProvider.notifier).nextStep();
                           context.push('/checkout/confirmation');
                         },

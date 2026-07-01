@@ -293,14 +293,19 @@ class SettingsScreen extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               context.pop();
-              await ref
-                  .read(auth_controller.authControllerProvider.notifier)
-                  .signOut();
-              if (context.mounted) {
-                _showSavedFeedback(context, 'Logged out successfully');
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  context.go('/welcome');
-                });
+              try {
+                await ref
+                    .read(auth_controller.authControllerProvider.notifier)
+                    .signOut();
+                if (context.mounted) {
+                  context.go('/signin');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout failed: $e')),
+                  );
+                }
               }
             },
             child: const Text('Logout'),

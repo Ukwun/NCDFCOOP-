@@ -4,6 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:coop_commerce/core/services/cart_activity_logger.dart';
 import 'package:coop_commerce/core/services/review_activity_logger.dart';
 import 'package:coop_commerce/core/services/activity_tracking_service.dart';
+import 'package:coop_commerce/core/services/user_activity_service.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/user_activity_providers.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// Providers for analytics data
@@ -41,8 +44,10 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = FirebaseAuth.instance.currentUser;
+    final isAdmin = ref.watch(isAdminProvider);
     final cartMetrics = ref.watch(cartMetricsProvider);
     final reviewMetrics = ref.watch(reviewMetricsProvider);
+    final globalTimeline = ref.watch(globalActivityTimelineProvider);
 
     if (user == null) {
       return Scaffold(
@@ -51,6 +56,10 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
           child: Text('Please login to view analytics'),
         ),
       );
+    }
+
+    if (isAdmin) {
+      return _buildAdminObservability(context, globalTimeline);
     }
 
     return Scaffold(
@@ -69,7 +78,10 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primary.withOpacity(0.7)
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -146,7 +158,234 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCartMetricsCards(BuildContext context, Map<String, dynamic> metrics) {
+  Widget _buildAdminObservability(
+    BuildContext context,
+    AsyncValue<List<UserActivity>> globalTimeline,
+  ) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Admin Observability'),
+        elevation: 0,
+        backgroundColor: AppColors.primary,
+      ),
+      body: globalTimeline.when(
+        data: (events) {
+          final metrics = _computeGlobalMetrics(events);
+          final eventBreakdown = metrics['eventBreakdown'] as Map<String, int>;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(0.78),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Live Commerce Pulse',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Streaming product views, cart actions, checkout starts, payment outcomes, follows, and reviews.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white70,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _buildMetricCard(
+                      context,
+                      title: 'Events (24h)',
+                      value: '${metrics['events24h']}',
+                      icon: Icons.bolt,
+                      color: Colors.indigo,
+                    ),
+                    _buildMetricCard(
+                      context,
+                      title: 'Unique Users (24h)',
+                      value: '${metrics['uniqueUsers24h']}',
+                      icon: Icons.group,
+                      color: Colors.blue,
+                    ),
+                    _buildMetricCard(
+                      context,
+                      title: 'Checkout Starts',
+                      value: '${metrics['checkoutStarts']}',
+                      icon: Icons.shopping_cart_checkout,
+                      color: Colors.deepPurple,
+                    ),
+                    _buildMetricCard(
+                      context,
+                      title: 'Payment Failures',
+                      value: '${metrics['paymentFailures']}',
+                      icon: Icons.error_outline,
+                      color: Colors.red,
+                    ),
+                    _buildMetricCard(
+                      context,
+                      title: 'Conversion Rate',
+                      value: '${metrics['checkoutConversionPct']}%',
+                      icon: Icons.trending_up,
+                      color: Colors.green,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Event Breakdown',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    children: eventBreakdown.entries
+                        .toList()
+                        .map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(entry.key.replaceAll('_', ' ')),
+                                Text(
+                                  '${entry.value}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Recent Global Events',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                ...events.take(20).map((event) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${event.activityType.replaceAll('_', ' ')} • user:${event.userId.substring(0, event.userId.length > 8 ? 8 : event.userId.length)}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        Text(
+                          _timeAgo(event.timestamp),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Text('Error loading observability stream: $error'),
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _computeGlobalMetrics(List<UserActivity> events) {
+    final now = DateTime.now();
+    final threshold = now.subtract(const Duration(hours: 24));
+    final events24h =
+        events.where((e) => e.timestamp.isAfter(threshold)).toList();
+    final uniqueUsers24h = events24h.map((e) => e.userId).toSet().length;
+    final checkoutStarts =
+        events24h.where((e) => e.activityType == 'checkout_started').length;
+    final paymentsSuccess =
+        events24h.where((e) => e.activityType == 'payment_success').length;
+    final paymentFailures =
+        events24h.where((e) => e.activityType == 'payment_failed').length;
+    final conversionPct = checkoutStarts == 0
+        ? 0
+        : ((paymentsSuccess / checkoutStarts) * 100).round();
+
+    final eventBreakdown = <String, int>{};
+    for (final event in events24h) {
+      eventBreakdown[event.activityType] =
+          (eventBreakdown[event.activityType] ?? 0) + 1;
+    }
+
+    final sortedBreakdown = eventBreakdown.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return {
+      'events24h': events24h.length,
+      'uniqueUsers24h': uniqueUsers24h,
+      'checkoutStarts': checkoutStarts,
+      'paymentFailures': paymentFailures,
+      'checkoutConversionPct': conversionPct,
+      'eventBreakdown': {
+        for (final e in sortedBreakdown.take(8)) e.key: e.value
+      },
+    };
+  }
+
+  String _timeAgo(DateTime timestamp) {
+    final diff = DateTime.now().difference(timestamp);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+
+  Widget _buildCartMetricsCards(
+      BuildContext context, Map<String, dynamic> metrics) {
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -198,7 +437,8 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildReviewMetricsCards(BuildContext context, Map<String, dynamic> metrics) {
+  Widget _buildReviewMetricsCards(
+      BuildContext context, Map<String, dynamic> metrics) {
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -252,7 +492,9 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
     bool isLarge = false,
   }) {
     return Container(
-      width: isLarge ? double.infinity : ((MediaQuery.of(context).size.width - 60) / 2),
+      width: isLarge
+          ? double.infinity
+          : ((MediaQuery.of(context).size.width - 60) / 2),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),

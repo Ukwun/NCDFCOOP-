@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/providers/real_time_providers.dart';
+import 'conversation_thread_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 
@@ -13,51 +16,31 @@ class MessagesScreen extends ConsumerStatefulWidget {
 }
 
 class _MessagesScreenState extends ConsumerState<MessagesScreen> {
-  int selectedChatIndex = 0;
-
-  // Mock data for conversations
-  final conversations = [
-    {
-      'id': 1,
-      'name': 'Fresh Produce Farm',
-      'avatar': '🏪',
-      'lastMessage': 'Your order has been shipped!',
-      'time': '2 mins ago',
-      'unread': 2,
-      'isOnline': true,
-    },
-    {
-      'id': 2,
-      'name': 'Customer Support',
-      'avatar': '💬',
-      'lastMessage': 'How can we help you today?',
-      'time': '1 hour ago',
-      'unread': 0,
-      'isOnline': true,
-    },
-    {
-      'id': 3,
-      'name': 'John\'s Farm Products',
-      'avatar': '👨‍🌾',
-      'lastMessage': 'Thank you for your purchase',
-      'time': '5 hours ago',
-      'unread': 0,
-      'isOnline': false,
-    },
-    {
-      'id': 4,
-      'name': 'Mary (Member)',
-      'avatar': '👩',
-      'lastMessage': 'Do you have more of this product?',
-      'time': 'Yesterday',
-      'unread': 1,
-      'isOnline': true,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            '💬 Messages',
+            style: AppTextStyles.h3.copyWith(color: AppColors.text),
+          ),
+        ),
+        body: _buildLoginPrompt(),
+      );
+    }
+
+    final conversationsAsync =
+        ref.watch(messengerConversationsProvider(user.id));
+    final conversations = conversationsAsync.maybeWhen(
+      data: (items) => items,
+      orElse: () => const <MessengerConversationPreview>[],
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -71,28 +54,37 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () => _showSearchDialog(context),
+            onPressed: () => _showSearchDialog(context, conversations),
           ),
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () => _showMoreOptions(context),
+            onPressed: () => _showMoreOptions(context, user.id, conversations),
           ),
         ],
       ),
-      body: conversations.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-              itemCount: conversations.length,
-              itemBuilder: (context, index) {
-                final chat = conversations[index];
-                return _buildChatTile(context, chat, index);
-              },
-            ),
+      body: conversationsAsync.when(
+        data: (items) {
+          if (items.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final chat = items[index];
+              return _buildChatTile(context, chat);
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _buildErrorState(error.toString()),
+      ),
     );
   }
 
-  Widget _buildChatTile(BuildContext context, Map chat, int index) {
-    final hasUnread = chat['unread'] as int > 0;
+  Widget _buildChatTile(
+      BuildContext context, MessengerConversationPreview chat) {
+    final hasUnread = chat.unreadCount > 0;
 
     return Column(
       children: [
@@ -108,12 +100,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    chat['avatar'] as String,
+                    chat.avatarText,
                     style: const TextStyle(fontSize: 24),
                   ),
                 ),
               ),
-              if (chat['isOnline'] as bool)
+              if (chat.isOnline)
                 Positioned(
                   right: 0,
                   bottom: 0,
@@ -130,13 +122,13 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             ],
           ),
           title: Text(
-            chat['name'] as String,
+            chat.title,
             style: AppTextStyles.bodyLarge.copyWith(
               fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           subtitle: Text(
-            chat['lastMessage'] as String,
+            chat.lastMessage,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.bodySmall.copyWith(
@@ -149,7 +141,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                chat['time'] as String,
+                _relativeTime(chat.updatedAt),
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.muted,
                 ),
@@ -164,7 +156,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${chat['unread']}',
+                    '${chat.unreadCount}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -211,120 +203,153 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     );
   }
 
-  void _openChat(BuildContext context, Map chat) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Row(
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(Icons.error_outline, size: 48, color: AppColors.muted),
+            const SizedBox(height: 12),
             Text(
-              chat['avatar'] as String,
-              style: const TextStyle(fontSize: 24),
+              'Unable to load messages',
+              style: AppTextStyles.h4.copyWith(color: AppColors.text),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(chat['name'] as String),
-                  Text(
-                    chat['isOnline'] as bool ? 'Online' : 'Offline',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: chat['isOnline'] as bool
-                          ? Colors.green
-                          : AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.muted),
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      ),
+    );
+  }
+
+  Widget _buildLoginPrompt() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                chat['lastMessage'] as String,
-                style: AppTextStyles.bodyMedium,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Type your message...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                suffixIcon: const Icon(Icons.send),
-              ),
+            Icon(Icons.lock_outline, size: 48, color: AppColors.muted),
+            const SizedBox(height: 12),
+            Text(
+              'Sign in to view your messages',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.h4.copyWith(color: AppColors.text),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Message sent to ${chat['name']}'),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Send'),
-          ),
-        ],
       ),
     );
   }
 
-  void _showSearchDialog(BuildContext context) {
-    showDialog(
+  void _openChat(BuildContext context, MessengerConversationPreview chat) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ConversationThreadScreen(conversation: chat),
+      ),
+    );
+  }
+
+  void _showSearchDialog(
+    BuildContext context,
+    List<MessengerConversationPreview> conversations,
+  ) {
+    var query = '';
+
+    showModalBottomSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Search Messages'),
-        content: TextField(
-          decoration: InputDecoration(
-            hintText: 'Search by name or message...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Searching messages...'),
-                  duration: Duration(seconds: 1),
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final trimmed = query.trim().toLowerCase();
+            final filtered = trimmed.isEmpty
+                ? conversations
+                : conversations.where((chat) {
+                    return chat.title.toLowerCase().contains(trimmed) ||
+                        chat.lastMessage.toLowerCase().contains(trimmed);
+                  }).toList();
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+              ),
+              child: SizedBox(
+                height: 420,
+                child: Column(
+                  children: [
+                    TextField(
+                      autofocus: true,
+                      onChanged: (value) => setState(() => query = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search by name or message...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No conversations found',
+                                style: AppTextStyles.bodyMedium
+                                    .copyWith(color: AppColors.muted),
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => Divider(
+                                color: AppColors.border,
+                                height: 1,
+                              ),
+                              itemBuilder: (context, index) {
+                                final chat = filtered[index];
+                                return ListTile(
+                                  leading: Text(
+                                    chat.avatarText,
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                  title: Text(chat.title),
+                                  subtitle: Text(
+                                    chat.lastMessage,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(sheetContext);
+                                    _openChat(context, chat);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-              );
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Search'),
-          ),
-        ],
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  void _showMoreOptions(BuildContext context) {
+  void _showMoreOptions(
+    BuildContext context,
+    String userId,
+    List<MessengerConversationPreview> conversations,
+  ) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -335,36 +360,240 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             ListTile(
               leading: const Icon(Icons.mark_as_unread),
               title: const Text('Mark all as read'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
+                if (conversations.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No unread conversations')),
+                  );
+                  return;
+                }
+
+                final updated = await _markAllAsRead(
+                  userId: userId,
+                  conversations: conversations,
+                );
+
+                if (!context.mounted) {
+                  return;
+                }
+
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('All marked as read')),
+                  SnackBar(
+                    content: Text(
+                      updated > 0
+                          ? 'Marked $updated conversation(s) as read'
+                          : 'No unread conversations',
+                    ),
+                  ),
                 );
               },
             ),
             ListTile(
               leading: const Icon(Icons.archive_outlined),
               title: const Text('Archive chats'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
+
+                final archived = await _archiveAllChats(
+                  userId: userId,
+                  conversations: conversations,
+                );
+
+                if (!context.mounted) {
+                  return;
+                }
+
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Chats archived')),
+                  SnackBar(
+                    content: Text(
+                      archived > 0
+                          ? 'Archived $archived conversation(s)'
+                          : 'No conversations to archive',
+                    ),
+                  ),
                 );
               },
             ),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
               title: const Text('Message settings'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
+
+                await _showMessageSettingsDialog(context, userId);
+
+                if (!context.mounted) {
+                  return;
+                }
+
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Opening settings...')),
+                  const SnackBar(content: Text('Message settings saved')),
                 );
               },
             ),
           ],
         ),
       ),
+    );
+  }
+
+  String _relativeTime(DateTime value) {
+    final now = DateTime.now();
+    final delta = now.difference(value);
+
+    if (delta.inMinutes < 1) {
+      return 'now';
+    }
+    if (delta.inMinutes < 60) {
+      return '${delta.inMinutes}m';
+    }
+    if (delta.inHours < 24) {
+      return '${delta.inHours}h';
+    }
+    if (delta.inDays < 7) {
+      return '${delta.inDays}d';
+    }
+    return '${value.day}/${value.month}/${value.year}';
+  }
+
+  Future<int> _markAllAsRead({
+    required String userId,
+    required List<MessengerConversationPreview> conversations,
+  }) async {
+    final firestore = FirebaseFirestore.instance;
+    final unreadConversations =
+        conversations.where((item) => item.unreadCount > 0).toList();
+
+    if (unreadConversations.isEmpty) {
+      return 0;
+    }
+
+    final batch = firestore.batch();
+    for (final conversation in unreadConversations) {
+      final doc = firestore.collection('conversations').doc(conversation.id);
+      batch.update(doc, {
+        'unreadByUser.$userId': 0,
+        'unreadCounts.$userId': 0,
+      });
+    }
+
+    try {
+      await batch.commit();
+      return unreadConversations.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<int> _archiveAllChats({
+    required String userId,
+    required List<MessengerConversationPreview> conversations,
+  }) async {
+    if (conversations.isEmpty) {
+      return 0;
+    }
+
+    final firestore = FirebaseFirestore.instance;
+    final batch = firestore.batch();
+
+    for (final conversation in conversations) {
+      final doc = firestore.collection('conversations').doc(conversation.id);
+      batch.set(
+          doc,
+          {
+            'archivedByUser.$userId': true,
+            'archivedAt.$userId': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
+    }
+
+    try {
+      await batch.commit();
+      return conversations.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<void> _showMessageSettingsDialog(
+    BuildContext context,
+    String userId,
+  ) async {
+    final firestore = FirebaseFirestore.instance;
+    final docRef = firestore.collection('users').doc(userId);
+    final snapshot = await docRef.get();
+    final data = snapshot.data() ?? <String, dynamic>{};
+    final messaging =
+        (data['messagingSettings'] as Map?)?.cast<String, dynamic>() ??
+            <String, dynamic>{};
+
+    bool pushEnabled = messaging['pushEnabled'] as bool? ?? true;
+    bool soundEnabled = messaging['soundEnabled'] as bool? ?? true;
+    bool previewEnabled = messaging['previewEnabled'] as bool? ?? true;
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Message settings'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Push notifications'),
+                    value: pushEnabled,
+                    onChanged: (value) => setState(() => pushEnabled = value),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Message sounds'),
+                    value: soundEnabled,
+                    onChanged: (value) => setState(() => soundEnabled = value),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Show message preview'),
+                    value: previewEnabled,
+                    onChanged: (value) =>
+                        setState(() => previewEnabled = value),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await docRef.set({
+                      'messagingSettings': {
+                        'pushEnabled': pushEnabled,
+                        'soundEnabled': soundEnabled,
+                        'previewEnabled': previewEnabled,
+                        'updatedAt': FieldValue.serverTimestamp(),
+                      },
+                    }, SetOptions(merge: true));
+
+                    if (dialogContext.mounted) {
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
