@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:coop_commerce/features/checkout/order_tracking_helpers.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -206,6 +207,20 @@ class SellerEarningsScreen extends ConsumerWidget {
     if (submitted != true) return;
 
     final value = double.tryParse(amount.text.trim());
+    final payoutError = validatePayoutDetails(
+      bankName: 'Bank',
+      bankCode: bankCode.text.trim(),
+      accountNumber: accountNumber.text.trim(),
+      accountName: accountName.text.trim(),
+    );
+    if (payoutError != null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(payoutError)),
+        );
+      }
+      return;
+    }
     if (value == null || value < 1000 || value > available) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -286,13 +301,16 @@ class SellerEarningsScreen extends ConsumerWidget {
       ),
     );
     if (save != true) return;
-    if (bankName.text.trim().isEmpty ||
-        bankCode.text.trim().isEmpty ||
-        !RegExp(r'^\d{10}$').hasMatch(accountNumber.text.trim()) ||
-        accountName.text.trim().isEmpty) {
+    final payoutError = validatePayoutDetails(
+      bankName: bankName.text.trim(),
+      bankCode: bankCode.text.trim(),
+      accountNumber: accountNumber.text.trim(),
+      accountName: accountName.text.trim(),
+    );
+    if (payoutError != null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter complete, valid bank details.')),
+          SnackBar(content: Text(payoutError)),
         );
       }
       return;

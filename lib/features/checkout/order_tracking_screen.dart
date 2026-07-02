@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmf;
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/models/order.dart';
+import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/core/providers/order_providers.dart';
 import 'package:coop_commerce/core/providers/real_time_providers.dart';
 import 'package:coop_commerce/core/widgets/order_notification_listener.dart';
 import 'package:coop_commerce/core/services/map_service.dart';
 import 'package:coop_commerce/core/services/order_fulfillment_service.dart'
     as ofs;
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/cart_provider.dart';
+import 'package:coop_commerce/core/providers/home_providers.dart';
+import 'package:coop_commerce/features/checkout/order_tracking_helpers.dart';
+import 'package:coop_commerce/features/selling/seller_earnings_screen.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -26,6 +33,8 @@ class OrderTrackingScreen extends ConsumerStatefulWidget {
 class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
+  final ofs.OrderFulfillmentService _fulfillmentService =
+      ofs.OrderFulfillmentService();
   gmf.GoogleMapController? _mapController;
   final List<OrderStatus> _statusProgression = [
     OrderStatus.confirmed,
@@ -55,6 +64,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
   @override
   Widget build(BuildContext context) {
     final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
+    final role = ref.watch(currentRoleProvider);
+    final currentUser = ref.watch(currentUserProvider);
 
     // Real-time order fulfillment status updates
     final fulfillmentUpdateAsync =
@@ -85,7 +96,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                 child: Column(
                   children: [
                     // Order ID and Status
-                    _buildOrderHeader(orderData),
+                    _buildOrderHeader(orderData, role),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    _buildRoleAwareSummary(orderData, role, currentUser),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    _buildRoleAwareActions(orderData, role),
                     const SizedBox(height: AppSpacing.lg),
 
                     // Timeline
@@ -285,6 +302,95 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     );
   }
 
+  Widget _infoChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: AppTextStyles.labelSmall
+                .copyWith(color: AppColors.textSecondary),
+          ),
+          Text(
+            value,
+            style:
+                AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _reorderItems(ofs.OrderData order) async {
+    final cartNotifier = ref.read(cartProvider.notifier);
+    for (final item in order.items) {
+      await cartNotifier.addItem(
+        CartItem(
+          id: '${item.productId}-${DateTime.now().microsecondsSinceEpoch}',
+          productId: item.productId,
+          productName: item.name,
+          memberPrice: item.price,
+          marketPrice: item.price,
+          quantity: item.quantity,
+        ),
+      );
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text('Reordered ${order.items.length} item(s) into your cart.'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _handleSellerAction(
+      Future<void> Function() action, String label, String successText) async {
+    try {
+      await action();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(successText), backgroundColor: AppColors.primary),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Unable to $label: $error'),
+            backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  Color _roleAccentColor(UserRole role) {
+    return switch (role) {
+      UserRole.seller => AppColors.primary,
+      UserRole.wholesaleBuyer => AppColors.accent,
+      _ => AppColors.tertiary,
+    };
+  }
+
+  IconData _roleIcon(UserRole role) {
+    return switch (role) {
+      UserRole.seller => Icons.storefront_outlined,
+      UserRole.wholesaleBuyer => Icons.warehouse_outlined,
+      _ => Icons.person_outline,
+    };
+  }
+
+  String _roleLabel(UserRole role) => roleDisplayLabel(role);
+
+  String _roleFocusText(UserRole role) => roleFocusText(role);
+
   Widget _buildMapPlaceholder() {
     return Container(
       height: 300,
@@ -312,13 +418,29 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     );
   }
 
-  Widget _buildOrderHeader(ofs.OrderData order) {
-    return Container(
+  Widget _buildOrderHeader(ofs.OrderData order, UserRole role) {
+    final accent = _roleAccentColor(role);
+    final roleLabel = _roleLabel(role);
+    final focusText = _roleFocusText(role);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        gradient: LinearGradient(
+          colors: [accent.withValues(alpha: 0.12), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,22 +448,24 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Order #${order.id.substring(0, 8).toUpperCase()}',
-                    style: AppTextStyles.h3,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Tracking: ${order.trackingNumber}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.tertiary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Order #${orderReferenceLabel(order.id)}',
+                      style: AppTextStyles.h3,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      '$roleLabel view · ${order.trackingNumber ?? 'Live update'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.tertiary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -366,6 +490,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
+            focusText,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
             order.orderStatus.description,
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.tertiary,
@@ -373,6 +505,378 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRoleAwareSummary(
+      ofs.OrderData order, UserRole role, dynamic currentUser) {
+    final accent = _roleAccentColor(role);
+    final summaryLabel = roleSummaryLabel(role);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_roleIcon(role), color: accent, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      summaryLabel,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      currentUser?.name?.isNotEmpty == true
+                          ? 'Signed in as ${currentUser!.name}'
+                          : 'Live order view',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _infoChip('Items', '${order.items.length}'),
+              _infoChip('Total', '₦${order.totalAmount.toStringAsFixed(0)}'),
+              _infoChip('Address',
+                  order.shippingAddress.isNotEmpty ? 'Set' : 'Pending'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleAwareActions(ofs.OrderData order, UserRole role) {
+    if (role == UserRole.seller) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Seller actions', style: AppTextStyles.labelMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (['submitted', 'pending', 'draft']
+                  .contains(order.status.toLowerCase()))
+                FilledButton.icon(
+                  onPressed: () => _handleSellerAction(
+                      () => _fulfillmentService.approveOrder(order.id),
+                      'Approved',
+                      'Order approved for fulfillment.'),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Approve'),
+                ),
+              if (['approved', 'processing']
+                  .contains(order.status.toLowerCase()))
+                FilledButton.icon(
+                  onPressed: () => _handleSellerAction(
+                      () => _fulfillmentService.startFulfillment(order.id),
+                      'Processing',
+                      'Fulfillment started.'),
+                  icon: const Icon(Icons.play_arrow_outlined),
+                  label: const Text('Process'),
+                ),
+              if (['processing', 'packed'].contains(order.status.toLowerCase()))
+                FilledButton.icon(
+                  onPressed: () => _handleSellerAction(
+                      () => _fulfillmentService.markItemsPacked(
+                          orderId: order.id,
+                          itemIds: order.items.map((item) => item.id).toList()),
+                      'Packed',
+                      'Items marked as packed.'),
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: const Text('Pack'),
+                ),
+              if (order.status.toLowerCase() == 'packed')
+                FilledButton.icon(
+                  onPressed: () => _handleSellerAction(
+                      () => _fulfillmentService.shipOrder(
+                          orderId: order.id,
+                          carrier: 'Coop Delivery',
+                          trackingNumber:
+                              'CD-${order.id.substring(0, 6).toUpperCase()}',
+                          estimatedDelivery: '2 business days'),
+                      'Shipped',
+                      'Order shipped.'),
+                  icon: const Icon(Icons.local_shipping_outlined),
+                  label: const Text('Ship'),
+                ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SellerEarningsScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: const Text('Payouts'),
+              ),
+              if (order.status.toLowerCase() == 'shipped')
+                FilledButton.icon(
+                  onPressed: () => _handleSellerAction(
+                      () => _fulfillmentService.markDelivered(order.id),
+                      'Delivered',
+                      'Order marked delivered.'),
+                  icon: const Icon(Icons.done_all_rounded),
+                  label: const Text('Deliver'),
+                ),
+              if (!['delivered', 'cancelled']
+                  .contains(order.status.toLowerCase()))
+                OutlinedButton.icon(
+                  onPressed: () => _handleSellerAction(
+                      () => _fulfillmentService.cancelOrder(
+                          orderId: order.id,
+                          reason: 'Seller cancelled after review.'),
+                      'Cancelled',
+                      'Order cancelled.'),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel'),
+                ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          role == UserRole.wholesaleBuyer
+              ? 'Wholesale buyer actions'
+              : 'Member actions',
+          style: AppTextStyles.labelMedium,
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              onPressed: () => _reorderItems(order),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reorder items'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => context.pushNamed('orders'),
+              icon: const Icon(Icons.history),
+              label: const Text('View history'),
+            ),
+            if (role == UserRole.wholesaleBuyer)
+              OutlinedButton.icon(
+                onPressed: () => _showWholesaleSupportSheet(order),
+                icon: const Icon(Icons.support_agent_outlined),
+                label: const Text('Talk to support'),
+              ),
+            if (role != UserRole.wholesaleBuyer)
+              OutlinedButton.icon(
+                onPressed: () => _showMemberBenefitsSheet(order),
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: const Text('Member benefits'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showMemberBenefitsSheet(ofs.OrderData order) async {
+    final userId = ref.read(currentUserProvider)?.id ?? '';
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        final memberDataAsync = ref.watch(memberDataProvider(userId));
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Member benefits are active',
+                      style: AppTextStyles.h4,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your membership unlocks savings, dividends, and faster support on real orders.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              memberDataAsync.when(
+                data: (memberData) {
+                  final tier = (memberData?.tier ?? 'bronze').toUpperCase();
+                  final discount = memberData?.discountPercentage ?? 0.0;
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Current tier: $tier',
+                            style: AppTextStyles.labelMedium),
+                        const SizedBox(height: 6),
+                        Text(
+                            'Member discount: ${discount.toStringAsFixed(0)}%'),
+                        const SizedBox(height: 6),
+                        Text(
+                            'Your order qualifies for member pricing and priority support.'),
+                      ],
+                    ),
+                  );
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (_, __) =>
+                    const Text('Member benefits are currently syncing.'),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  context.pushNamed('dashboard');
+                },
+                icon: const Icon(Icons.rocket_launch_outlined),
+                label: const Text('Open member dashboard'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showWholesaleSupportSheet(ofs.OrderData order) async {
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Wholesale support desk',
+                      style: AppTextStyles.h4,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your bulk order receives priority handling and a live account specialist with every update.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        'Order value: ₦${order.totalAmount.toStringAsFixed(0)}',
+                        style: AppTextStyles.labelMedium),
+                    const SizedBox(height: 6),
+                    Text(
+                        'Expected response: within 30 minutes during business hours.'),
+                    const SizedBox(height: 6),
+                    Text(
+                        'Next step: we will confirm your delivery and stock availability.'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Wholesale support has been notified.')),
+                  );
+                },
+                icon: const Icon(Icons.headset_mic_outlined),
+                label: const Text('Request a callback'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
