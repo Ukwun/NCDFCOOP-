@@ -48,8 +48,50 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     super.dispose();
   }
 
+  bool _canAdvanceToNextStep() {
+    switch (_currentStep) {
+      case 0:
+        if (ref.read(checkoutStateProvider).selectedAddress == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Please select a delivery address before continuing.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 1:
+        if (ref.read(checkoutStateProvider).deliverySlot == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please choose a delivery slot before continuing.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 2:
+        if (ref.read(checkoutStateProvider).selectedPaymentMethod.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Please choose a payment method before continuing.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return false;
+        }
+        return true;
+      default:
+        return true;
+    }
+  }
+
   void _nextStep() {
-    if (_currentStep < 3) {
+    if (_currentStep < 3 && _canAdvanceToNextStep()) {
       setState(() => _currentStep++);
       _slideController.forward(from: 0);
     }
@@ -70,6 +112,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     if (checkoutState.selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a delivery address')),
+      );
+      return;
+    }
+
+    if (checkoutState.deliverySlot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a delivery slot')),
+      );
+      return;
+    }
+
+    if (checkoutState.selectedPaymentMethod.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please choose a payment method')),
       );
       return;
     }
@@ -150,12 +206,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             : null,
       );
 
-      // Step 2: Create payment record
+      // Step 2: Create payment record and mark it as processed
       final paymentService = ref.read(paymentProcessingServiceProvider);
       final paymentMethod =
           _mapPaymentMethod(checkoutState.selectedPaymentMethod);
 
-      await paymentService.createPayment(
+      final paymentId = await paymentService.createPayment(
         orderId: orderId,
         buyerId: user.id,
         amount: cart.totalPrice,
@@ -167,10 +223,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             : null,
       );
 
-      // Step 3: Clear cart after successful order creation
+      await paymentService.processPayment(
+        paymentId: paymentId,
+        gatewayTransactionId: 'sim-${orderId.substring(0, 8)}',
+      );
+
+      // Step 3: Advance the order lifecycle to make it feel live
+      await fulfillmentService.submitOrder(orderId);
+      await fulfillmentService.startFulfillment(orderId);
+
+      // Step 4: Clear cart after successful order creation
       ref.read(cartProvider.notifier).clearCart();
 
-      // Step 4: Reset checkout state
+      // Step 5: Reset checkout state
       ref.read(checkoutStateProvider.notifier).reset();
 
       if (mounted) {

@@ -189,7 +189,7 @@ class MyNCDFCOOPScreen extends ConsumerWidget {
                   leading: Icon(Icons.receipt_long),
                   title: Text('My Orders'),
                   trailing: Icon(Icons.arrow_forward_ios, size: 14),
-                  onTap: () => context.pushNamed('profile-orders'),
+                  onTap: () => context.pushNamed('orders'),
                 ),
                 ListTile(
                   leading: Icon(Icons.savings),

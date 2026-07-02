@@ -3,6 +3,17 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/services/auth/firebase_auth_service.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+
+bool isValidEmailAddress(String email) {
+  final trimmedEmail = email.trim();
+  if (trimmedEmail.isEmpty) return false;
+
+  final regex = RegExp(
+    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+  );
+  return regex.hasMatch(trimmedEmail);
+}
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -22,6 +33,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   void initState() {
     super.initState();
     _emailController = TextEditingController();
+    final currentEmail = ref.read(firebaseUserEmailProvider);
+    if (currentEmail != null && currentEmail.isNotEmpty) {
+      _emailController.text = currentEmail;
+    }
   }
 
   @override
@@ -38,7 +53,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       return;
     }
 
-    if (!_isValidEmail(_emailController.text)) {
+    if (!isValidEmailAddress(_emailController.text)) {
       setState(() => _errorMessage = 'Please enter a valid email address');
       return;
     }
@@ -53,10 +68,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
       setState(() => _emailSent = true);
     } on AuthException catch (e) {
-      setState(() => _errorMessage = e.message);
+      setState(() => _errorMessage = _friendlyResetError(e.message));
     } catch (e) {
-      setState(() =>
-          _errorMessage = 'Failed to send reset email. Please try again.');
+      setState(() => _errorMessage = _friendlyResetError());
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -64,11 +78,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     }
   }
 
-  bool _isValidEmail(String email) {
-    final regex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
-    return regex.hasMatch(email);
+  String _friendlyResetError([String? rawMessage]) {
+    final message = rawMessage?.toLowerCase() ?? '';
+    if (message.contains('invalid-email') ||
+        message.contains('user-not-found')) {
+      return 'If that email is registered with CoopCommerce, we will send a reset link shortly.';
+    }
+    if (message.contains('too-many-requests')) {
+      return 'We are receiving a lot of reset requests right now. Please wait a moment and try again.';
+    }
+    return 'We could not send the reset link right now. Please try again in a moment.';
   }
 
   @override
@@ -109,7 +128,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 const SizedBox(height: 12),
 
                 Text(
-                  'Don\'t worry! We\'ll help you get back to your account.',
+                  'We will send a secure reset link to the email address on your account.',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -160,7 +179,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Enter the email address associated with your account and we\'ll send you a link to reset your password.',
+                          'Enter the email address associated with your account. If it exists in our system, we\'ll send a reset link that opens in a browser.',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.blue[700],
@@ -189,6 +208,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   controller: _emailController,
                   enabled: !_isLoading,
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.email],
+                  onSubmitted: (_) => _handlePasswordReset(),
                   decoration: InputDecoration(
                     hintText: 'example@email.com',
                     contentPadding: const EdgeInsets.symmetric(
@@ -338,7 +360,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               const SizedBox(height: 12),
 
               Text(
-                'We\'ve sent a password reset link to:\n${_emailController.text}',
+                'We\'ve sent a secure password reset link to:\n${_emailController.text.trim()}',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],

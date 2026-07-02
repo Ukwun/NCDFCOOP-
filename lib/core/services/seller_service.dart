@@ -77,40 +77,8 @@ class SellerService {
       }
     }
 
-    // Recovery path: if user id changed unexpectedly, reuse a locally saved seller profile.
-    // This keeps seller setup visible across relaunches in degraded auth/firestore states.
-    for (final key in prefs.getKeys()) {
-      if (!key.startsWith(_localProfileKeyPrefix)) {
-        continue;
-      }
-      final candidate = prefs.getString(key);
-      if (candidate == null || candidate.isEmpty) {
-        continue;
-      }
-      final fallbackProfile = parseProfile(candidate);
-      if (fallbackProfile == null) {
-        continue;
-      }
-
-      _localProfileCacheByUserId[userId] = fallbackProfile;
-      await _persistLocalProfile(
-        SellerProfile(
-          id: fallbackProfile.id,
-          userId: userId,
-          businessName: fallbackProfile.businessName,
-          sellerType: fallbackProfile.sellerType,
-          sellingPath: fallbackProfile.sellingPath,
-          country: fallbackProfile.country,
-          category: fallbackProfile.category,
-          targetCustomer: fallbackProfile.targetCustomer,
-          isVerified: fallbackProfile.isVerified,
-          createdAt: fallbackProfile.createdAt,
-          approvedAt: fallbackProfile.approvedAt,
-        ),
-      );
-      return _localProfileCacheByUserId[userId];
-    }
-
+    // Never reuse another account's cached profile. A device may be shared,
+    // and seller identity must remain bound to the authenticated Firebase uid.
     return null;
   }
 
@@ -305,24 +273,34 @@ class SellerService {
   /// Add new product
   Future<SellerProduct> addProduct(SellerProduct product) async {
     try {
-      final docRef = await _firestore
-          .collection('seller_products')
-          .add(product.toFirestore());
+      final batch = _firestore.batch();
+      final sellerDocRef = _firestore.collection('seller_products').doc();
+      final marketplaceDocRef =
+          _firestore.collection('products').doc(sellerDocRef.id);
+      final moderationDocRef =
+          _firestore.collection('product_moderation').doc();
 
-      // Create moderation request
-      await _firestore.collection('product_moderation').add(
-            ProductModerationRequest(
-              productId: docRef.id,
-              sellerId: product.sellerUserId ?? product.sellerId,
-              sellerUserId: product.sellerUserId,
-              productName: product.productName,
-              submittedAt: DateTime.now(),
-              status: ProductApprovalStatus.pending,
-            ).toFirestore(),
-          );
+      batch.set(sellerDocRef, product.toFirestore());
+      batch.set(
+        marketplaceDocRef,
+        product.toMarketplaceProductMap(productId: sellerDocRef.id),
+      );
+      batch.set(
+        moderationDocRef,
+        ProductModerationRequest(
+          productId: sellerDocRef.id,
+          sellerId: product.sellerUserId ?? product.sellerId,
+          sellerUserId: product.sellerUserId,
+          productName: product.productName,
+          submittedAt: DateTime.now(),
+          status: ProductApprovalStatus.pending,
+        ).toFirestore(),
+      );
+
+      await batch.commit();
 
       return SellerProduct(
-        id: docRef.id,
+        id: sellerDocRef.id,
         sellerId: product.sellerId,
         sellerUserId: product.sellerUserId,
         sellerProfileId: product.sellerProfileId,
@@ -337,7 +315,7 @@ class SellerService {
         imageUrl: product.imageUrl,
         description: product.description,
         status: ProductApprovalStatus.pending,
-        createdAt: DateTime.now(),
+        createdAt: product.createdAt,
       );
     } catch (e) {
       throw Exception('Failed to add product: $e');
@@ -351,10 +329,16 @@ class SellerService {
     }
 
     try {
-      await _firestore
-          .collection('seller_products')
-          .doc(product.id)
-          .update(product.toFirestore());
+      final batch = _firestore.batch();
+      batch.update(
+        _firestore.collection('seller_products').doc(product.id),
+        product.toFirestore(),
+      );
+      batch.update(
+        _firestore.collection('products').doc(product.id),
+        product.toMarketplaceProductMap(productId: product.id!),
+      );
+      await batch.commit();
     } catch (e) {
       rethrow;
     }
@@ -363,9 +347,15 @@ class SellerService {
   /// Approve product (admin only)
   Future<void> approveProduct(String productId) async {
     try {
-      await _firestore.collection('seller_products').doc(productId).update({
+      final batch = _firestore.batch();
+      batch.update(_firestore.collection('seller_products').doc(productId), {
         'status': ProductApprovalStatus.approved.name,
         'approvedAt': Timestamp.now(),
+      });
+      batch.update(_firestore.collection('products').doc(productId), {
+        'status': ProductApprovalStatus.approved.name,
+        'is_active': true,
+        'updated_at': FieldValue.serverTimestamp(),
       });
 
       // Update moderation request
@@ -376,11 +366,12 @@ class SellerService {
           .get();
 
       if (moderationQuery.docs.isNotEmpty) {
-        await moderationQuery.docs.first.reference.update({
+        batch.update(moderationQuery.docs.first.reference, {
           'status': ProductApprovalStatus.approved.name,
           'reviewedAt': Timestamp.now(),
         });
       }
+      await batch.commit();
     } catch (e) {
       throw Exception('Failed to approve product: $e');
     }
@@ -389,10 +380,16 @@ class SellerService {
   /// Reject product with reason (admin only)
   Future<void> rejectProduct(String productId, String reason) async {
     try {
-      await _firestore.collection('seller_products').doc(productId).update({
+      final batch = _firestore.batch();
+      batch.update(_firestore.collection('seller_products').doc(productId), {
         'status': ProductApprovalStatus.rejected.name,
         'rejectionReason': reason,
         'rejectedAt': Timestamp.now(),
+      });
+      batch.update(_firestore.collection('products').doc(productId), {
+        'status': ProductApprovalStatus.rejected.name,
+        'is_active': false,
+        'updated_at': FieldValue.serverTimestamp(),
       });
 
       // Update moderation request
@@ -403,12 +400,13 @@ class SellerService {
           .get();
 
       if (moderationQuery.docs.isNotEmpty) {
-        await moderationQuery.docs.first.reference.update({
+        batch.update(moderationQuery.docs.first.reference, {
           'status': ProductApprovalStatus.rejected.name,
           'reviewedAt': Timestamp.now(),
           'reviewNotes': reason,
         });
       }
+      await batch.commit();
     } catch (e) {
       throw Exception('Failed to reject product: $e');
     }

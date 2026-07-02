@@ -77,6 +77,53 @@ class _WholesaleBuyerHomeScreenState
                 children: [
                   _buildTopModeTabs(context),
                   const SizedBox(height: 12),
+                  if (currentUser != null)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_wallet_outlined,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Welcome back, ${currentUser.name.split(' ').first}',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Your wholesale orders, quotes and savings stay live in real time.',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (currentUser != null) const SizedBox(height: 12),
                   _buildSearchBar(context),
                   const SizedBox(height: 12),
                   _buildLiveSummaryStrip(cartState, ordersAsync),

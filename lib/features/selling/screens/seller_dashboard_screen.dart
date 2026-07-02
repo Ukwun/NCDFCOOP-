@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/core/intelligence/role_commerce_intelligence.dart';
+import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
 import '../../../theme/app_theme.dart';
 import '../../../core/models/seller_models.dart';
 
@@ -67,6 +69,33 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.storefront_outlined,
+                            color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Welcome back. Your buyers are watching live stock, orders and fulfilment updates.',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.text,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   Text(
                     'My Store',
                     style: AppTextStyles.h2.copyWith(
@@ -79,6 +108,44 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
                     widget.businessName,
                     style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textLight,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Upload products and keep your store live',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Add inventory, pricing and images in a few taps.',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textLight,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        FilledButton.icon(
+                          onPressed: widget.onAddNewProduct,
+                          icon: const Icon(Icons.cloud_upload_outlined),
+                          label: const Text('Upload Product'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -100,6 +167,11 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: _buildProductsList(),
               ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildIncomingOrdersPanel(),
+            ),
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -138,6 +210,11 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
         ),
       ),
       actions: [
+        IconButton(
+          onPressed: widget.onAddNewProduct,
+          icon: const Icon(Icons.add_circle_outline),
+          tooltip: 'Upload product',
+        ),
         if (widget.onSalesLedgerTap != null)
           IconButton(
             onPressed: widget.onSalesLedgerTap,
@@ -578,6 +655,411 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildIncomingOrdersPanel() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .where('sellerUserId', isEqualTo: widget.sellerId)
+          .orderBy('createdAt', descending: true)
+          .limit(5)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final orders = snapshot.data?.docs ?? const [];
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.local_shipping_outlined,
+                      color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text('Incoming orders', style: AppTextStyles.h4),
+                  const Spacer(),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (snapshot.hasError)
+                const Text(
+                  'Incoming orders will appear here once buyers place purchases.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                )
+              else if (orders.isEmpty)
+                const Text('No incoming orders yet.')
+              else
+                ...orders.map((document) {
+                  final order = document.data();
+                  final status = (order['status'] ?? 'pending').toString();
+                  final itemCount = ((order['items'] as List?)?.length ?? 0);
+                  final amount = (order['totalAmount'] ?? 0).toString();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _showOrderActionSheet(document.id, order),
+                        borderRadius: BorderRadius.circular(14),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Order ${document.id.substring(0, 6).toUpperCase()}',
+                                      style: AppTextStyles.labelMedium.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '$itemCount item(s) · ₦$amount',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Chip(
+                                    label: Text(status.toUpperCase()),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap to act',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showOrderActionSheet(String orderId, Map<String, dynamic> order) {
+    final fulfillmentService = OrderFulfillmentService();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            String currentStatus = (order['status'] ?? 'pending').toString();
+            final itemIds = ((order['items'] as List?)
+                    ?.map((item) => item['id']?.toString())
+                    .whereType<String>()
+                    .toList() ??
+                <String>[]);
+            final totalAmount = ((order['totalAmount'] ?? 0) as num).toDouble();
+            final shippingAddress =
+                (order['shippingAddress'] ?? 'Delivery address pending')
+                    .toString();
+            final buyerLabel =
+                (order['buyerName'] ?? order['buyerId'] ?? 'Buyer').toString();
+            final orderLabel = orderId.length >= 6
+                ? orderId.substring(0, 6).toUpperCase()
+                : orderId.toUpperCase();
+            bool isUpdating = false;
+
+            Future<void> runAction(Future<void> Function() action,
+                String nextStatus, String successText) async {
+              setState(() {
+                isUpdating = true;
+              });
+              try {
+                await action();
+                currentStatus = nextStatus;
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(successText),
+                    backgroundColor: AppColors.primary,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              } catch (error) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Action failed: $error'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              } finally {
+                setState(() {
+                  isUpdating = false;
+                });
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20, 20, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Order $orderLabel',
+                          style: AppTextStyles.h4.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Live seller actions for $buyerLabel',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Current status',
+                                style: AppTextStyles.labelMedium,
+                              ),
+                            ),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              child: Chip(
+                                key: ValueKey(currentStatus),
+                                label: Text(currentStatus.toUpperCase()),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _buildOrderDetailRow('Buyer', buyerLabel),
+                        _buildOrderDetailRow(
+                            'Items', '$itemIds.length item(s)'),
+                        _buildOrderDetailRow(
+                            'Total', '₦${totalAmount.toStringAsFixed(0)}'),
+                        _buildOrderDetailRow('Address', shippingAddress),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (isUpdating)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop();
+                            context.pushNamed(
+                              'order-tracking',
+                              pathParameters: {'orderId': orderId},
+                            );
+                          },
+                          icon: const Icon(Icons.visibility_outlined),
+                          label: const Text('Open full order details'),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (['submitted', 'pending', 'draft']
+                                .contains(currentStatus.toLowerCase()))
+                              FilledButton.icon(
+                                onPressed: () => runAction(
+                                  () =>
+                                      fulfillmentService.approveOrder(orderId),
+                                  'approved',
+                                  'Order approved and ready for fulfillment.',
+                                ),
+                                icon: const Icon(Icons.check_circle_outline),
+                                label: const Text('Approve'),
+                              ),
+                            if (['approved', 'processing']
+                                .contains(currentStatus.toLowerCase()))
+                              FilledButton.icon(
+                                onPressed: () => runAction(
+                                  () => fulfillmentService
+                                      .startFulfillment(orderId),
+                                  'processing',
+                                  'Fulfillment started for this order.',
+                                ),
+                                icon: const Icon(Icons.play_arrow_outlined),
+                                label: const Text('Start processing'),
+                              ),
+                            if (['processing', 'packed']
+                                .contains(currentStatus.toLowerCase()))
+                              FilledButton.icon(
+                                onPressed: () => runAction(
+                                  () async {
+                                    await fulfillmentService.markItemsPacked(
+                                      orderId: orderId,
+                                      itemIds: itemIds.isEmpty
+                                          ? ['default-item']
+                                          : itemIds,
+                                    );
+                                  },
+                                  'packed',
+                                  'Items marked as packed and ready for dispatch.',
+                                ),
+                                icon: const Icon(Icons.inventory_2_outlined),
+                                label: const Text('Mark packed'),
+                              ),
+                            if (currentStatus.toLowerCase() == 'packed')
+                              FilledButton.icon(
+                                onPressed: () => runAction(
+                                  () => fulfillmentService.shipOrder(
+                                    orderId: orderId,
+                                    carrier: 'Coop Delivery',
+                                    trackingNumber: 'CD-$orderLabel',
+                                    estimatedDelivery: '2 business days',
+                                  ),
+                                  'shipped',
+                                  'Order shipped with tracking assigned.',
+                                ),
+                                icon: const Icon(Icons.local_shipping_outlined),
+                                label: const Text('Ship order'),
+                              ),
+                            if (currentStatus.toLowerCase() == 'shipped')
+                              FilledButton.icon(
+                                onPressed: () => runAction(
+                                  () =>
+                                      fulfillmentService.markDelivered(orderId),
+                                  'delivered',
+                                  'Order marked delivered to the buyer.',
+                                ),
+                                icon: const Icon(Icons.done_all_rounded),
+                                label: const Text('Mark delivered'),
+                              ),
+                            if (!['delivered', 'cancelled']
+                                .contains(currentStatus.toLowerCase()))
+                              OutlinedButton.icon(
+                                onPressed: () => runAction(
+                                  () => fulfillmentService.cancelOrder(
+                                    orderId: orderId,
+                                    reason:
+                                        'Seller cancelled the order after review.',
+                                  ),
+                                  'cancelled',
+                                  'Order cancelled.',
+                                ),
+                                icon: const Icon(Icons.cancel_outlined),
+                                label: const Text('Cancel'),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildOrderDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              value,
+              style: AppTextStyles.bodySmall.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

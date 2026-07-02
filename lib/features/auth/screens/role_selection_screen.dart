@@ -149,8 +149,9 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   }
 
   Future<void> _skipForNow() async {
-    // Allow users to skip and use as Member by default
-    context.go('/home', extra: {'selectedRole': UserRole.coopMember});
+    if (_isLoading) return;
+    setState(() => _selectedRole = UserRole.coopMember);
+    await _continue();
   }
 
   @override
@@ -169,13 +170,10 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
           ),
         ),
         centerTitle: true,
-        leading: GestureDetector(
-          onTap: _skipForNow,
-          child: const Icon(
-            Icons.close,
-            color: Colors.black,
-            size: 24,
-          ),
+        leading: IconButton(
+          tooltip: 'Continue as a member',
+          onPressed: _isLoading ? null : _skipForNow,
+          icon: const Icon(Icons.close, color: Colors.black, size: 24),
         ),
       ),
       body: SafeArea(
@@ -391,10 +389,10 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                   ),
                   const SizedBox(height: 12),
                   // Skip for now
-                  GestureDetector(
-                    onTap: _skipForNow,
+                  TextButton(
+                    onPressed: _isLoading ? null : _skipForNow,
                     child: Text(
-                      'Skip for now',
+                      'Continue as a member',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,

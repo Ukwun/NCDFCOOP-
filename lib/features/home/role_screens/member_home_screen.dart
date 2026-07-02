@@ -84,6 +84,44 @@ class MemberHomeScreen extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primary,
+                            AppColors.primary.withValues(alpha: 0.84),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome back, ${user?.name.split(' ').first ?? 'member'}',
+                            style: AppTextStyles.h3.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${displayData.tier.toUpperCase()} member • ${displayData.rewardsPoints} points • ${displayData.ordersCount} orders',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: Colors.white.withValues(alpha: 0.92),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   _buildRecentlyBrowsedProductsSection(context, featuredAsync),
 
                   const SizedBox(height: 16),

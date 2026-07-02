@@ -662,6 +662,13 @@ class AppRouter {
           builder: (context, state) => const OrdersScreen(),
         ),
 
+        GoRoute(
+          path: '/profile-orders',
+          name: 'profile-orders',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const OrdersScreen(),
+        ),
+
         // Delivery Tracking Route
         GoRoute(
           path: '/orders/tracking',

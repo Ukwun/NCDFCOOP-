@@ -19,6 +19,18 @@ extension StringExtension on String {
   }
 }
 
+bool shouldShowBuyerActionsForRole(UserRole role) {
+  return role != UserRole.seller;
+}
+
+bool shouldShowProductsUnavailableState({
+  required int visibleProductCount,
+  required bool isLoading,
+  required bool hasError,
+}) {
+  return !isLoading && (hasError || visibleProductCount == 0);
+}
+
 class ProductsListingScreen extends ConsumerStatefulWidget {
   final String title;
   final String? category; // Optional: category filter
@@ -81,6 +93,18 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
       sortOption = newSort;
     });
     ref.read(productFiltersProvider.notifier).setSortBy(newSort);
+  }
+
+  int _crossAxisCountForWidth(double width) {
+    if (width < 600) return 2;
+    if (width < 900) return 3;
+    return 4;
+  }
+
+  double _childAspectRatioForWidth(double width) {
+    if (width < 600) return 0.78;
+    if (width < 900) return 0.82;
+    return 0.88;
   }
 
   bool _isSellerMarketplaceProduct(Product product) {
@@ -577,28 +601,46 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
             .where((product) => _canCurrentRoleSeeProduct(product, role))
             .toList();
 
-        if (visibleProducts.isEmpty) {
-          return SizedBox(
-            height: 300,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_basket_outlined,
-                      size: 48, color: AppColors.muted),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No products found',
-                    style: AppTextStyles.h4.copyWith(color: AppColors.text),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Try adjusting your filters',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.muted),
-                  ),
-                ],
-              ),
+        if (shouldShowProductsUnavailableState(
+          visibleProductCount: visibleProducts.length,
+          isLoading: false,
+          hasError: false,
+        )) {
+          return Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.inventory_2_outlined,
+                    size: 48, color: AppColors.primary),
+                const SizedBox(height: 16),
+                Text(
+                  'No products are currently available',
+                  style: AppTextStyles.h4.copyWith(color: AppColors.text),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'The catalog is temporarily empty or the current filters do not match any live inventory.',
+                  style:
+                      AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () {
+                    ref.read(productFiltersProvider.notifier).reset();
+                    ref.invalidate(productsByFiltersProvider);
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh catalog'),
+                ),
+              ],
             ),
           );
         }
@@ -606,18 +648,29 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
         if (viewType == 'grid') {
           return Padding(
             padding: const EdgeInsets.all(16),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 16,
-              ),
-              itemCount: visibleProducts.length,
-              itemBuilder: (context, index) {
-                return _buildProductCard(visibleProducts[index], ref);
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount = _crossAxisCountForWidth(
+                  constraints.maxWidth,
+                );
+                final aspectRatio = _childAspectRatioForWidth(
+                  constraints.maxWidth,
+                );
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: aspectRatio,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: visibleProducts.length,
+                  itemBuilder: (context, index) {
+                    return _buildProductCard(visibleProducts[index], ref);
+                  },
+                );
               },
             ),
           );
@@ -642,129 +695,42 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
         ),
       ),
       error: (error, stackTrace) {
-        // Show mock products on error as fallback
-        final mockProducts = [
-          Product(
-            id: 'mock_001',
-            name: 'Premium Rice 50kg',
-            retailPrice: 22000.0,
-            wholesalePrice: 19800.0,
-            contractPrice: 18000.0,
-            description: 'High quality long grain rice',
-            imageUrl: 'https://picsum.photos/300/300?random=1',
-            categoryId: 'grains',
-            stock: 100,
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
           ),
-          Product(
-            id: 'mock_002',
-            name: 'Palm Oil 25L',
-            retailPrice: 45000.0,
-            wholesalePrice: 40500.0,
-            contractPrice: 40000.0,
-            description: 'Premium edible palm oil',
-            imageUrl: 'https://picsum.photos/300/300?random=2',
-            categoryId: 'oils',
-            stock: 50,
-          ),
-          Product(
-            id: 'mock_003',
-            name: 'Black Beans 20kg',
-            retailPrice: 15000.0,
-            wholesalePrice: 13500.0,
-            contractPrice: 12000.0,
-            description: 'Quality black beans',
-            imageUrl: 'https://picsum.photos/300/300?random=3',
-            categoryId: 'legumes',
-            stock: 75,
-          ),
-          Product(
-            id: 'mock_004',
-            name: 'White Sugar 25kg',
-            retailPrice: 28000.0,
-            wholesalePrice: 25200.0,
-            contractPrice: 24000.0,
-            description: 'Pure white granulated sugar',
-            imageUrl: 'https://picsum.photos/300/300?random=4',
-            categoryId: 'sweeteners',
-            stock: 60,
-          ),
-          Product(
-            id: 'mock_005',
-            name: 'Garlic Powder 500g',
-            retailPrice: 3500.0,
-            wholesalePrice: 3150.0,
-            contractPrice: 3000.0,
-            description: 'Premium garlic powder',
-            imageUrl: 'https://picsum.photos/300/300?random=5',
-            categoryId: 'spices',
-            stock: 120,
-          ),
-          Product(
-            id: 'mock_006',
-            name: 'Tomato Paste 1kg',
-            retailPrice: 5000.0,
-            wholesalePrice: 4500.0,
-            contractPrice: 4200.0,
-            description: 'Rich tomato paste',
-            imageUrl: 'https://picsum.photos/300/300?random=6',
-            categoryId: 'condiments',
-            stock: 90,
-          ),
-          Product(
-            id: 'mock_007',
-            name: 'Onion Powder 300g',
-            retailPrice: 2800.0,
-            wholesalePrice: 2520.0,
-            contractPrice: 2400.0,
-            description: 'Fine onion powder seasoning',
-            imageUrl: 'https://picsum.photos/300/300?random=7',
-            categoryId: 'spices',
-            stock: 110,
-          ),
-          Product(
-            id: 'mock_008',
-            name: 'Chicken Seasoning 250g',
-            retailPrice: 3200.0,
-            wholesalePrice: 2880.0,
-            contractPrice: 2700.0,
-            description: 'Delicious chicken seasoning',
-            imageUrl: 'https://picsum.photos/300/300?random=8',
-            categoryId: 'spices',
-            stock: 95,
-          ),
-        ];
-
-        if (viewType == 'grid') {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 16,
+          child: Column(
+            children: [
+              Icon(Icons.signal_wifi_connected_no_internet_4_outlined,
+                  size: 48, color: AppColors.primary),
+              const SizedBox(height: 16),
+              Text(
+                'We could not load the catalog right now',
+                style: AppTextStyles.h4.copyWith(color: AppColors.text),
+                textAlign: TextAlign.center,
               ),
-              itemCount: mockProducts.length,
-              itemBuilder: (context, index) {
-                return _buildProductCard(mockProducts[index], ref);
-              },
-            ),
-          );
-        } else {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: mockProducts.map((product) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildProductListItem(product, ref),
-                );
-              }).toList(),
-            ),
-          );
-        }
+              const SizedBox(height: 8),
+              Text(
+                'Please check your connection and try again. If the issue continues, the team will be notified automatically.',
+                style:
+                    AppTextStyles.bodyMedium.copyWith(color: AppColors.muted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  ref.invalidate(productsByFiltersProvider);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry loading catalog'),
+              ),
+            ],
+          ),
+        );
       },
     );
   }
@@ -775,6 +741,8 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
       productInventoryStatusProvider(product.id),
     );
     final isFavorite = ref.watch(wl.isProductInWishlistProvider(product.id));
+    final role = ref.watch(currentRoleProvider);
+    final showBuyerActions = shouldShowBuyerActionsForRole(role);
 
     return GestureDetector(
       onTap: () {
@@ -934,44 +902,45 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildFavoriteButton(
-                              product: product,
-                              isFavorite: isFavorite,
-                              size: 26,
-                              iconSize: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            GestureDetector(
-                              onTap: product.stock > 0
-                                  ? () async {
-                                      await _addProductToCart(product);
-                                    }
-                                  : null,
-                              onLongPress: () {
-                                _toggleFavorite(product);
-                              },
-                              child: Container(
-                                width: 26,
-                                height: 26,
-                                decoration: BoxDecoration(
-                                  color: product.stock > 0
-                                      ? AppColors.primary
-                                      : AppColors.muted,
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.sm),
-                                ),
-                                child: Icon(
-                                  Icons.add,
-                                  color: AppColors.surface,
-                                  size: 16,
+                        if (showBuyerActions)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildFavoriteButton(
+                                product: product,
+                                isFavorite: isFavorite,
+                                size: 26,
+                                iconSize: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: product.stock > 0
+                                    ? () async {
+                                        await _addProductToCart(product);
+                                      }
+                                    : null,
+                                onLongPress: () {
+                                  _toggleFavorite(product);
+                                },
+                                child: Container(
+                                  width: 26,
+                                  height: 26,
+                                  decoration: BoxDecoration(
+                                    color: product.stock > 0
+                                        ? AppColors.primary
+                                        : AppColors.muted,
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.sm),
+                                  ),
+                                  child: Icon(
+                                    Icons.add,
+                                    color: AppColors.surface,
+                                    size: 16,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                       ],
                     ),
                   ],
@@ -990,6 +959,8 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
       productInventoryStatusProvider(product.id),
     );
     final isFavorite = ref.watch(wl.isProductInWishlistProvider(product.id));
+    final role = ref.watch(currentRoleProvider);
+    final showBuyerActions = shouldShowBuyerActionsForRole(role);
 
     return GestureDetector(
       onTap: () {
@@ -1115,7 +1086,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                       spacing: 8,
                       children: [
                         Text(
-                          '��${product.retailPrice.toStringAsFixed(0)}',
+                          '₦${product.retailPrice.toStringAsFixed(0)}',
                           style: AppTextStyles.h4.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w700,
@@ -1154,46 +1125,47 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
             ),
 
             // Action Buttons
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildFavoriteButton(
-                    product: product,
-                    isFavorite: isFavorite,
-                    size: 32,
-                    iconSize: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: product.stock > 0
-                        ? () async {
-                            await _addProductToCart(product);
-                          }
-                        : null,
-                    onLongPress: () {
-                      _toggleFavorite(product);
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: product.stock > 0
-                            ? AppColors.primary
-                            : AppColors.muted,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Icon(
-                        Icons.add,
-                        color: AppColors.surface,
-                        size: 18,
+            if (showBuyerActions)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildFavoriteButton(
+                      product: product,
+                      isFavorite: isFavorite,
+                      size: 32,
+                      iconSize: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: product.stock > 0
+                          ? () async {
+                              await _addProductToCart(product);
+                            }
+                          : null,
+                      onLongPress: () {
+                        _toggleFavorite(product);
+                      },
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: product.stock > 0
+                              ? AppColors.primary
+                              : AppColors.muted,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          color: AppColors.surface,
+                          size: 18,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

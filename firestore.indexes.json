@@ -2,7 +2,7 @@
   "indexes": [
     {
       "collectionGroup": "products",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "category",
@@ -16,7 +16,7 @@
     },
     {
       "collectionGroup": "products",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "isMemberExclusive",
@@ -30,7 +30,7 @@
     },
     {
       "collectionGroup": "products",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "status",
@@ -44,7 +44,7 @@
     },
     {
       "collectionGroup": "orders",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "userId",
@@ -58,7 +58,7 @@
     },
     {
       "collectionGroup": "orders",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "status",
@@ -72,7 +72,7 @@
     },
     {
       "collectionGroup": "user_activities",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "userId",
@@ -86,7 +86,7 @@
     },
     {
       "collectionGroup": "user_activities",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "userId",
@@ -104,7 +104,7 @@
     },
     {
       "collectionGroup": "reviews",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "productId",
@@ -118,7 +118,7 @@
     },
     {
       "collectionGroup": "reviews",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "productId",
@@ -132,7 +132,7 @@
     },
     {
       "collectionGroup": "cart_items",
-      "queryScope": "Collection",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "userId",
@@ -152,7 +152,7 @@
       "indexes": [
         {
           "order": "ASCENDING",
-          "queryScope": "Collection"
+          "queryScope": "COLLECTION"
         }
       ]
     },
@@ -162,11 +162,11 @@
       "indexes": [
         {
           "order": "ASCENDING",
-          "queryScope": "Collection"
+          "queryScope": "COLLECTION"
         },
         {
           "order": "DESCENDING",
-          "queryScope": "Collection"
+          "queryScope": "COLLECTION"
         }
       ]
     },
@@ -176,7 +176,7 @@
       "indexes": [
         {
           "order": "ASCENDING",
-          "queryScope": "Collection"
+          "queryScope": "COLLECTION"
         }
       ]
     }

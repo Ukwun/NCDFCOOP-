@@ -191,6 +191,38 @@ class SellerProduct {
       'rejectedAt': rejectedAt != null ? Timestamp.fromDate(rejectedAt!) : null,
     };
   }
+
+  Map<String, dynamic> toMarketplaceProductMap({required String productId}) {
+    final retailPriceValue = retailPrice ?? price;
+    final wholesalePriceValue = wholesalePrice ?? price;
+
+    return {
+      'id': productId,
+      'name': productName,
+      'description': description,
+      'retailPrice': retailPriceValue,
+      'wholesalePrice': wholesalePriceValue,
+      'contractPrice': wholesalePriceValue,
+      'categoryId': category,
+      'imageUrl': imageUrl,
+      'stock': quantity,
+      'minimumOrderQuantity': moq,
+      'rating': 0.0,
+      'visibleToRetail': audience != ProductAudience.wholesale,
+      'visibleToWholesale': audience != ProductAudience.retail,
+      'visibleToInstitutions': false,
+      'franchiseId': 'seller_marketplace',
+      'uploadedBy': sellerUserId ?? sellerId,
+      'colors': const <String>[],
+      'is_active': status == ProductApprovalStatus.approved,
+      'created_at': Timestamp.fromDate(createdAt),
+      'updated_at': Timestamp.fromDate(DateTime.now()),
+      'sellerProfileId': sellerProfileId,
+      'sellerId': sellerId,
+      'status': status.name,
+      'name_lower': productName.toLowerCase(),
+    };
+  }
 }
 
 /// Product approval/moderation request

@@ -256,17 +256,12 @@ class AuthController extends AsyncNotifier<void> {
           'Your secure session has expired. Please sign in again.');
     }
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.id)
-        .set(
-      {
-        'marketplaceRole': selectedRole.name,
-        'roleSelectionCompleted': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    await _persistRoleSelection(
+      userId: currentUser.id,
+      email: currentUser.email,
+      name: currentUser.name,
+      role: selectedRole,
+    ).timeout(const Duration(seconds: 12));
 
     // Update user's roles to include the selected role + mark role selection as completed
     final updatedUser = currentUser.copyWith(
@@ -289,66 +284,80 @@ class AuthController extends AsyncNotifier<void> {
     });
     print('✅ Persistence save scheduled (non-blocking)');
 
-    // Step 3: Create Firestore profiles based on role
-    // AWAIT these with timeout so profile exists when user navigates
-    if (selectedRole == UserRole.coopMember) {
-      try {
-        await _createMemberProfile(
-                currentUser.id, currentUser.email, currentUser.name)
-            .timeout(const Duration(seconds: 8));
-        print('✅ Member profile created');
-      } catch (e) {
-        print('⚠️ Warning: Member profile creation failed or timed out: $e');
-        // Don't rethrow - allow role selection to continue even if profile creation fails
-      }
-    } else if (selectedRole == UserRole.seller) {
-      try {
-        await _createSellerProfile(
-                currentUser.id, currentUser.email, currentUser.name)
-            .timeout(const Duration(seconds: 8));
-        print('✅ Seller profile created');
-      } catch (e) {
-        print('⚠️ Warning: Seller profile creation failed or timed out: $e');
-      }
-    } else if (selectedRole == UserRole.institutionalBuyer) {
-      try {
-        await _createInstitutionalBuyerProfile(
-                currentUser.id, currentUser.email, currentUser.name)
-            .timeout(const Duration(seconds: 8));
-        print('✅ Institutional buyer profile created');
-      } catch (e) {
-        print(
-            '⚠️ Warning: Institutional buyer profile creation failed or timed out: $e');
-        // Don't rethrow - allow role selection to continue
-      }
-    }
-
     print('✅ Role selection completed: ${selectedRole.name}');
-    // Function now returns after profile is created (or timeout)
   }
 
-  Future<void> _createSellerProfile(
-      String userId, String email, String name) async {
-    try {
-      final firestore = FirebaseFirestore.instance;
+  Future<void> _persistRoleSelection({
+    required String userId,
+    required String email,
+    required String name,
+    required UserRole role,
+  }) async {
+    final firestore = FirebaseFirestore.instance;
+    final batch = firestore.batch();
+    final now = FieldValue.serverTimestamp();
 
-      await firestore.collection('seller_profiles').doc(userId).set({
-        'userId': userId,
-        'email': email,
-        'businessName': name.isEmpty ? 'My Store' : '$name Store',
-        'sellerType': 'individual',
-        'sellingPath': 'member',
-        'country': 'NG',
-        'category': 'agriculture',
-        'targetCustomer': 'individual',
-        'isVerified': false,
-        'createdAt': Timestamp.now(),
-        'updatedAt': Timestamp.now(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      print('❌ Seller profile creation failed: $e');
-      rethrow;
+    batch.set(
+      firestore.collection('users').doc(userId),
+      {
+        'marketplaceRole': role.name,
+        'roleSelectionCompleted': true,
+        'updatedAt': now,
+      },
+      SetOptions(merge: true),
+    );
+
+    if (role == UserRole.seller) {
+      batch.set(
+        firestore.collection('sellers').doc(userId),
+        {
+          'userId': userId,
+          'email': email,
+          'businessName':
+              name.trim().isEmpty ? 'My Store' : '${name.trim()} Store',
+          'sellerType': 'individual',
+          'sellingPath': 'member',
+          'country': 'Nigeria',
+          'category': '',
+          'targetCustomer': 'individual',
+          'isVerified': false,
+          'createdAt': now,
+          'updatedAt': now,
+        },
+        SetOptions(merge: true),
+      );
+    } else if (role == UserRole.coopMember) {
+      batch.set(
+        firestore.collection('members').doc(userId),
+        {
+          'userId': userId,
+          'email': email,
+          'name': name,
+          'tier': 'bronze',
+          'loyaltyPoints': 0,
+          'totalSpent': 0.0,
+          'joiningDate': now,
+          'membershipStatus': 'active',
+        },
+        SetOptions(merge: true),
+      );
+    } else if (role == UserRole.wholesaleBuyer) {
+      batch.set(
+        firestore.collection('wholesale_buyers').doc(userId),
+        {
+          'userId': userId,
+          'email': email,
+          'name': name,
+          'businessName': '',
+          'verificationStatus': 'pending',
+          'createdAt': now,
+          'updatedAt': now,
+        },
+        SetOptions(merge: true),
+      );
     }
+
+    await batch.commit();
   }
 
   /// Create member profile in Firestore when user selects Member role

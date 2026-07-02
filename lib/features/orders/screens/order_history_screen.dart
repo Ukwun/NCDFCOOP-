@@ -1,197 +1,107 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
-import 'package:coop_commerce/widgets/product_image.dart';
+import 'package:coop_commerce/core/providers/order_providers.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/providers/cart_provider.dart';
+import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
 
-enum OrderStatus {
-  pending,
-  processing,
-  shipped,
-  delivered,
-  cancelled,
+class OrderHistoryScreen extends ConsumerStatefulWidget {
+  const OrderHistoryScreen({super.key});
+
+  @override
+  ConsumerState<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
 }
 
-extension OrderStatusExt on OrderStatus {
-  String get displayName {
-    switch (this) {
-      case OrderStatus.pending:
-        return '⏳ Pending';
-      case OrderStatus.processing:
-        return '📦 Processing';
-      case OrderStatus.shipped:
-        return '🚚 Shipped';
-      case OrderStatus.delivered:
-        return '✅ Delivered';
-      case OrderStatus.cancelled:
-        return '❌ Cancelled';
-    }
-  }
+class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
+  String _selectedStatus = 'all';
 
-  Color get statusColor {
-    switch (this) {
-      case OrderStatus.pending:
-        return Colors.orange;
-      case OrderStatus.processing:
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return Colors.green;
+      case 'shipped':
+      case 'packed':
+      case 'processing':
         return Colors.blue;
-      case OrderStatus.shipped:
-        return Colors.purple;
-      case OrderStatus.delivered:
-        return AppColors.primary;
-      case OrderStatus.cancelled:
+      case 'cancelled':
+      case 'returned':
         return AppColors.error;
+      case 'submitted':
+      case 'approved':
+      case 'pending':
+      default:
+        return Colors.orange;
     }
   }
-}
 
-class OrderItem {
-  final String orderId;
-  final String orderDate;
-  final double totalAmount;
-  final OrderStatus status;
-  final List<OrderProduct> products;
-  final String deliveryAddress;
-  final String? trackingNumber;
-
-  OrderItem({
-    required this.orderId,
-    required this.orderDate,
-    required this.totalAmount,
-    required this.status,
-    required this.products,
-    required this.deliveryAddress,
-    this.trackingNumber,
-  });
-}
-
-class OrderProduct {
-  final String name;
-  final int quantity;
-  final double price;
-  final String imageUrl;
-
-  OrderProduct({
-    required this.name,
-    required this.quantity,
-    required this.price,
-    required this.imageUrl,
-  });
-}
-
-class OrderHistoryScreen extends StatefulWidget {
-  final List<OrderItem>? mockOrders;
-
-  const OrderHistoryScreen({super.key, this.mockOrders});
-
-  @override
-  State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
-}
-
-class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
-  late List<OrderItem> orders;
-  OrderStatus? selectedFilter;
-
-  @override
-  void initState() {
-    super.initState();
-    orders = widget.mockOrders ??
-        [
-          OrderItem(
-            orderId: 'ORD-2026-001',
-            orderDate: 'Feb 14, 2026',
-            totalAmount: 15650,
-            status: OrderStatus.delivered,
-            products: [
-              OrderProduct(
-                name: 'Premium Basmati Rice (5kg)',
-                quantity: 2,
-                price: 6800,
-                imageUrl:
-                    'https://images.unsplash.com/photo-1638551112442-20fcf9f96f64?w=100&h=100&fit=crop',
-              ),
-              OrderProduct(
-                name: 'Organic Sugar (2kg)',
-                quantity: 1,
-                price: 2500,
-                imageUrl:
-                    'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=100&h=100&fit=crop',
-              ),
-            ],
-            deliveryAddress: '123 Lagos Street, Victoria Island, Lagos',
-            trackingNumber: 'TRK-2026-001-ABC',
-          ),
-          OrderItem(
-            orderId: 'ORD-2026-002',
-            orderDate: 'Feb 10, 2026',
-            totalAmount: 8200,
-            status: OrderStatus.shipped,
-            products: [
-              OrderProduct(
-                name: 'Ground Pepper (500g)',
-                quantity: 1,
-                price: 8200,
-                imageUrl:
-                    'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=100&h=100&fit=crop',
-              ),
-            ],
-            deliveryAddress: '456 Abuja Road, Central Area, Abuja',
-            trackingNumber: 'TRK-2026-002-XYZ',
-          ),
-          OrderItem(
-            orderId: 'ORD-2026-003',
-            orderDate: 'Feb 5, 2026',
-            totalAmount: 3800,
-            status: OrderStatus.processing,
-            products: [
-              OrderProduct(
-                name: 'Cooking Oil (1L)',
-                quantity: 1,
-                price: 3800,
-                imageUrl:
-                    'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=100&h=100&fit=crop',
-              ),
-            ],
-            deliveryAddress: '789 Kano Street, Kano City, Kano',
-            trackingNumber: null,
-          ),
-          OrderItem(
-            orderId: 'ORD-2026-004',
-            orderDate: 'Jan 28, 2026',
-            totalAmount: 12500,
-            status: OrderStatus.cancelled,
-            products: [
-              OrderProduct(
-                name: 'Tomato Paste (2kg)',
-                quantity: 2,
-                price: 6250,
-                imageUrl:
-                    'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=100&h=100&fit=crop',
-              ),
-            ],
-            deliveryAddress: '321 Enugu Avenue, Enugu, Enugu',
-            trackingNumber: null,
-          ),
-        ];
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return 'Delivered';
+      case 'shipped':
+        return 'Shipped';
+      case 'packed':
+        return 'Packed';
+      case 'processing':
+        return 'Processing';
+      case 'submitted':
+        return 'Pending';
+      case 'approved':
+        return 'Approved';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'returned':
+        return 'Returned';
+      default:
+        return status.isEmpty ? 'Pending' : status.toUpperCase();
+    }
   }
 
-  List<OrderItem> get filteredOrders {
-    if (selectedFilter == null) return orders;
-    return orders.where((order) => order.status == selectedFilter).toList();
-  }
+  String _formatDate(DateTime date) => DateFormat('MMM d, yyyy').format(date);
 
-  void _reorderItems(OrderItem order) {
+  Future<void> _reorderItems(OrderData order) async {
+    final cartNotifier = ref.read(cartProvider.notifier);
+
+    for (final item in order.items) {
+      await cartNotifier.addItem(
+        CartItem(
+          id: '${item.productId}-${DateTime.now().microsecondsSinceEpoch}',
+          productId: item.productId,
+          productName: item.name,
+          memberPrice: item.price,
+          marketPrice: item.price,
+          quantity: item.quantity,
+        ),
+      );
+    }
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content:
-            Text('🛒 Added ${order.products.length} items from order to cart'),
+            Text('🛒 Added ${order.items.length} item(s) back to your cart'),
         backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 2),
       ),
     );
-    // TODO: Add items to cart programmatically
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Order History')),
+        body: const Center(child: Text('Please sign in to view your orders.')),
+      );
+    }
+
+    final ordersAsync = ref.watch(userOrdersProvider(user.id));
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -213,57 +123,72 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       ),
       body: Column(
         children: [
-          // Filter chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                // All orders chip
-                FilterChip(
-                  label: const Text('All Orders'),
-                  selected: selectedFilter == null,
-                  onSelected: (selected) {
-                    setState(() => selectedFilter = null);
-                  },
-                  backgroundColor: Colors.grey[200],
-                  selectedColor: AppColors.primary.withOpacity(0.3),
-                ),
-                const SizedBox(width: 8),
-                // Status filter chips
-                ...OrderStatus.values.map(
-                  (status) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(status.displayName),
-                      selected: selectedFilter == status,
-                      onSelected: (selected) {
-                        setState(
-                          () => selectedFilter = selected ? status : null,
-                        );
-                      },
-                      backgroundColor: Colors.grey[200],
-                      selectedColor: status.statusColor.withOpacity(0.3),
-                    ),
-                  ),
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('All Orders', 'all'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Pending', 'pending'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Processing', 'processing'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Delivered', 'delivered'),
+                ],
+              ),
             ),
           ),
-
-          // Orders list
           Expanded(
-            child: filteredOrders.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: filteredOrders.length,
-                    itemBuilder: (context, index) =>
-                        _buildOrderCard(filteredOrders[index]),
-                  ),
+            child: ordersAsync.when(
+              data: (orders) {
+                final filteredOrders = orders.where((order) {
+                  if (_selectedStatus == 'all') return true;
+                  if (_selectedStatus == 'pending') {
+                    return ['draft', 'submitted', 'approved', 'pending']
+                        .contains(order.status.toLowerCase());
+                  }
+                  if (_selectedStatus == 'processing') {
+                    return ['processing', 'packed', 'shipped']
+                        .contains(order.status.toLowerCase());
+                  }
+                  return order.status.toLowerCase() == _selectedStatus;
+                }).toList();
+
+                if (filteredOrders.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredOrders.length,
+                  itemBuilder: (context, index) =>
+                      _buildOrderCard(filteredOrders[index]),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('Unable to load orders right now: $error'),
+                ),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _selectedStatus == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _selectedStatus = value),
+      backgroundColor: Colors.grey[200],
+      selectedColor: AppColors.primary.withOpacity(0.3),
     );
   }
 
@@ -272,36 +197,31 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.inbox_outlined,
-            size: 80,
-            color: Colors.grey[300],
-          ),
+          Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'No Orders Found',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+              color: Colors.grey,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            selectedFilter != null
-                ? 'No orders with this status'
-                : 'Start shopping to see orders here',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+          const Text(
+            'Your recent purchases will appear here once checkout is complete.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOrderCard(OrderItem order) {
+  Widget _buildOrderCard(OrderData order) {
+    final statusColor = _statusColor(order.status);
+    final statusLabel = _statusLabel(order.status);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -311,7 +231,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -324,105 +243,101 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Order #${order.orderId}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order #${order.orderId.substring(0, 8).toUpperCase()}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      order.orderDate,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatDate(order.createdAt),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: order.status.statusColor.withOpacity(0.15),
+                    color: statusColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    order.status.displayName,
+                    statusLabel,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: order.status.statusColor,
+                      color: statusColor,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
-          // Products
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ...order.products.map(
-                  (product) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: ProductImage(
-                            imageUrl: product.imageUrl,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                ...order.items.take(3).map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              Text(
-                                '${product.quantity}x @ ₦${product.price.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
+                              child: const Icon(
+                                Icons.shopping_bag_outlined,
+                                color: AppColors.primary,
+                                size: 20,
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${item.quantity}x @ ₦${item.price.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
               ],
             ),
           ),
-
-          // Divider
           Divider(color: Colors.grey[200], height: 1),
-
-          // Footer info
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -433,10 +348,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   children: [
                     Text(
                       'Total Amount',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     Text(
                       '₦${order.totalAmount.toStringAsFixed(0)}',
@@ -449,56 +361,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (order.trackingNumber != null) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Tracking #',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        order.trackingNumber!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
                 Text(
-                  order.deliveryAddress,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                    height: 1.4,
-                  ),
+                  order.shippingAddress,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
-
-          // Action buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('📊 Order details: ${order.orderId}'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
+                    onPressed: () => context.pushNamed(
+                      'order-tracking',
+                      pathParameters: {'orderId': order.orderId},
+                    ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.primary),
                     ),
