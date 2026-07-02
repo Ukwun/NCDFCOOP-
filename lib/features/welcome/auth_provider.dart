@@ -301,6 +301,15 @@ class AuthController extends AsyncNotifier<void> {
         print('⚠️ Warning: Member profile creation failed or timed out: $e');
         // Don't rethrow - allow role selection to continue even if profile creation fails
       }
+    } else if (selectedRole == UserRole.seller) {
+      try {
+        await _createSellerProfile(
+                currentUser.id, currentUser.email, currentUser.name)
+            .timeout(const Duration(seconds: 8));
+        print('✅ Seller profile created');
+      } catch (e) {
+        print('⚠️ Warning: Seller profile creation failed or timed out: $e');
+      }
     } else if (selectedRole == UserRole.institutionalBuyer) {
       try {
         await _createInstitutionalBuyerProfile(
@@ -316,6 +325,30 @@ class AuthController extends AsyncNotifier<void> {
 
     print('✅ Role selection completed: ${selectedRole.name}');
     // Function now returns after profile is created (or timeout)
+  }
+
+  Future<void> _createSellerProfile(
+      String userId, String email, String name) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+
+      await firestore.collection('seller_profiles').doc(userId).set({
+        'userId': userId,
+        'email': email,
+        'businessName': name.isEmpty ? 'My Store' : '$name Store',
+        'sellerType': 'individual',
+        'sellingPath': 'member',
+        'country': 'NG',
+        'category': 'agriculture',
+        'targetCustomer': 'individual',
+        'isVerified': false,
+        'createdAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('❌ Seller profile creation failed: $e');
+      rethrow;
+    }
   }
 
   /// Create member profile in Firestore when user selects Member role

@@ -23,6 +23,13 @@ extension UserRoleX on UserRole {
     UserRole.wholesaleBuyer,
   };
 
+  /// The public onboarding flow exposes these three roles in a consistent order.
+  static const List<UserRole> visibleRoles = [
+    UserRole.seller,
+    UserRole.coopMember,
+    UserRole.wholesaleBuyer,
+  ];
+
   bool get isSupported => supportedRoles.contains(this);
 
   /// Display name for UI

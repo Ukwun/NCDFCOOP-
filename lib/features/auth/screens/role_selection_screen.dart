@@ -31,59 +31,68 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   UserRole? _selectedRole;
   bool _isLoading = false;
 
-  final List<_RoleOptionModel> roleOptions = [
-    _RoleOptionModel(
-      role: UserRole.coopMember,
-      title: '👤 Member',
-      subtitle: 'Shop and save with member benefits',
-      description:
-          'Become a member and enjoy exclusive benefits. Upgrade to Premium Member for even more rewards. Add and save money in your account for easier checkout.',
-      benefits: [
-        '✓ Member pricing',
-        '✓ Add money to account',
-        '✓ Save money in account',
-        '✓ Upgrade to Premium Member',
-        '✓ Loyalty rewards',
-        '✓ Priority support',
-      ],
-      color: const Color(0xFF8B6F47),
-      icon: Icons.person_outlined,
-    ),
-    _RoleOptionModel(
-      role: UserRole.wholesaleBuyer,
-      title: '🛒 Wholesale Buyer',
-      subtitle: 'Buy in bulk with wholesale pricing',
-      description:
-          'For businesses, resellers, and bulk buyers. Get wholesale pricing, bulk discounts, flexible payment terms, and dedicated support.',
-      benefits: [
-        '✓ Wholesale bulk pricing',
-        '✓ Add money to account',
-        '✓ Multiple delivery locations',
-        '✓ Flexible payment terms',
-        '✓ Dedicated account manager',
-        '✓ Invoice billing available',
-      ],
-      color: const Color(0xFF2E5090),
-      icon: Icons.shopping_cart_outlined,
-    ),
-    _RoleOptionModel(
-      role: UserRole.seller,
-      title: '🚀 Start Selling Now',
-      subtitle: 'Become a seller and reach customers',
-      description:
-          'Start your selling journey. List products, manage inventory, and sell to Members and Wholesale Buyers. Grow your business on our platform.',
-      benefits: [
-        '✓ Sell to Members',
-        '✓ Sell to Wholesale Buyers',
-        '✓ Inventory management',
-        '✓ Sales analytics',
-        '✓ Marketing tools',
-        '✓ Seller support',
-      ],
-      color: const Color(0xFF1A4E00),
-      icon: Icons.store_outlined,
-    ),
-  ];
+  final List<_RoleOptionModel> roleOptions = UserRoleX.visibleRoles.map((role) {
+    switch (role) {
+      case UserRole.coopMember:
+        return _RoleOptionModel(
+          role: role,
+          title: '👤 Member',
+          subtitle: 'Shop and save with member benefits',
+          description:
+              'Become a member and enjoy exclusive savings, loyalty rewards, and a seamless checkout experience.',
+          benefits: const [
+            '✓ Member pricing',
+            '✓ Savings wallet',
+            '✓ Priority support',
+            '✓ Premium upgrades',
+          ],
+          color: const Color(0xFF8B6F47),
+          icon: Icons.person_outlined,
+        );
+      case UserRole.wholesaleBuyer:
+        return _RoleOptionModel(
+          role: role,
+          title: '🛒 Wholesale Buyer',
+          subtitle: 'Buy in bulk with wholesale pricing',
+          description:
+              'For businesses, resellers, and bulk buyers. Access wholesale pricing and better procurement workflows.',
+          benefits: const [
+            '✓ Bulk pricing',
+            '✓ Flexible orders',
+            '✓ Fast reordering',
+            '✓ Dedicated support',
+          ],
+          color: const Color(0xFF2E5090),
+          icon: Icons.shopping_cart_outlined,
+        );
+      case UserRole.seller:
+        return _RoleOptionModel(
+          role: role,
+          title: '🚀 Start Selling Now',
+          subtitle: 'Become a seller and reach customers',
+          description:
+              'List products, manage inventory, and serve Members and Wholesale Buyers from a single modern storefront.',
+          benefits: const [
+            '✓ Product uploads',
+            '✓ Inventory control',
+            '✓ Sales insights',
+            '✓ Buyer outreach',
+          ],
+          color: const Color(0xFF1A4E00),
+          icon: Icons.store_outlined,
+        );
+      default:
+        return _RoleOptionModel(
+          role: role,
+          title: role.displayName,
+          subtitle: 'Personalized workspace',
+          description: 'This role is part of the live marketplace experience.',
+          benefits: const ['✓ Personalized access'],
+          color: const Color(0xFF1A4E00),
+          icon: Icons.account_circle_outlined,
+        );
+    }
+  }).toList();
 
   void _selectRole(UserRole role) {
     setState(() => _selectedRole = role);

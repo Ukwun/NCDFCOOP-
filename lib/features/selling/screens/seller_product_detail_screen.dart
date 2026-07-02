@@ -65,9 +65,11 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
 
   late final TextEditingController _nameController;
   late final TextEditingController _priceController;
+  late final TextEditingController _wholesalePriceController;
   late final TextEditingController _quantityController;
   late final TextEditingController _moqController;
   late final TextEditingController _descriptionController;
+  late ProductAudience _audience;
   bool _isSaving = false;
 
   @override
@@ -76,17 +78,23 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
     _nameController = TextEditingController(text: widget.product.productName);
     _priceController =
         TextEditingController(text: widget.product.price.toStringAsFixed(2));
+    _wholesalePriceController = TextEditingController(
+      text: (widget.product.wholesalePrice ?? widget.product.price)
+          .toStringAsFixed(2),
+    );
     _quantityController =
         TextEditingController(text: widget.product.quantity.toString());
     _moqController = TextEditingController(text: widget.product.moq.toString());
     _descriptionController =
         TextEditingController(text: widget.product.description);
+    _audience = widget.product.audience;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _priceController.dispose();
+    _wholesalePriceController.dispose();
     _quantityController.dispose();
     _moqController.dispose();
     _descriptionController.dispose();
@@ -151,6 +159,48 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
                   final parsed = double.tryParse((value ?? '').trim());
                   if (parsed == null || parsed <= 0) {
                     return 'Enter a valid price';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<ProductAudience>(
+                value: _audience,
+                decoration: const InputDecoration(
+                  labelText: 'Audience',
+                  border: OutlineInputBorder(),
+                ),
+                items: ProductAudience.values
+                    .map(
+                      (audience) => DropdownMenuItem(
+                        value: audience,
+                        child: Text(audience.displayName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: widget.editable
+                    ? (value) {
+                        if (value != null) {
+                          setState(() => _audience = value);
+                        }
+                      }
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              _buildField(
+                label: 'Wholesale price (NGN)',
+                controller: _wholesalePriceController,
+                enabled: widget.editable,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  final parsed = double.tryParse((value ?? '').trim());
+                  if (parsed == null || parsed <= 0) {
+                    return 'Enter a valid wholesale price';
+                  }
+                  final retail = double.tryParse(_priceController.text.trim());
+                  if (retail != null && parsed > retail) {
+                    return 'Wholesale price cannot exceed retail price';
                   }
                   return null;
                 },
@@ -266,6 +316,9 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
 
     setState(() => _isSaving = true);
     try {
+      final retailPrice = double.parse(_priceController.text.trim());
+      final wholesalePrice =
+          double.parse(_wholesalePriceController.text.trim());
       final updated = SellerProduct(
         id: widget.product.id,
         sellerId: widget.product.sellerId,
@@ -273,10 +326,10 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
         sellerProfileId: widget.product.sellerProfileId,
         productName: _nameController.text.trim(),
         category: widget.product.category,
-        price: double.parse(_priceController.text.trim()),
-        retailPrice: widget.product.retailPrice,
-        wholesalePrice: widget.product.wholesalePrice,
-        audience: widget.product.audience,
+        price: retailPrice,
+        retailPrice: retailPrice,
+        wholesalePrice: wholesalePrice,
+        audience: _audience,
         quantity: int.parse(_quantityController.text.trim()),
         moq: int.parse(_moqController.text.trim()),
         imageUrl: widget.product.imageUrl,
