@@ -77,6 +77,8 @@ export declare const logProductView: functions.HttpsFunction & functions.Runnabl
 export declare const initializeFlutterwavePayment: functions.HttpsFunction & functions.Runnable<any>;
 /** Places a seller withdrawal request while reserving the requested balance. */
 export declare const requestSellerWithdrawal: functions.HttpsFunction & functions.Runnable<any>;
+/** Redeems a member reward using a server-authoritative points transaction. */
+export declare const claimMemberReward: functions.HttpsFunction & functions.Runnable<any>;
 /** Deletes the authenticated account and its private marketplace records. */
 export declare const deleteMyAccount: functions.HttpsFunction & functions.Runnable<any>;
 /** Releases pending seller funds only after a paid order is delivered. */

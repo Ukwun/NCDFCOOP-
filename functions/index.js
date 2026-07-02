@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.releaseSellerEarningsOnDelivery = exports.deleteMyAccount = exports.requestSellerWithdrawal = exports.initializeFlutterwavePayment = exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = void 0;
+exports.releaseSellerEarningsOnDelivery = exports.deleteMyAccount = exports.claimMemberReward = exports.requestSellerWithdrawal = exports.initializeFlutterwavePayment = exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -1616,6 +1616,54 @@ exports.requestSellerWithdrawal = functions.https.onCall(async (data, context) =
         });
     });
     return { withdrawalId: withdrawalRef.id, status: 'pending' };
+});
+/** Redeems a member reward using a server-authoritative points transaction. */
+exports.claimMemberReward = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in to claim a reward.');
+    }
+    const memberId = String(data?.memberId || '');
+    const rewardId = String(data?.rewardId || '');
+    if (memberId !== context.auth.uid) {
+        throw new functions.https.HttpsError('permission-denied', 'You can only use your own points.');
+    }
+    const rewards = {
+        discount_voucher_500: { title: 'Discount Voucher', points: 500, value: 500, type: 'voucher' },
+        free_shipping_300: { title: 'Free Shipping', points: 300, value: 0, type: 'shipping' },
+        gift_card_1000: { title: 'Gift Card', points: 1000, value: 1000, type: 'gift_card' },
+    };
+    const reward = rewards[rewardId];
+    if (!reward) {
+        throw new functions.https.HttpsError('invalid-argument', 'This reward is not available.');
+    }
+    const memberRef = db.collection('members').doc(memberId);
+    const claimRef = db.collection('reward_claims').doc();
+    await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(memberRef);
+        if (!snapshot.exists) {
+            throw new functions.https.HttpsError('not-found', 'Member profile was not found.');
+        }
+        const available = Number(snapshot.data()?.loyaltyPoints || 0);
+        if (available < reward.points) {
+            throw new functions.https.HttpsError('failed-precondition', 'You do not have enough points.');
+        }
+        transaction.update(memberRef, {
+            loyaltyPoints: available - reward.points,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        transaction.set(claimRef, {
+            userId: memberId,
+            memberId,
+            rewardId,
+            title: reward.title,
+            rewardType: reward.type,
+            rewardValue: reward.value,
+            pointsUsed: reward.points,
+            status: 'active',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+    return { claimId: claimRef.id, status: 'active' };
 });
 /** Deletes the authenticated account and its private marketplace records. */
 exports.deleteMyAccount = functions.https.onCall(async (_data, context) => {

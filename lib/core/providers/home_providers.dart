@@ -465,6 +465,7 @@ final activePromosProvider = StreamProvider<List<PromoBanner>>((ref) {
 // ==================== PHASE 2: ROLE-AWARE PRODUCT PROVIDERS ====================
 
 /// Mock products fallback (when Firebase is unavailable)
+// ignore: unused_element
 List<Product> _getDefaultMockProducts() {
   return [
     // GRAINS
@@ -685,8 +686,11 @@ final roleAwareFeaturedProductsProvider =
     final firestore = FirebaseFirestore.instance;
     final role = userRole.toLowerCase();
 
-    final companySnapshot =
-        await firestore.collection('products').limit(60).get();
+    final companySnapshot = await firestore
+        .collection('products')
+        .where('is_active', isEqualTo: true)
+        .limit(60)
+        .get();
 
     final merged = <String, Product>{};
     for (final doc in companySnapshot.docs) {
@@ -737,14 +741,10 @@ final roleAwareFeaturedProductsProvider =
     final products = merged.values.toList()
       ..sort((a, b) => b.stock.compareTo(a.stock));
 
-    if (products.isEmpty) {
-      return _getDefaultMockProducts().take(6).toList();
-    }
-
     return products.take(6).toList();
   } catch (e) {
     print('⚠️ Error in roleAwareFeaturedProductsProvider: $e');
-    return _getDefaultMockProducts().take(6).toList();
+    rethrow;
   }
 });
 
@@ -755,7 +755,10 @@ final roleAwareProductsProvider =
     final firestore = FirebaseFirestore.instance;
     final role = userRole.toLowerCase();
 
-    final companyStream = firestore.collection('products').snapshots();
+    final companyStream = firestore
+        .collection('products')
+        .where('is_active', isEqualTo: true)
+        .snapshots();
 
     final sellerStream = (role.contains('member') ||
             role.contains('cooperative') ||
@@ -832,29 +835,17 @@ final roleAwareProductsProvider =
     return controller.stream;
   } catch (e) {
     print('⚠️ Firebase error in roleAwareProductsProvider: $e');
-    return Stream.value(_getDefaultMockProducts());
+    return Stream.error(e);
   }
 });
 
-/// Product list for a specific category, filtered by role
-/// Uses FutureProvider for instant display of mock data
+/// Product list for a specific category, filtered by role and backed by Firestore.
 final roleAwareCategoryProductsProvider = FutureProvider.family<List<Product>,
     ({String categoryId, String userRole})>((ref, params) async {
-  try {
-    // Return mock products filtered by category immediately
-    // This provides instant UI feedback instead of waiting for Firebase
-    final mockProducts = _getDefaultMockProducts();
-    final filtered =
-        mockProducts.where((p) => p.categoryId == params.categoryId).toList();
-
-    // Sort by price descending by default (popular = highest quality first)
-    filtered.sort((a, b) => b.retailPrice.compareTo(a.retailPrice));
-
-    return filtered;
-  } catch (e) {
-    print('⚠️ Error in roleAwareCategoryProductsProvider: $e');
-    return _getDefaultMockProducts()
-        .where((p) => p.categoryId == params.categoryId)
-        .toList();
-  }
+  final products =
+      await ref.watch(roleAwareProductsProvider(params.userRole).future);
+  return products
+      .where((product) => product.categoryId == params.categoryId)
+      .toList()
+    ..sort((a, b) => b.retailPrice.compareTo(a.retailPrice));
 });

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../theme/app_theme.dart';
@@ -564,9 +565,14 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
       }
 
       final file = File(selected.path);
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        throw StateError('Sign in again before uploading a product image.');
+      }
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('seller_products')
+          .child(userId)
           .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
 
       await storageRef.putFile(file);

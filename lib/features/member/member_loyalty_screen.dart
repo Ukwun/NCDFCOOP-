@@ -5,7 +5,7 @@ import 'package:coop_commerce/models/member_models.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/providers/member_providers.dart';
 
-/// Member Loyalty Points Screen - MVP with mock data
+/// Member loyalty points backed by the authenticated member's Firestore record.
 class MemberLoyaltyScreen extends ConsumerWidget {
   const MemberLoyaltyScreen({Key? key}) : super(key: key);
 
@@ -14,13 +14,20 @@ class MemberLoyaltyScreen extends ConsumerWidget {
     final currentUser = ref.watch(currentUserProvider);
     final memberId = currentUser?.id;
 
-    // Mock data for MVP
-    const memberName = "Chinedu Okoro";
-    const currentPoints = 2450;
-    const pointsThisMonth = 650;
-    const currentTier = "GOLD";
-    const nextTierPoints = 5000;
-    const pointsToNextTier = nextTierPoints - currentPoints;
+    final memberAsync = ref.watch(currentMemberProvider);
+    final member = memberAsync.value;
+    final memberName = member?.fullName.trim().isNotEmpty == true
+        ? member!.fullName
+        : currentUser?.name ?? 'Member';
+    final currentPoints = member?.loyaltyPoints ?? 0;
+    final pointsThisMonth = member?.totalPointsEarned ?? 0;
+    final currentTier = member?.memberTier.toUpperCase() ?? 'BRONZE';
+    final nextTierPoints = switch (currentTier) {
+      'BRONZE' => 1000,
+      'SILVER' => 5000,
+      'GOLD' => 15000,
+      _ => currentPoints > 0 ? currentPoints : 1,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -334,15 +341,24 @@ class MemberLoyaltyScreen extends ConsumerWidget {
           isClaimed: false,
         );
 
-        await ref.read(claimRewardProvider((memberId, reward)).future);
-
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Reward claimed: $title'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        try {
+          await ref.read(claimRewardProvider((memberId, reward)).future);
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Reward claimed: $title'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } catch (error) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Reward could not be claimed: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
       child: Container(
         decoration: BoxDecoration(

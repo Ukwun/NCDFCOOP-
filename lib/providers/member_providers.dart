@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/member_models.dart';
 import 'auth_provider.dart';
@@ -11,37 +12,43 @@ import 'auth_provider.dart';
 
 /// Current member (logged in user) as Member object
 final currentMemberProvider = FutureProvider<Member?>((ref) async {
-  // Connect to auth provider to get current user
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
 
-  // For now, return a placeholder member object based on user
-  // In production, fetch from Firestore using user ID
-
-  final nameParts = user.name.split(' ');
+  final snapshot =
+      await FirebaseFirestore.instance.collection('members').doc(user.id).get();
+  if (!snapshot.exists) return null;
+  final data = snapshot.data()!;
+  final storedName = (data['name'] as String?)?.trim();
+  final nameParts = (storedName?.isNotEmpty == true ? storedName! : user.name)
+      .split(RegExp(r'\s+'));
   final firstName = nameParts.isNotEmpty ? nameParts.first : '';
   final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-
   final now = DateTime.now();
-
-  // Handle phone number - use the value from user
-  final phone = user.phoneNumber;
+  DateTime dateFrom(dynamic value) => value is Timestamp ? value.toDate() : now;
 
   return Member(
     id: user.id,
     firstName: firstName.isEmpty ? 'User' : firstName,
     lastName: lastName.isEmpty ? 'Member' : lastName,
-    email: user.email,
-    phone: phone,
-    memberTier: 'BASIC', // Default tier for new members
-    loyaltyPoints: 0,
-    totalPointsEarned: 0,
-    memberSince: now,
-    totalOrders: 0,
-    totalSpent: 0.0,
-    isActive: true,
-    createdAt: now,
-    updatedAt: now,
+    email: (data['email'] as String?) ?? user.email,
+    phone: (data['phone'] as String?) ?? user.phoneNumber,
+    memberTier: ((data['memberTier'] ?? data['tier'] ?? 'bronze') as String)
+        .toUpperCase(),
+    loyaltyPoints: (data['loyaltyPoints'] as num?)?.toInt() ?? 0,
+    totalPointsEarned: (data['totalPointsEarned'] as num?)?.toInt() ?? 0,
+    memberSince: dateFrom(data['memberSince'] ?? data['joiningDate']),
+    lastPurchaseDate: data['lastPurchaseDate'] is Timestamp
+        ? (data['lastPurchaseDate'] as Timestamp).toDate()
+        : null,
+    totalOrders:
+        (data['totalOrders'] ?? data['ordersCount'] as num?)?.toInt() ?? 0,
+    totalSpent: (data['totalSpent'] as num?)?.toDouble() ?? 0.0,
+    isActive: data['isActive'] as bool? ??
+        (data['membershipStatus'] == null ||
+            data['membershipStatus'] == 'active'),
+    createdAt: dateFrom(data['createdAt'] ?? data['joiningDate']),
+    updatedAt: dateFrom(data['updatedAt']),
   );
 });
 
@@ -212,7 +219,7 @@ final markNotificationAsReadProvider =
       'readAt': Timestamp.now(),
     });
   } catch (e) {
-    // Silently fail if Firebase is not available
+    rethrow;
   }
 });
 
@@ -300,24 +307,14 @@ final deletePaymentMethodProvider =
 /// Claim reward from loyalty points
 final claimRewardProvider =
     FutureProvider.family<void, (String, Reward)>((ref, params) async {
-  try {
-    final (memberId, reward) = params;
-
-    final batch = FirebaseFirestore.instance.batch();
-
-    // Update loyalty - deduct points and add claimed reward
-    final loyaltyRef =
-        FirebaseFirestore.instance.collection('memberLoyalty').doc(memberId);
-
-    batch.update(loyaltyRef, {
-      'currentPoints': FieldValue.increment(-reward.pointsRequired),
-      'claimedRewards': FieldValue.arrayUnion([reward.toMap()]),
-    });
-
-    await batch.commit();
-  } catch (e) {
-    // Silently fail if Firebase is not available
-  }
+  final (memberId, reward) = params;
+  final callable =
+      FirebaseFunctions.instance.httpsCallable('claimMemberReward');
+  await callable.call(<String, dynamic>{
+    'memberId': memberId,
+    'rewardId': reward.id,
+  });
+  ref.invalidate(currentMemberProvider);
 });
 
 // ============================================================================

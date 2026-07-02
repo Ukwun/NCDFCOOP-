@@ -97,7 +97,7 @@ service cloud.firestore {
       // Public catalogue exposes only approved active products. Existing
       // platform-owned catalogue records without moderation fields remain readable.
       allow read: if !resource.data.keys().hasAny(['status']) ||
-                     (resource.data.status == 'approved' && resource.data.is_active == true) ||
+                     resource.data.is_active == true ||
                      (isAuthenticated() && request.auth.uid == resource.data.uploadedBy) ||
                      isAdmin();
       
@@ -584,8 +584,7 @@ service cloud.firestore {
     match /reward_claims/{claimId} {
       allow read: if isAuthenticated() &&
                      (isOwner(resource.data.userId) || isAdmin());
-      allow create: if isAuthenticated() &&
-                       request.auth.uid == request.resource.data.userId;
+      allow create: if false;
     }
 
     // ==================== FRANCHISE REORDER ALERTS ====================

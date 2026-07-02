@@ -15,7 +15,7 @@ class VisibilityService {
 
     // Check role-based visibility
     return switch (role) {
-      UserRole.wholesaleBuyer => product.visibleToRetail,
+      UserRole.wholesaleBuyer => product.visibleToWholesale,
       UserRole.coopMember => product.visibleToRetail,
       UserRole.premiumMember => product.visibleToRetail,
       UserRole.franchiseOwner => product.visibleToWholesale,

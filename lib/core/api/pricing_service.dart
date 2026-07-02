@@ -29,7 +29,7 @@ class PricingService {
     }
 
     return switch (userRole) {
-      auth_role.UserRole.wholesaleBuyer => product.retailPrice,
+      auth_role.UserRole.wholesaleBuyer => product.wholesalePrice,
       auth_role.UserRole.coopMember =>
         product.retailPrice * 0.95, // 5% member discount
       auth_role.UserRole.premiumMember =>
@@ -53,7 +53,7 @@ class PricingService {
     required auth_role.UserRole userRole,
   }) {
     return switch (userRole) {
-      auth_role.UserRole.wholesaleBuyer => product.retailPrice,
+      auth_role.UserRole.wholesaleBuyer => product.wholesalePrice,
       auth_role.UserRole.coopMember =>
         product.retailPrice * 0.95, // 5% member discount
       auth_role.UserRole.premiumMember =>
@@ -146,7 +146,7 @@ class PricingService {
     if (userRole.isAdmin) return true;
 
     return switch (userRole) {
-      auth_role.UserRole.wholesaleBuyer => product.visibleToRetail,
+      auth_role.UserRole.wholesaleBuyer => product.visibleToWholesale,
       auth_role.UserRole.coopMember => product.visibleToRetail,
       auth_role.UserRole.premiumMember => product.visibleToRetail,
       auth_role.UserRole.seller => product.visibleToWholesale,

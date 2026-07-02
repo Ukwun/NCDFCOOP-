@@ -1169,34 +1169,16 @@ class MemberHomeScreen extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                GestureDetector(
-                  onTap: () => context.pushNamed('member-transparency'),
-                  child: Text(
-                    'View All',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
+                const Icon(Icons.verified_outlined, color: AppColors.primary),
               ],
             ),
             const SizedBox(height: 12),
-            _ReportItem(
-              title: 'Annual Financials (2025)',
-              subtitle: 'Revenue ₦2.5M | Members 5,000',
-              onTap: () => context.pushNamed('member-transparency'),
-            ),
-            const SizedBox(height: 8),
-            _ReportItem(
-              title: 'Impact Report (Q4 2025)',
-              subtitle: 'Savings distributed: ₦850K',
-              onTap: () => context.pushNamed('member-transparency'),
-            ),
-            const SizedBox(height: 8),
-            _ReportItem(
-              title: 'Farmer Support Fund',
-              subtitle: 'Allocated ₦250K for smallholder support',
-              onTap: () => context.pushNamed('member-transparency'),
+            Text(
+              'Verified financial and impact reports will appear here when published by the cooperative.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
             ),
           ],
         ),
