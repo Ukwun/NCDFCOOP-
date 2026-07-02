@@ -9,6 +9,8 @@ import 'package:coop_commerce/providers/real_time_orders_provider.dart';
 import 'package:coop_commerce/providers/user_activity_providers.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'
+    show FirebaseFirestore, Timestamp, SetOptions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -872,12 +874,95 @@ class _WholesaleBuyerHomeScreenState
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    if (product == null || product.uploadedBy.isEmpty) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Choose a seller product first so your enquiry reaches the correct seller.',
+                          ),
+                        ),
+                      );
+                      this.context.pushNamed('products');
+                      return;
+                    }
+                    final user = ref.read(currentUserProvider);
+                    final quantity = int.tryParse(qtyController.text.trim());
+                    final targetPrice =
+                        double.tryParse(targetPriceController.text.trim());
+                    if (user == null ||
+                        quantity == null ||
+                        quantity < product.minimumOrderQuantity ||
+                        targetPrice == null ||
+                        targetPrice <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Enter at least ${product.minimumOrderQuantity} units and a valid target price.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    final participants = [user.id, product.uploadedBy]..sort();
+                    final conversationId =
+                        '${participants.join('_')}_${product.id}'
+                            .replaceAll('/', '_');
+                    final firestore = FirebaseFirestore.instance;
+                    final quote = firestore.collection('quote_requests').doc();
+                    final conversation = firestore
+                        .collection('conversations')
+                        .doc(conversationId);
+                    final message = conversation.collection('messages').doc();
+                    final now = Timestamp.now();
+                    final text =
+                        'Quote request: $quantity × ${product.name} at NGN ${targetPrice.toStringAsFixed(2)} per unit.';
+                    final batch = firestore.batch();
+                    batch.set(quote, {
+                      'quoteId': quote.id,
+                      'conversationId': conversationId,
+                      'productId': product.id,
+                      'productName': product.name,
+                      'buyerId': user.id,
+                      'buyerName': user.name,
+                      'sellerId': product.uploadedBy,
+                      'quantity': quantity,
+                      'targetUnitPrice': targetPrice,
+                      'status': 'pending',
+                      'createdAt': now,
+                      'updatedAt': now,
+                    });
+                    batch.set(
+                        conversation,
+                        {
+                          'participantIds': participants,
+                          'participants': participants,
+                          'participantNames': {user.id: user.name},
+                          'productId': product.id,
+                          'productName': product.name,
+                          'lastMessageText': text,
+                          'lastMessageAt': now,
+                          'updatedAt': now,
+                          'unreadByUser': {user.id: 0, product.uploadedBy: 1},
+                        },
+                        SetOptions(merge: true));
+                    batch.set(message, {
+                      'id': message.id,
+                      'conversationId': conversationId,
+                      'senderId': user.id,
+                      'senderName': user.name,
+                      'text': text,
+                      'messageType': 'quote_request',
+                      'quoteId': quote.id,
+                      'createdAt': now,
+                    });
+                    await batch.commit();
+                    if (!context.mounted) return;
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(this.context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                            'Quote request drafted. Continue in Messages.'),
+                        content: Text('Quote request sent to the seller.'),
                       ),
                     );
                     this.context.pushNamed('messages');

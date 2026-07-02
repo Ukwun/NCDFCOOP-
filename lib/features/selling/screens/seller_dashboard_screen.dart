@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coop_commerce/core/intelligence/role_commerce_intelligence.dart';
 import '../../../theme/app_theme.dart';
 import '../../../core/models/seller_models.dart';
@@ -7,6 +8,7 @@ import '../../../core/models/seller_models.dart';
 /// Simple dashboard showing All products, Pending, and Approved
 class SellerDashboardScreen extends StatefulWidget {
   final String businessName;
+  final String sellerId;
   final List<SellerProduct> products;
   final VoidCallback onAddNewProduct;
   final ValueChanged<SellerProduct> onProductTap;
@@ -17,6 +19,7 @@ class SellerDashboardScreen extends StatefulWidget {
   const SellerDashboardScreen({
     super.key,
     required this.businessName,
+    required this.sellerId,
     required this.products,
     required this.onAddNewProduct,
     required this.onProductTap,
@@ -78,11 +81,31 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
                       color: AppColors.textLight,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _buildRelationshipPanel(snapshot),
                 ],
               ),
             ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildFilterTabs(),
+            ),
+            const SizedBox(height: 16),
+            if (_filteredProducts.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildEmptyState(),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildProductsList(),
+              ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildBulkEnquiriesPanel(),
+            ),
+            const SizedBox(height: 24),
 
             // Stats section
             Padding(
@@ -91,25 +114,10 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Filter tabs
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildFilterTabs(),
+              child: _buildRelationshipPanel(snapshot),
             ),
-            const SizedBox(height: 24),
-
-            // Products section
-            if (_filteredProducts.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: _buildEmptyState(),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _buildProductsList(),
-              ),
-
             const SizedBox(height: 32),
           ],
         ),
@@ -387,7 +395,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Action failed. Please try again.'),
+          content: Text('That action is unavailable right now. Please retry.'),
         ),
       );
     }
@@ -572,6 +580,101 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildBulkEnquiriesPanel() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('quote_requests')
+          .where('sellerId', isEqualTo: widget.sellerId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final enquiries = snapshot.data?.docs ?? const [];
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.request_quote_outlined,
+                      color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text('Bulk enquiries', style: AppTextStyles.h4),
+                  const Spacer(),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (snapshot.hasError)
+                const Text(
+                  'Enquiries will appear here when buyers contact you. Please refresh shortly.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                )
+              else if (enquiries.isEmpty)
+                const Text('No bulk enquiries yet.')
+              else
+                ...enquiries.take(5).map((document) {
+                  final enquiry = document.data();
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(enquiry['productName'] ?? 'Product enquiry'),
+                    subtitle: Text(
+                      '${enquiry['quantity'] ?? 0} units · NGN ${enquiry['targetUnitPrice'] ?? 0} each',
+                    ),
+                    trailing: Chip(
+                      label: Text((enquiry['status'] ?? 'pending').toString()),
+                    ),
+                    onTap: () =>
+                        _showEnquiryActions(document.reference, enquiry),
+                  );
+                }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showEnquiryActions(
+    DocumentReference<Map<String, dynamic>> reference,
+    Map<String, dynamic> enquiry,
+  ) async {
+    final response = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(enquiry['productName'] ?? 'Bulk enquiry'),
+        content: Text(enquiry['message']?.toString().trim().isNotEmpty == true
+            ? enquiry['message']
+            : 'The buyer did not add extra requirements.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'declined'),
+            child: const Text('Decline'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, 'accepted'),
+            child: const Text('Accept & continue in chat'),
+          ),
+        ],
+      ),
+    );
+    if (response == null) return;
+    await reference.update({
+      'status': response,
+      'respondedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Widget _buildEmptyState() {

@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = void 0;
+exports.releaseSellerEarningsOnDelivery = exports.deleteMyAccount = exports.requestSellerWithdrawal = exports.initializeFlutterwavePayment = exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -49,6 +49,20 @@ const db = admin.firestore();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
+app.use((req, res, next) => {
+    const retiredClientPaymentRoutes = [
+        '/initiatePayment',
+        '/verifyPayment',
+        '/processRefund',
+    ];
+    if (retiredClientPaymentRoutes.includes(req.path)) {
+        return res.status(410).json({
+            success: false,
+            message: 'Use the authenticated payment callable.',
+        });
+    }
+    next();
+});
 // ============= ENVIRONMENT VARIABLES =============
 // Use these from your system environment or Firebase Config
 const FLUTTERWAVE_SECRET_KEY = process.env.FLUTTERWAVE_SECRET_KEY || '';
@@ -274,20 +288,37 @@ app.post('/processRefund', async (req, res) => {
  */
 app.post('/webhooks/flutterwave', async (req, res) => {
     try {
+        const expectedHash = process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH;
+        const receivedHash = req.headers['verif-hash'];
+        if (!expectedHash || receivedHash !== expectedHash) {
+            return res.status(401).send('Unauthorized');
+        }
         const { event, data } = req.body;
         console.log(`Flutterwave webhook received: ${event}`);
         if (event === 'charge.completed') {
-            const { id, tx_ref, amount, customer, status } = data;
+            const { id, tx_ref, customer } = data;
+            const verification = await axios_1.default.get(`https://api.flutterwave.com/v3/transactions/${id}/verify`, { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } });
+            const verified = verification.data?.data;
+            if (!verified || verified.status !== 'successful' || verified.tx_ref !== tx_ref) {
+                return res.status(400).send('Payment verification failed');
+            }
             // Update payment status
             const paymentQuery = await db
                 .collection('payments')
-                .where('txRef', '==', id)
+                .where('txRef', '==', tx_ref)
                 .limit(1)
                 .get();
             if (!paymentQuery.empty) {
                 const paymentDoc = paymentQuery.docs[0];
                 const paymentData = paymentDoc.data();
-                const paymentStatus = status === 'successful' ? 'completed' : 'failed';
+                if (paymentData.status === 'completed') {
+                    return res.status(200).json({ success: true, duplicate: true });
+                }
+                if (Number(paymentData.amount) !== Number(verified.amount) ||
+                    paymentData.currency !== verified.currency) {
+                    return res.status(400).send('Payment amount mismatch');
+                }
+                const paymentStatus = 'completed';
                 await paymentDoc.ref.update({
                     status: paymentStatus,
                     completedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -299,7 +330,7 @@ app.post('/webhooks/flutterwave', async (req, res) => {
                         paymentId: paymentDoc.id,
                         txRef: id,
                         txReference: tx_ref,
-                        amount,
+                        amount: verified.amount,
                         email: customer?.email,
                         phone: customer?.phone_number,
                         status: 'completed',
@@ -314,12 +345,52 @@ app.post('/webhooks/flutterwave', async (req, res) => {
                     });
                     // If there's an order, update its payment status
                     if (paymentData.orderId) {
-                        await db.collection('orders').doc(paymentData.orderId).update({
+                        const orderRef = db.collection('orders').doc(paymentData.orderId);
+                        const orderSnapshot = await orderRef.get();
+                        await orderRef.update({
                             paymentStatus: 'paid',
                             paidAt: admin.firestore.FieldValue.serverTimestamp(),
                         }).catch(() => {
                             // Order might not exist, that's Ok
                         });
+                        const order = orderSnapshot.data() || {};
+                        const orderItems = Array.isArray(order.items) ? order.items : [];
+                        const grossBySeller = new Map();
+                        for (const item of orderItems) {
+                            const sellerId = item.sellerUserId || item.sellerId;
+                            if (!sellerId)
+                                continue;
+                            const lineTotal = Number(item.lineTotal ??
+                                (Number(item.unitPrice ?? item.price ?? 0) * Number(item.quantity ?? 0)));
+                            grossBySeller.set(sellerId, (grossBySeller.get(sellerId) || 0) + lineTotal);
+                        }
+                        if (grossBySeller.size === 0 && order.sellerId) {
+                            grossBySeller.set(order.sellerId, Number(verified.amount));
+                        }
+                        const settlementBatch = db.batch();
+                        for (const [sellerId, grossAmount] of grossBySeller) {
+                            const platformFee = Math.round(grossAmount * 0.05 * 100) / 100;
+                            const netAmount = grossAmount - platformFee;
+                            const settlementRef = db
+                                .collection('seller_settlements')
+                                .doc(`${paymentDoc.id}_${sellerId}`);
+                            settlementBatch.set(settlementRef, {
+                                sellerId,
+                                orderId: paymentData.orderId,
+                                paymentId: paymentDoc.id,
+                                grossAmount,
+                                platformFee,
+                                netAmount,
+                                status: 'pending_fulfillment',
+                                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                            });
+                            settlementBatch.set(db.collection('seller_earnings').doc(sellerId), {
+                                pendingBalance: admin.firestore.FieldValue.increment(netAmount),
+                                lifetimeEarnings: admin.firestore.FieldValue.increment(netAmount),
+                                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                            }, { merge: true });
+                        }
+                        await settlementBatch.commit();
                     }
                 }
             }
@@ -431,6 +502,9 @@ app.get('/health', (req, res) => {
  */
 exports.payments = functions
     .region('us-central1')
+    .runWith({
+    secrets: ['FLUTTERWAVE_SECRET_KEY', 'FLUTTERWAVE_WEBHOOK_SECRET_HASH'],
+})
     .https.onRequest(app);
 /**
  * Scheduled function to clean up old pending payments (24 hours old)
@@ -1412,6 +1486,211 @@ exports.logProductView = functions.https.onCall(async (data, context) => {
         console.error('Error logging product view:', error);
         throw new functions.https.HttpsError('internal', 'Failed to log product view');
     }
+});
+/**
+ * Creates a Flutterwave checkout using the server-authoritative order total.
+ * The secret key is injected by Secret Manager and never sent to the app.
+ */
+exports.initializeFlutterwavePayment = functions
+    .runWith({ secrets: ['FLUTTERWAVE_SECRET_KEY'] })
+    .https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in to pay.');
+    }
+    const orderId = String(data.orderId || '').trim();
+    const paymentType = data.paymentType === 'bank_transfer'
+        ? 'bank_transfer'
+        : 'card';
+    if (!orderId) {
+        throw new functions.https.HttpsError('invalid-argument', 'orderId is required.');
+    }
+    const orderRef = db.collection('orders').doc(orderId);
+    const orderSnapshot = await orderRef.get();
+    if (!orderSnapshot.exists) {
+        throw new functions.https.HttpsError('not-found', 'Order was not found.');
+    }
+    const order = orderSnapshot.data() || {};
+    const buyerId = order.buyerId || order.userId;
+    if (buyerId !== context.auth.uid) {
+        throw new functions.https.HttpsError('permission-denied', 'This order belongs to another user.');
+    }
+    if (order.paymentStatus === 'paid') {
+        throw new functions.https.HttpsError('already-exists', 'This order is already paid.');
+    }
+    const amount = Number(order.totalAmount ?? order.total ?? 0);
+    if (!Number.isFinite(amount) || amount < 100 || amount > 50000000) {
+        throw new functions.https.HttpsError('failed-precondition', 'Order total is invalid.');
+    }
+    const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
+    if (!secretKey) {
+        throw new functions.https.HttpsError('failed-precondition', 'Payment provider is not configured.');
+    }
+    const paymentRef = db.collection('payments').doc();
+    const txRef = `NCDF_${orderId}_${paymentRef.id}`;
+    const response = await axios_1.default.post('https://api.flutterwave.com/v3/payments', {
+        tx_ref: txRef,
+        amount,
+        currency: 'NGN',
+        redirect_url: `https://coop-commerce-8d43f.web.app/payment-callback?paymentId=${paymentRef.id}`,
+        payment_options: paymentType === 'bank_transfer' ? 'account' : 'card,banktransfer,ussd',
+        customer: {
+            email: context.auth.token.email || order.customerEmail,
+            name: order.customerName || 'NCDFCOOP customer',
+            phonenumber: order.customerPhone || '',
+        },
+        meta: { orderId, buyerId: context.auth.uid, paymentId: paymentRef.id },
+        customizations: {
+            title: 'NCDFCOOP Marketplace',
+            description: `Payment for order ${orderId}`,
+        },
+    }, { headers: { Authorization: `Bearer ${secretKey}` } });
+    const authorizationUrl = response.data?.data?.link;
+    if (!authorizationUrl) {
+        throw new functions.https.HttpsError('internal', 'Payment provider did not return a checkout link.');
+    }
+    await paymentRef.set({
+        userId: context.auth.uid,
+        buyerId: context.auth.uid,
+        orderId,
+        amount,
+        currency: 'NGN',
+        paymentType,
+        txRef,
+        status: 'pending',
+        authorizationUrl,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await orderRef.update({
+        paymentId: paymentRef.id,
+        paymentStatus: 'pending',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { paymentId: paymentRef.id, authorizationUrl, txRef };
+});
+/** Places a seller withdrawal request while reserving the requested balance. */
+exports.requestSellerWithdrawal = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in to withdraw.');
+    }
+    const amount = Number(data.amount);
+    if (!Number.isFinite(amount) || amount < 1000) {
+        throw new functions.https.HttpsError('invalid-argument', 'Minimum withdrawal is NGN 1,000.');
+    }
+    const sellerSnapshot = await db.collection('sellers').doc(context.auth.uid).get();
+    if (!sellerSnapshot.exists) {
+        throw new functions.https.HttpsError('permission-denied', 'A seller profile is required.');
+    }
+    const payoutAccount = await db
+        .collection('seller_payout_accounts')
+        .doc(context.auth.uid)
+        .get();
+    if (!payoutAccount.exists) {
+        throw new functions.https.HttpsError('failed-precondition', 'Save a payout bank account before withdrawing.');
+    }
+    const bank = payoutAccount.data();
+    const earningsRef = db.collection('seller_earnings').doc(context.auth.uid);
+    const withdrawalRef = db.collection('seller_withdrawals').doc();
+    await db.runTransaction(async (transaction) => {
+        const earningsSnapshot = await transaction.get(earningsRef);
+        const available = Number(earningsSnapshot.data()?.availableBalance || 0);
+        if (amount > available) {
+            throw new functions.https.HttpsError('failed-precondition', 'Insufficient available balance.');
+        }
+        transaction.set(earningsRef, {
+            availableBalance: available - amount,
+            pendingWithdrawal: admin.firestore.FieldValue.increment(amount),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(withdrawalRef, {
+            sellerId: context.auth.uid,
+            amount,
+            currency: 'NGN',
+            bankName: String(bank.bankName || ''),
+            bankCode: String(bank.bankCode || ''),
+            accountNumber: String(bank.accountNumber || ''),
+            accountName: String(bank.accountName || ''),
+            status: 'pending',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+    return { withdrawalId: withdrawalRef.id, status: 'pending' };
+});
+/** Deletes the authenticated account and its private marketplace records. */
+exports.deleteMyAccount = functions.https.onCall(async (_data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in to delete your account.');
+    }
+    const uid = context.auth.uid;
+    const directDocuments = [
+        db.collection('users').doc(uid),
+        db.collection('sellers').doc(uid),
+        db.collection('members').doc(uid),
+        db.collection('wholesale_buyers').doc(uid),
+        db.collection('carts').doc(uid),
+        db.collection('seller_earnings').doc(uid),
+        db.collection('seller_payout_accounts').doc(uid),
+    ];
+    for (const reference of directDocuments) {
+        const snapshot = await reference.get();
+        if (snapshot.exists)
+            await db.recursiveDelete(reference);
+    }
+    const ownedCollections = [
+        ['seller_products', 'sellerUserId'],
+        ['quote_requests', 'buyerId'],
+        ['seller_withdrawals', 'sellerId'],
+    ];
+    for (const [collectionName, ownerField] of ownedCollections) {
+        const snapshot = await db.collection(collectionName)
+            .where(ownerField, '==', uid)
+            .get();
+        const batch = db.batch();
+        snapshot.docs.forEach((document) => batch.delete(document.ref));
+        await batch.commit();
+    }
+    await db.collection('account_deletions').doc(uid).set({
+        userId: uid,
+        deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await admin.auth().deleteUser(uid);
+    return { deleted: true };
+});
+/** Releases pending seller funds only after a paid order is delivered. */
+exports.releaseSellerEarningsOnDelivery = functions.firestore
+    .document('orders/{orderId}')
+    .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (before.status === 'delivered' || after.status !== 'delivered' ||
+        after.paymentStatus !== 'paid') {
+        return null;
+    }
+    const settlements = await db.collection('seller_settlements')
+        .where('orderId', '==', context.params.orderId)
+        .where('status', '==', 'pending_fulfillment')
+        .get();
+    for (const settlementDoc of settlements.docs) {
+        await db.runTransaction(async (transaction) => {
+            const latest = await transaction.get(settlementDoc.ref);
+            if (!latest.exists || latest.data()?.status !== 'pending_fulfillment')
+                return;
+            const settlement = latest.data();
+            const netAmount = Number(settlement.netAmount || 0);
+            const earningsRef = db.collection('seller_earnings').doc(settlement.sellerId);
+            transaction.set(earningsRef, {
+                pendingBalance: admin.firestore.FieldValue.increment(-netAmount),
+                availableBalance: admin.firestore.FieldValue.increment(netAmount),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            transaction.update(settlementDoc.ref, {
+                status: 'available',
+                releasedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        });
+    }
+    return null;
 });
 /**
  * Format date to YYYY-MM-DD key

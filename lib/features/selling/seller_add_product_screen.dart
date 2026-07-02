@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:coop_commerce/core/models/seller_models.dart';
@@ -23,12 +24,14 @@ class _SellerAddProductScreenState
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
+  final _wholesalePriceController = TextEditingController();
   final _quantityController = TextEditingController(text: '1');
   final _moqController = TextEditingController(text: '1');
   final _descriptionController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   String _category = 'agriculture';
+  ProductAudience _audience = ProductAudience.both;
   String _imageUrl = '';
   bool _isUploadingImage = false;
   bool _isSaving = false;
@@ -37,6 +40,7 @@ class _SellerAddProductScreenState
   void dispose() {
     _nameController.dispose();
     _priceController.dispose();
+    _wholesalePriceController.dispose();
     _quantityController.dispose();
     _moqController.dispose();
     _descriptionController.dispose();
@@ -136,18 +140,69 @@ class _SellerAddProductScreenState
                   },
                 ),
                 const SizedBox(height: 12),
+                DropdownButtonFormField<ProductAudience>(
+                  value: _audience,
+                  decoration: const InputDecoration(
+                    labelText: 'Who can buy this product?',
+                    prefixIcon: Icon(Icons.groups_2_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: ProductAudience.values
+                      .map(
+                        (audience) => DropdownMenuItem(
+                          value: audience,
+                          child: Text(audience.displayName),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _audience = value);
+                  },
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _priceController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Price (NGN)',
+                    labelText: 'Retail price (NGN)',
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
+                    if (_audience == ProductAudience.wholesale &&
+                        (value ?? '').trim().isEmpty) {
+                      return null;
+                    }
                     final parsed = double.tryParse((value ?? '').trim());
                     if (parsed == null || parsed <= 0) {
                       return 'Enter a valid price';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _wholesalePriceController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Wholesale unit price (NGN)',
+                    helperText: 'The price applied when MOQ is met',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (_audience == ProductAudience.retail &&
+                        (value ?? '').trim().isEmpty) {
+                      return null;
+                    }
+                    final parsed = double.tryParse((value ?? '').trim());
+                    if (parsed == null || parsed <= 0) {
+                      return 'Enter a valid wholesale price';
+                    }
+                    final retail =
+                        double.tryParse(_priceController.text.trim());
+                    if (retail != null && parsed > retail) {
+                      return 'Wholesale price should not exceed retail price';
                     }
                     return null;
                   },
@@ -277,13 +332,22 @@ class _SellerAddProductScreenState
         return;
       }
 
-      final file = File(selected.path);
+      final user = ref.read(currentUserProvider);
+      if (user == null) throw StateError('Sign in before uploading an image.');
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('seller_products')
+          .child(user.id)
           .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-      await storageRef.putFile(file);
+      if (kIsWeb) {
+        await storageRef.putData(
+          await selected.readAsBytes(),
+          SettableMetadata(contentType: selected.mimeType ?? 'image/jpeg'),
+        );
+      } else {
+        await storageRef.putFile(File(selected.path));
+      }
       final downloadUrl = await storageRef.getDownloadURL();
 
       if (!mounted) return;
@@ -322,13 +386,22 @@ class _SellerAddProductScreenState
     setState(() => _isSaving = true);
     try {
       final sellerService = ref.read(sellerServiceProvider);
+      final retailPrice = double.tryParse(_priceController.text.trim()) ??
+          double.parse(_wholesalePriceController.text.trim());
+      final wholesalePrice =
+          double.tryParse(_wholesalePriceController.text.trim()) ?? retailPrice;
       final product = SellerProduct(
         sellerId: user.id,
         sellerUserId: user.id,
         sellerProfileId: profile.id,
         productName: _nameController.text.trim(),
         category: _category,
-        price: double.parse(_priceController.text.trim()),
+        price: _audience == ProductAudience.wholesale
+            ? wholesalePrice
+            : retailPrice,
+        retailPrice: retailPrice,
+        wholesalePrice: wholesalePrice,
+        audience: _audience,
         quantity: int.parse(_quantityController.text.trim()),
         moq: int.parse(_moqController.text.trim()),
         imageUrl: _imageUrl,

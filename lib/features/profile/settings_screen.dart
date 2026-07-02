@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_settings_provider.dart';
 import '../welcome/auth_provider.dart' as auth_controller;
@@ -162,7 +163,7 @@ class SettingsScreen extends ConsumerWidget {
               'Delete Account',
               'Permanently delete your account',
               Icons.delete_outline,
-              () => _deleteAccount(context),
+              () => _deleteAccount(context, ref),
               isDestructive: true,
             ),
             _buildActionTile(
@@ -469,7 +470,7 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _deleteAccount(BuildContext context) {
+  void _deleteAccount(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -483,9 +484,26 @@ class SettingsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               context.pop();
-              _showSavedFeedback(context, 'Account deletion initiated');
+              try {
+                await FirebaseFunctions.instance
+                    .httpsCallable('deleteMyAccount')
+                    .call();
+                await ref
+                    .read(auth_controller.authControllerProvider.notifier)
+                    .signOut();
+                if (context.mounted) context.go('/welcome');
+              } on FirebaseFunctionsException catch (error) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(error.message ??
+                          'We could not delete the account. Please sign in again and retry.'),
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),

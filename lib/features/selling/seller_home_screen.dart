@@ -150,7 +150,20 @@ class SellerHomeScreen extends ConsumerWidget {
                     const Icon(Icons.error_outline,
                         size: 56, color: Colors.red),
                     const SizedBox(height: 10),
-                    Text('Unable to load products: $error'),
+                    const Text(
+                      'Your products could not be refreshed right now.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => ref.invalidate(
+                        sellerProductsForSellerProvider(
+                          (userId: user.id, sellerProfileId: sellerProfile.id),
+                        ),
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
                   ],
                 ),
               ),
@@ -159,6 +172,7 @@ class SellerHomeScreen extends ConsumerWidget {
           data: (products) {
             return SellerDashboardScreen(
               businessName: sellerProfile.businessName,
+              sellerId: user.id,
               products: products,
               onProfileTap: () => context.pushNamed('my-ncdfcoop'),
               onSalesLedgerTap: () => context.pushNamed('seller-sales-ledger'),

@@ -53,15 +53,10 @@ class Product {
   double getPriceForRole(String userRole) {
     if (userRole.contains('consumer') || userRole == 'consumer') {
       return retailPrice;
-    } else if (userRole.contains('member') ||
-        userRole.contains('cooperative') ||
-        userRole == 'coopMember') {
+    } else if (userRole.contains('member') || userRole == 'coopMember') {
+      return retailPrice;
+    } else if (userRole == 'wholesaleBuyer') {
       return wholesalePrice > 0 ? wholesalePrice : retailPrice;
-    } else if (userRole.contains('institutional') ||
-        userRole.contains('buyer') ||
-        userRole == 'institutionalBuyer' ||
-        userRole == 'institutionalApprover') {
-      return contractPrice > 0 ? contractPrice : wholesalePrice;
     }
     return retailPrice; // Default to retail
   }
@@ -70,15 +65,10 @@ class Product {
   bool isVisibleToRole(String userRole) {
     if (userRole.contains('consumer') || userRole == 'consumer') {
       return visibleToRetail;
-    } else if (userRole.contains('member') ||
-        userRole.contains('cooperative') ||
-        userRole == 'coopMember') {
+    } else if (userRole.contains('member') || userRole == 'coopMember') {
+      return visibleToRetail;
+    } else if (userRole == 'wholesaleBuyer') {
       return visibleToWholesale;
-    } else if (userRole.contains('institutional') ||
-        userRole.contains('buyer') ||
-        userRole == 'institutionalBuyer' ||
-        userRole == 'institutionalApprover') {
-      return visibleToInstitutions;
     }
     return visibleToRetail; // Default to retail visibility
   }

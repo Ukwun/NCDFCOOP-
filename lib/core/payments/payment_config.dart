@@ -10,7 +10,7 @@ class PaymentConfig {
   );
   static const String paystackSecretKey = String.fromEnvironment(
     'PAYSTACK_SECRET_KEY',
-    defaultValue: 'sk_test_your_secret_key',
+    defaultValue: '',
   );
 
   // Flutterwave Configuration
@@ -21,7 +21,7 @@ class PaymentConfig {
   );
   static const String flutterwaveSecretKey = String.fromEnvironment(
     'FLUTTERWAVE_SECRET_KEY',
-    defaultValue: 'FLWSECK_TEST-6f9bc4d562c29ff6c60e0e856f80e3ca-X',
+    defaultValue: '',
   );
 
   // General Payment Configuration

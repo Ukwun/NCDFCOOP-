@@ -312,13 +312,6 @@ class MyNCDFCOOPScreen extends ConsumerWidget {
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.settings_outlined),
-          title: Text('Account Settings'),
-          trailing: Icon(Icons.arrow_forward_ios, size: 14),
-          onTap: () => context.pushNamed('settings'),
-        ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.help_outline),
           title: Text('Help & Support'),
           trailing: Icon(Icons.arrow_forward_ios, size: 14),

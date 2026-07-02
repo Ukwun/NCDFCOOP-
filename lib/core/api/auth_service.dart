@@ -610,7 +610,12 @@ class AuthService {
         }
       }
 
-      // Fallback: generate mock token
+      // Never fabricate an authenticated identity in production when refresh
+      // fails. Mock tokens are available only for explicitly enabled debug
+      // sessions.
+      _requireMockAuthEnabled();
+
+      // Debug-only fallback: generate a mock token.
       print('📱 Generating mock refresh token...');
       final mockToken = _generateMockJWT(
         userId: userId ?? 'user_unknown',
@@ -631,14 +636,14 @@ class AuthService {
 
   /// Forgot password
   Future<void> forgotPassword(String email) async {
-    try {
-      await _apiClient.client.post(
-        '/auth/forgot-password',
-        data: {'email': email},
-      );
-    } catch (e) {
-      rethrow;
-    }
+    await firebase_auth.FirebaseAuth.instance.sendPasswordResetEmail(
+      email: email.trim(),
+      actionCodeSettings: firebase_auth.ActionCodeSettings(
+        url: 'https://coop-commerce-8d43f.web.app/signin',
+        handleCodeInApp: false,
+        androidPackageName: 'com.example.coop_commerce',
+      ),
+    );
   }
 
   /// Reset password
@@ -646,14 +651,10 @@ class AuthService {
     required String token,
     required String newPassword,
   }) async {
-    try {
-      await _apiClient.client.post(
-        '/auth/reset-password',
-        data: {'token': token, 'newPassword': newPassword},
-      );
-    } catch (e) {
-      rethrow;
-    }
+    await firebase_auth.FirebaseAuth.instance.confirmPasswordReset(
+      code: token,
+      newPassword: newPassword,
+    );
   }
 
   /// Verify email
@@ -683,6 +684,29 @@ class AuthService {
 
   /// Sign in with Google - with robust error handling and fallback
   Future<User> signInWithGoogle({bool rememberMe = false}) async {
+    if (!_allowMockAuth) {
+      firebase_auth.UserCredential credential;
+      if (kIsWeb) {
+        final provider = firebase_auth.GoogleAuthProvider()
+          ..setCustomParameters({'prompt': 'select_account'});
+        credential =
+            await firebase_auth.FirebaseAuth.instance.signInWithPopup(provider);
+      } else {
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          throw StateError('Google sign-in was cancelled.');
+        }
+        final googleAuth = await googleUser.authentication;
+        credential =
+            await firebase_auth.FirebaseAuth.instance.signInWithCredential(
+          firebase_auth.GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          ),
+        );
+      }
+      return _firebaseUserToAppUser(credential.user!);
+    }
     try {
       print('🔐 Attempting Google Sign-In...');
 
@@ -814,6 +838,16 @@ class AuthService {
 
   /// Sign in with Facebook - with robust error handling and fallback
   Future<User> signInWithFacebook({bool rememberMe = false}) async {
+    if (!_allowMockAuth) {
+      final provider = firebase_auth.FacebookAuthProvider()
+        ..addScope('email')
+        ..setCustomParameters({'display': 'popup'});
+      final credential = kIsWeb
+          ? await firebase_auth.FirebaseAuth.instance.signInWithPopup(provider)
+          : await firebase_auth.FirebaseAuth.instance
+              .signInWithProvider(provider);
+      return _firebaseUserToAppUser(credential.user!);
+    }
     // Guard: keep Facebook button functional without the native Facebook plugin path.
     if (!SocialAuthConfig.isFacebookConfigured) {
       print(
@@ -827,6 +861,7 @@ class AuthService {
   }
 
   /// Mock Facebook Sign-In for offline/development
+  // ignore: unused_element
   Future<User> _facebookSignInWithMock(
     Map<String, dynamic> userData,
     bool rememberMe,
@@ -873,6 +908,16 @@ class AuthService {
 
   /// Sign in with Apple - with robust error handling and fallback
   Future<User> signInWithApple({bool rememberMe = false}) async {
+    if (!_allowMockAuth) {
+      final provider = firebase_auth.AppleAuthProvider()
+        ..addScope('email')
+        ..addScope('name');
+      final credential = kIsWeb
+          ? await firebase_auth.FirebaseAuth.instance.signInWithPopup(provider)
+          : await firebase_auth.FirebaseAuth.instance
+              .signInWithProvider(provider);
+      return _firebaseUserToAppUser(credential.user!);
+    }
     try {
       print('🔐 Attempting Apple Sign-In...');
 

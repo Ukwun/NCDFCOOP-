@@ -210,20 +210,24 @@ Product _sellerDocToProduct(
   Map<String, dynamic> data,
 ) {
   final sellerPrice = ((data['price'] ?? 0) as num).toDouble();
+  final retailPrice = ((data['retailPrice'] ?? sellerPrice) as num).toDouble();
+  final wholesalePrice =
+      ((data['wholesalePrice'] ?? sellerPrice) as num).toDouble();
+  final audience = (data['audience'] ?? 'both').toString();
 
   return Product(
     id: id,
     name: (data['productName'] ?? 'Seller Product') as String,
     description: (data['description'] ?? '') as String,
-    retailPrice: sellerPrice,
-    wholesalePrice: sellerPrice,
-    contractPrice: sellerPrice,
+    retailPrice: retailPrice,
+    wholesalePrice: wholesalePrice,
+    contractPrice: wholesalePrice,
     categoryId: (data['category'] ?? 'seller') as String,
     imageUrl: data['imageUrl'] as String?,
     stock: ((data['quantity'] ?? 0) as num).toInt(),
     minimumOrderQuantity: ((data['moq'] ?? 1) as num).toInt(),
-    visibleToRetail: false,
-    visibleToWholesale: true,
+    visibleToRetail: audience != 'wholesale',
+    visibleToWholesale: audience != 'retail',
     visibleToInstitutions: false,
     franchiseId: 'seller_marketplace',
     uploadedBy: (data['sellerUserId'] ?? data['sellerId'] ?? '') as String,

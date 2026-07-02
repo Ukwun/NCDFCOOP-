@@ -70,5 +70,16 @@ export declare const getRecommendedProducts: functions.HttpsFunction & functions
  * Called when user views a product detail page
  */
 export declare const logProductView: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Creates a Flutterwave checkout using the server-authoritative order total.
+ * The secret key is injected by Secret Manager and never sent to the app.
+ */
+export declare const initializeFlutterwavePayment: functions.HttpsFunction & functions.Runnable<any>;
+/** Places a seller withdrawal request while reserving the requested balance. */
+export declare const requestSellerWithdrawal: functions.HttpsFunction & functions.Runnable<any>;
+/** Deletes the authenticated account and its private marketplace records. */
+export declare const deleteMyAccount: functions.HttpsFunction & functions.Runnable<any>;
+/** Releases pending seller funds only after a paid order is delivered. */
+export declare const releaseSellerEarningsOnDelivery: functions.CloudFunction<functions.Change<functions.firestore.QueryDocumentSnapshot>>;
 export {};
 //# sourceMappingURL=index.d.ts.map

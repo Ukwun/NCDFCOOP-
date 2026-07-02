@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
@@ -9,6 +10,8 @@ import 'package:coop_commerce/widgets/product_image.dart';
 import 'package:coop_commerce/providers/cart_provider.dart';
 import 'package:coop_commerce/providers/wishlist_provider.dart' as wl;
 import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/core/auth/role.dart';
+import 'package:coop_commerce/models/product.dart';
 import 'package:coop_commerce/providers/user_activity_providers.dart';
 import 'package:coop_commerce/providers/inventory_providers.dart';
 import 'package:coop_commerce/core/services/inventory_warning_service.dart'
@@ -85,6 +88,152 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
     if (!mounted) return;
     context.pushNamed('checkout-address');
+  }
+
+  Future<void> _requestQuote(Product product) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || product.uploadedBy.isEmpty) return;
+
+    final targetController = TextEditingController(
+      text: product.wholesalePrice.toStringAsFixed(0),
+    );
+    final messageController = TextEditingController();
+    final requestedQuantity = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        final quantityController = TextEditingController(
+          text: quantity
+              .clamp(product.minimumOrderQuantity, product.stock)
+              .toString(),
+        );
+        return AlertDialog(
+          title: const Text('Request a seller quote'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${product.name} · MOQ ${product.minimumOrderQuantity}'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Quantity'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: targetController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                      labelText: 'Target unit price (NGN)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: messageController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Delivery or packaging requirements',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = int.tryParse(quantityController.text.trim());
+                if (value == null ||
+                    value < product.minimumOrderQuantity ||
+                    value > product.stock) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Quantity must be between ${product.minimumOrderQuantity} and ${product.stock}.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, value);
+              },
+              child: const Text('Send quote request'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (requestedQuantity == null) return;
+    final targetPrice = double.tryParse(targetController.text.trim());
+    if (targetPrice == null || targetPrice <= 0) return;
+
+    final firestore = FirebaseFirestore.instance;
+    final participants = [user.id, product.uploadedBy]..sort();
+    final conversationId =
+        '${participants.join('_')}_${product.id}'.replaceAll('/', '_');
+    final conversationRef =
+        firestore.collection('conversations').doc(conversationId);
+    final quoteRef = firestore.collection('quote_requests').doc();
+    final messageRef = conversationRef.collection('messages').doc();
+    final now = Timestamp.now();
+    final quoteMessage =
+        'Quote request: $requestedQuantity × ${product.name} at NGN ${targetPrice.toStringAsFixed(2)} per unit.';
+
+    final batch = firestore.batch();
+    batch.set(quoteRef, {
+      'quoteId': quoteRef.id,
+      'conversationId': conversationId,
+      'productId': product.id,
+      'productName': product.name,
+      'buyerId': user.id,
+      'buyerName': user.name,
+      'sellerId': product.uploadedBy,
+      'quantity': requestedQuantity,
+      'targetUnitPrice': targetPrice,
+      'message': messageController.text.trim(),
+      'status': 'pending',
+      'createdAt': now,
+      'updatedAt': now,
+    });
+    batch.set(
+        conversationRef,
+        {
+          'participantIds': participants,
+          'participants': participants,
+          'participantNames': {user.id: user.name},
+          'productId': product.id,
+          'productName': product.name,
+          'lastMessageText': quoteMessage,
+          'lastMessageAt': now,
+          'updatedAt': now,
+          'unreadByUser': {user.id: 0, product.uploadedBy: 1},
+        },
+        SetOptions(merge: true));
+    batch.set(messageRef, {
+      'id': messageRef.id,
+      'conversationId': conversationId,
+      'senderId': user.id,
+      'senderName': user.name,
+      'text': quoteMessage,
+      'messageType': 'quote_request',
+      'quoteId': quoteRef.id,
+      'createdAt': now,
+    });
+    await batch.commit();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+            'Quote request sent to the seller. You can continue in Messenger.'),
+        backgroundColor: AppColors.success,
+      ),
+    );
   }
 
   Widget _buildSimpleProductDetail(Map<String, dynamic> product) {
@@ -655,6 +804,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeRole = ref.watch(currentRoleProvider);
     // Legacy/demo cards still pass a simplified map shape that does not align
     // with the real Product model used elsewhere in the app.
     if (widget.productData != null &&
@@ -1300,6 +1450,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (activeRole == UserRole.wholesaleBuyer &&
+                  product.uploadedBy.isNotEmpty) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => _requestQuote(product),
+                    icon: const Icon(Icons.request_quote_outlined),
+                    label: const Text('Request quote from this seller'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               // Quantity Selector
               Container(
                 decoration: BoxDecoration(

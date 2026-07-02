@@ -8,6 +8,7 @@ import 'package:coop_commerce/features/offers/offers_screen.dart';
 import 'package:coop_commerce/features/products/products_listing_screen.dart';
 import 'package:coop_commerce/features/profile/payment_methods_screen.dart';
 import 'package:coop_commerce/features/selling/seller_home_screen.dart';
+import 'package:coop_commerce/features/selling/seller_earnings_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/wholesale_buyer_home_screen.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
@@ -77,7 +78,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 2:
         return const ProductsListingScreen(title: 'Seller Products');
       case 3:
-        return const _SellerEarningsTabScreen();
+        return const SellerEarningsScreen();
       case 4:
         return const MyNCDFCOOPScreen();
       default:

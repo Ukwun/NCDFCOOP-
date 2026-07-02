@@ -19,6 +19,15 @@ enum ProductApprovalStatus {
   const ProductApprovalStatus(this.displayName);
 }
 
+enum ProductAudience {
+  retail('Retail / Members'),
+  wholesale('Wholesale Buyers'),
+  both('Retail and Wholesale');
+
+  final String displayName;
+  const ProductAudience(this.displayName);
+}
+
 /// Seller profile information
 class SellerProfile {
   final String? id;
@@ -92,6 +101,9 @@ class SellerProduct {
   final String productName;
   final String category;
   final double price;
+  final double? retailPrice;
+  final double? wholesalePrice;
+  final ProductAudience audience;
   final int quantity;
   final int moq; // Minimum Order Quantity
   final String imageUrl;
@@ -110,6 +122,9 @@ class SellerProduct {
     required this.productName,
     required this.category,
     required this.price,
+    this.retailPrice,
+    this.wholesalePrice,
+    this.audience = ProductAudience.both,
     required this.quantity,
     required this.moq,
     required this.imageUrl,
@@ -131,6 +146,12 @@ class SellerProduct {
       productName: data['productName'] ?? '',
       category: data['category'] ?? '',
       price: (data['price'] ?? 0).toDouble(),
+      retailPrice: (data['retailPrice'] as num?)?.toDouble(),
+      wholesalePrice: (data['wholesalePrice'] as num?)?.toDouble(),
+      audience: ProductAudience.values.firstWhere(
+        (value) => value.name == (data['audience'] ?? 'both'),
+        orElse: () => ProductAudience.both,
+      ),
       quantity: data['quantity'] ?? 0,
       moq: data['moq'] ?? 1,
       imageUrl: data['imageUrl'] ?? '',
@@ -154,6 +175,11 @@ class SellerProduct {
       'productName': productName,
       'category': category,
       'price': price,
+      'retailPrice': retailPrice ?? price,
+      'wholesalePrice': wholesalePrice ?? price,
+      'audience': audience.name,
+      'visibleToRetail': audience != ProductAudience.wholesale,
+      'visibleToWholesale': audience != ProductAudience.retail,
       'quantity': quantity,
       'moq': moq,
       'imageUrl': imageUrl,

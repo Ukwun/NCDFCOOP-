@@ -176,6 +176,7 @@ class AppHeaderUtility extends ConsumerWidget {
   }
 
   /// Build role-specific utility buttons
+  // ignore: unused_element
   Widget _buildRoleSpecificUtilities(
     BuildContext context,
     dynamic user,
@@ -627,6 +628,7 @@ class AppHeaderUtility extends ConsumerWidget {
   }
 
   /// Show logout confirmation dialog
+  // ignore: unused_element
   void _showLogoutConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -905,7 +907,7 @@ class _HeaderQuickActionsState extends ConsumerState<_HeaderQuickActions> {
                         border: Border.all(color: AppColors.border),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),

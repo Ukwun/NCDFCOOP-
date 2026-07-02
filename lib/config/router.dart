@@ -1889,6 +1889,8 @@ class AppRouter {
           path: '/seller/add-product',
           name: 'seller-add-product',
           parentNavigatorKey: _rootNavigatorKey,
+          redirect: (context, state) =>
+              _hasRole(context, UserRole.seller) ? null : '/home',
           builder: (context, state) {
             return const SellerAddProductScreen();
           },
@@ -1897,6 +1899,8 @@ class AppRouter {
           path: '/seller/sales-ledger',
           name: 'seller-sales-ledger',
           parentNavigatorKey: _rootNavigatorKey,
+          redirect: (context, state) =>
+              _hasRole(context, UserRole.seller) ? null : '/home',
           builder: (context, state) {
             return const SellerSalesLedgerScreen();
           },
@@ -1905,6 +1909,8 @@ class AppRouter {
           path: '/seller/products/:productId/edit',
           name: 'seller-product-detail-edit',
           parentNavigatorKey: _rootNavigatorKey,
+          redirect: (context, state) =>
+              _hasRole(context, UserRole.seller) ? null : '/home',
           builder: (context, state) {
             final productId = state.pathParameters['productId'] ?? '';
             final extra = state.extra as Map<String, dynamic>? ?? {};
