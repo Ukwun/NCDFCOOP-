@@ -48,34 +48,35 @@ class Product {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'description': description,
-    'category': category,
-    'regularPrice': regularPrice,
-    'memberGoldPrice': memberGoldPrice,
-    'memberPlatinumPrice': memberPlatinumPrice,
-    'imageUrl': imageUrl,
-    'isMemberExclusive': isMemberExclusive,
-    'discountPercentage': discountPercentage,
-  };
+        'id': id,
+        'name': name,
+        'description': description,
+        'category': category,
+        'regularPrice': regularPrice,
+        'memberGoldPrice': memberGoldPrice,
+        'memberPlatinumPrice': memberPlatinumPrice,
+        'imageUrl': imageUrl,
+        'isMemberExclusive': isMemberExclusive,
+        'discountPercentage': discountPercentage,
+      };
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    description: json['description'] as String,
-    category: json['category'] as String,
-    regularPrice: (json['regularPrice'] as num).toDouble(),
-    memberGoldPrice: json['memberGoldPrice'] != null
-        ? (json['memberGoldPrice'] as num).toDouble()
-        : null,
-    memberPlatinumPrice: json['memberPlatinumPrice'] != null
-        ? (json['memberPlatinumPrice'] as num).toDouble()
-        : null,
-    imageUrl: json['imageUrl'] as String?,
-    isMemberExclusive: json['isMemberExclusive'] as bool? ?? false,
-    discountPercentage: (json['discountPercentage'] as num?)?.toDouble() ?? 0,
-  );
+        id: json['id'] as String,
+        name: json['name'] as String,
+        description: json['description'] as String,
+        category: json['category'] as String,
+        regularPrice: (json['regularPrice'] as num).toDouble(),
+        memberGoldPrice: json['memberGoldPrice'] != null
+            ? (json['memberGoldPrice'] as num).toDouble()
+            : null,
+        memberPlatinumPrice: json['memberPlatinumPrice'] != null
+            ? (json['memberPlatinumPrice'] as num).toDouble()
+            : null,
+        imageUrl: json['imageUrl'] as String?,
+        isMemberExclusive: json['isMemberExclusive'] as bool? ?? false,
+        discountPercentage:
+            (json['discountPercentage'] as num?)?.toDouble() ?? 0,
+      );
 }
 
 /// Real product database with actual member pricing

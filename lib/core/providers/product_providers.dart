@@ -113,6 +113,9 @@ class ProductFiltersNotifier extends Notifier<ProductFilters> {
 
 /// Mock products for fallback
 List<Product> _getMockProducts() {
+  if (!const bool.fromEnvironment('ENABLE_DEMO_CATALOG', defaultValue: false)) {
+    return const [];
+  }
   return [
     Product(
       id: 'mock_001',
@@ -513,13 +516,11 @@ final productDetailProvider =
       }
     } catch (_) {}
 
-    // Fallback: find in mock products
     final mockProducts = _getMockProducts();
-    try {
+    if (mockProducts.isNotEmpty) {
       return mockProducts.firstWhere((p) => p.id == productId);
-    } catch (_) {
-      return mockProducts.first; // Return first if not found
     }
+    throw StateError('Product $productId was not found in the live catalog.');
   }
 });
 

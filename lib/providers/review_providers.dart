@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/enhanced_review_service.dart';
 import '../models/enhanced_review_models.dart';
+import 'auth_provider.dart';
 
 /// Enhanced review service provider
 final enhancedReviewServiceProvider = Provider((ref) {
@@ -30,7 +31,8 @@ final productReviewsProvider = FutureProvider.family<
 
 /// Get a single review
 final singleReviewProvider =
-    FutureProvider.family<EnhancedProductReview?, String>((ref, reviewId) async {
+    FutureProvider.family<EnhancedProductReview?, String>(
+        (ref, reviewId) async {
   final reviewService = ref.watch(enhancedReviewServiceProvider);
   return await reviewService.getReview(reviewId);
 });
@@ -43,9 +45,10 @@ final reviewStatisticsProvider =
 });
 
 /// Get current user's reviews
-final userReviewsProvider = FutureProvider<List<EnhancedProductReview>>((ref) async {
-  // TODO: Get userId from auth provider
-  const userId = 'current_user'; // Placeholder
+final userReviewsProvider =
+    FutureProvider<List<EnhancedProductReview>>((ref) async {
+  final userId = ref.watch(currentUserProvider)?.id;
+  if (userId == null) return const [];
   final reviewService = ref.watch(enhancedReviewServiceProvider);
   return await reviewService.getUserReviews(userId: userId);
 });
@@ -68,14 +71,24 @@ final pendingReviewsProvider =
 /// Provider for review-related actions
 final reviewActionsProvider = Provider((ref) {
   final reviewService = ref.read(enhancedReviewServiceProvider);
-  return ReviewActions(reviewService: reviewService);
+  return ReviewActions(
+    reviewService: reviewService,
+    currentUserId: () => ref.read(currentUserProvider)?.id,
+  );
 });
 
 /// Helper class for review-related actions
 class ReviewActions {
   final EnhancedReviewService reviewService;
+  final String? Function() currentUserId;
 
-  ReviewActions({required this.reviewService});
+  ReviewActions({required this.reviewService, required this.currentUserId});
+
+  String _requireUserId() {
+    final userId = currentUserId();
+    if (userId == null) throw StateError('Sign in to perform this action.');
+    return userId;
+  }
 
   /// Submit a new review
   Future<String> submitReview({
@@ -104,16 +117,12 @@ class ReviewActions {
 
   /// Mark review as helpful
   Future<void> markAsHelpful(String reviewId) async {
-    // TODO: Get actual userId from auth
-    const userId = 'current_user';
-    await reviewService.markAsHelpful(reviewId, userId);
+    await reviewService.markAsHelpful(reviewId, _requireUserId());
   }
 
   /// Mark review as not helpful
   Future<void> markAsNotHelpful(String reviewId) async {
-    // TODO: Get actual userId from auth
-    const userId = 'current_user';
-    await reviewService.markAsNotHelpful(reviewId, userId);
+    await reviewService.markAsNotHelpful(reviewId, _requireUserId());
   }
 
   /// Flag review for moderation
@@ -299,12 +308,11 @@ final reviewModerationFormProvider = NotifierProvider.family<
 });
 
 /// Track review moderation form state
-class ReviewModerationFormNotifier 
-    extends Notifier<ReviewModerationFormState> {
+class ReviewModerationFormNotifier extends Notifier<ReviewModerationFormState> {
   final String _reviewId;
-  
+
   ReviewModerationFormNotifier(this._reviewId);
-  
+
   @override
   ReviewModerationFormState build() {
     return ReviewModerationFormState(reviewId: _reviewId);

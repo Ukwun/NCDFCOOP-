@@ -217,7 +217,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '9:45',
+                '',
                 style: AppTextStyles.h4.copyWith(color: AppColors.surface),
               ),
               Row(

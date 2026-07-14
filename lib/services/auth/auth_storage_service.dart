@@ -8,6 +8,7 @@ class AuthStorageService {
   static const String _tokenKey = 'auth_token';
   static const String _rememberMeKey = 'remember_me';
   static const String _emailKey = 'remembered_email';
+  // Kept only so older installations can securely remove the legacy value.
   static const String _passwordKey = 'remembered_password';
   static const String _providerKey =
       'auth_provider'; // google, facebook, apple, email
@@ -47,11 +48,11 @@ class AuthStorageService {
       // Save provider
       await prefs.setString(_providerKey, provider ?? 'email');
 
-      // Save credentials if rememberMe is enabled
-      if (rememberMe && email != null && password != null) {
+      // Firebase persists the authenticated session securely. Remember only the
+      // email for convenience; never persist a user's password on the device.
+      if (rememberMe && email != null) {
         await prefs.setString(_emailKey, email);
-        // In production, encrypt password before storing!
-        await prefs.setString(_passwordKey, password);
+        await prefs.remove(_passwordKey);
       } else {
         // Clear saved credentials if remember me is disabled
         await prefs.remove(_emailKey);
@@ -106,13 +107,12 @@ class AuthStorageService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final email = prefs.getString(_emailKey);
-      final password = prefs.getString(_passwordKey);
-
-      if (email == null || password == null) return null;
+      // Remove passwords written by pre-production builds during migration.
+      await prefs.remove(_passwordKey);
+      if (email == null) return null;
 
       return {
         'email': email,
-        'password': password,
       };
     } catch (e) {
       print('Error loading credentials: $e');

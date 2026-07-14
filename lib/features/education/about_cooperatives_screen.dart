@@ -75,32 +75,38 @@ class AboutCooperativesScreen extends StatelessWidget {
                   _buildPrincipleCard(
                     number: '2',
                     title: 'Member Democratic Control',
-                    description: 'Members make decisions together. One member, one vote.',
+                    description:
+                        'Members make decisions together. One member, one vote.',
                   ),
                   _buildPrincipleCard(
                     number: '3',
                     title: 'Member Economic Participation',
-                    description: 'Members own the business and share profits fairly.',
+                    description:
+                        'Members own the business and share profits fairly.',
                   ),
                   _buildPrincipleCard(
                     number: '4',
                     title: 'Autonomy & Independence',
-                    description: 'Members control the cooperative, not external forces.',
+                    description:
+                        'Members control the cooperative, not external forces.',
                   ),
                   _buildPrincipleCard(
                     number: '5',
                     title: 'Education & Training',
-                    description: 'Members learn cooperative values and improve skills.',
+                    description:
+                        'Members learn cooperative values and improve skills.',
                   ),
                   _buildPrincipleCard(
                     number: '6',
                     title: 'Cooperation Among Cooperatives',
-                    description: 'Cooperatives work together to strengthen communities.',
+                    description:
+                        'Cooperatives work together to strengthen communities.',
                   ),
                   _buildPrincipleCard(
                     number: '7',
                     title: 'Community Commitment',
-                    description: 'Cooperatives support sustainable community development.',
+                    description:
+                        'Cooperatives support sustainable community development.',
                   ),
                 ],
               ),
@@ -122,22 +128,26 @@ class AboutCooperativesScreen extends StatelessWidget {
                   _buildStepCard(
                     step: 'Step 1',
                     title: 'You Join',
-                    description: 'Become a member and own a piece of the cooperative.',
+                    description:
+                        'Become a member and own a piece of the cooperative.',
                   ),
                   _buildStepCard(
                     step: 'Step 2',
                     title: 'You Shop',
-                    description: 'Access fair prices and member-exclusive deals.',
+                    description:
+                        'Access fair prices and member-exclusive deals.',
                   ),
                   _buildStepCard(
                     step: 'Step 3',
                     title: 'You Earn',
-                    description: 'Earn rewards, points, and community dividends.',
+                    description:
+                        'Earn rewards, points, and community dividends.',
                   ),
                   _buildStepCard(
                     step: 'Step 4',
                     title: 'You Decide',
-                    description: 'Vote on cooperative decisions that affect us all.',
+                    description:
+                        'Vote on cooperative decisions that affect us all.',
                   ),
                 ],
               ),
@@ -154,12 +164,18 @@ class AboutCooperativesScreen extends StatelessWidget {
                     style: AppTextStyles.h4,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _buildBenefitRow('📊', 'Access member-only analytics', 'Track savings and community impact'),
-                  _buildBenefitRow('💰', 'Fair pricing', 'Transparent pricing with no hidden markup'),
-                  _buildBenefitRow('🎁', 'Community dividends', 'Share profits with other members'),
-                  _buildBenefitRow('🤝', 'Voice & vote', 'Have a say in cooperative decisions'),
-                  _buildBenefitRow('📱', 'Member app features', 'Reviews, invoices, and bulk ordering'),
-                  _buildBenefitRow('🌱', 'Support growth', 'Help local businesses and communities thrive'),
+                  _buildBenefitRow('📊', 'Access member-only analytics',
+                      'Track savings and community impact'),
+                  _buildBenefitRow('💰', 'Fair pricing',
+                      'Transparent pricing with no hidden markup'),
+                  _buildBenefitRow('🎁', 'Community dividends',
+                      'Share profits with other members'),
+                  _buildBenefitRow('🤝', 'Voice & vote',
+                      'Have a say in cooperative decisions'),
+                  _buildBenefitRow('📱', 'Member app features',
+                      'Reviews, invoices, and bulk ordering'),
+                  _buildBenefitRow('🌱', 'Support growth',
+                      'Help local businesses and communities thrive'),
                 ],
               ),
             ),
@@ -181,25 +197,42 @@ class AboutCooperativesScreen extends StatelessWidget {
                     tier: 'Wholesale',
                     icon: '🏢',
                     description: 'For bulk buyers and small businesses',
-                    benefits: ['Bulk ordering', 'Business pricing', 'Dedicated support'],
+                    benefits: [
+                      'Bulk ordering',
+                      'Business pricing',
+                      'Dedicated support'
+                    ],
                   ),
                   _buildTierCard(
                     tier: 'Regular Member',
                     icon: '👤',
                     description: 'For individual shoppers',
-                    benefits: ['Fair pricing', 'Member rewards', 'Access to sales'],
+                    benefits: [
+                      'Fair pricing',
+                      'Member rewards',
+                      'Access to sales'
+                    ],
                   ),
                   _buildTierCard(
                     tier: 'Gold Member',
                     icon: '👑',
                     description: 'For committed members',
-                    benefits: ['5% bonus rewards', 'Priority support', 'Extra dividends'],
+                    benefits: [
+                      '5% bonus rewards',
+                      'Priority support',
+                      'Extra dividends'
+                    ],
                   ),
                   _buildTierCard(
                     tier: 'Cooperative Owner',
                     icon: '🏆',
-                    description: 'For those who want to participate in management',
-                    benefits: ['Full voting rights', 'Board access', 'Highest dividends'],
+                    description:
+                        'For those who want to participate in management',
+                    benefits: [
+                      'Full voting rights',
+                      'Board access',
+                      'Highest dividends'
+                    ],
                   ),
                 ],
               ),
@@ -420,15 +453,16 @@ class AboutCooperativesScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             ...benefits.map((benefit) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(benefit, style: AppTextStyles.bodySmall),
-                ],
-              ),
-            )),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          color: AppColors.primary, size: 20),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(benefit, style: AppTextStyles.bodySmall),
+                    ],
+                  ),
+                )),
           ],
         ),
       ),

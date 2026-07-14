@@ -250,7 +250,8 @@ class _ApprovalHistoryScreenState extends ConsumerState<ApprovalHistoryScreen> {
                             color: Colors.grey.shade600,
                           ),
                         ),
-                        if (entry.comments != null && entry.comments!.isNotEmpty)
+                        if (entry.comments != null &&
+                            entry.comments!.isNotEmpty)
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

@@ -116,7 +116,9 @@ class _LoginScreenState extends State<LoginScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        if (mounted) context.go('/home');
+        // Re-enter through the authoritative auth bootstrap so Firestore role
+        // and onboarding state, not this screen, determine the destination.
+        if (mounted) context.go('/splash');
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -174,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        if (mounted) context.go('/home');
+        if (mounted) context.go('/splash');
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -225,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        if (mounted) context.go('/home');
+        if (mounted) context.go('/splash');
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -276,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        if (mounted) context.go('/home');
+        if (mounted) context.go('/splash');
       }
     } on AuthException catch (e) {
       if (mounted) {

@@ -31,7 +31,8 @@ class InvoiceService {
         'invoiceNumber': 'INV-RETAIL-${orderId.toUpperCase()}',
         'invoiceType': 'Retail Order Invoice',
         'orderDate': DateFormat('MMM dd, yyyy').format(orderDate),
-        'dueDate': DateFormat('MMM dd, yyyy').format(orderDate.add(Duration(days: 30))),
+        'dueDate': DateFormat('MMM dd, yyyy')
+            .format(orderDate.add(Duration(days: 30))),
         'billTo': {
           'name': customerName,
           'email': customerEmail,
@@ -55,7 +56,8 @@ class InvoiceService {
         },
         'paymentMethod': paymentMethod,
         'terms': 'Thank you for your purchase!',
-        'notes': 'Please keep this invoice for your records. For support, contact support@coopcommerce.ng',
+        'notes':
+            'Please keep this invoice for your records. For support, contact support@coopcommerce.ng',
       };
     } catch (e) {
       print('Failed to generate retail invoice: $e');
@@ -138,7 +140,8 @@ class InvoiceService {
         'invoiceNumber': 'INV-WHOLESALE-${orderId.toUpperCase()}',
         'invoiceType': 'Wholesale Order Invoice',
         'orderDate': DateFormat('MMM dd, yyyy').format(orderDate),
-        'dueDate': DateFormat('MMM dd, yyyy').format(orderDate.add(Duration(days: 15))),
+        'dueDate': DateFormat('MMM dd, yyyy')
+            .format(orderDate.add(Duration(days: 15))),
         'billTo': {
           'name': buyerName,
           'email': buyerEmail,
@@ -183,12 +186,9 @@ class InvoiceService {
       // pdf.addPage(...);
       // return pdf.save();
 
-      final dummyPdf = Uint8List.fromList([
-        0x25, 0x50, 0x44, 0x46, // PDF header
-        0x2D, 0x31, 0x2E, 0x34, // -1.4
-      ]);
-
-      return dummyPdf;
+      throw UnsupportedError(
+        'PDF export is unavailable. Use the live HTML invoice until the PDF renderer is configured.',
+      );
     } catch (e) {
       print('Failed to generate PDF: $e');
       return Uint8List(0);
@@ -328,7 +328,8 @@ class InvoiceService {
         'invoiceNumber': 'INV-RETAIL-$orderId',
         'invoiceType': 'Retail Order Invoice',
         'orderDate': DateFormat('MMM dd, yyyy').format(DateTime.now()),
-        'dueDate': DateFormat('MMM dd, yyyy').format(DateTime.now().add(Duration(days: 30))),
+        'dueDate': DateFormat('MMM dd, yyyy')
+            .format(DateTime.now().add(Duration(days: 30))),
         'billTo': {
           'name': 'John Doe',
           'email': 'john@example.com',

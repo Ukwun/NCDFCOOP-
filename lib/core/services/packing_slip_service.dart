@@ -219,7 +219,8 @@ class PackingSlipService {
     }
 
     buffer.writeln('─' * 80);
-    buffer.writeln('Total Items: ${slip.totalItems} | Total Boxes: ${slip.totalBoxes}');
+    buffer.writeln(
+        'Total Items: ${slip.totalItems} | Total Boxes: ${slip.totalBoxes}');
     buffer.writeln('');
 
     // Footer

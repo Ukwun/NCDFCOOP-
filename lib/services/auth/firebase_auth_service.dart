@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:coop_commerce/core/config/social_auth_config.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -84,6 +84,11 @@ class FirebaseAuthService {
   // Google Sign In
   Future<User?> signInWithGoogle() async {
     try {
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider()
+          ..setCustomParameters({'prompt': 'select_account'});
+        return (await _firebaseAuth.signInWithPopup(provider)).user;
+      }
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         throw AuthException(message: 'Google sign-in cancelled by user');
@@ -105,20 +110,26 @@ class FirebaseAuthService {
 
   // Facebook Sign In
   Future<User?> signInWithFacebook() async {
-    if (!SocialAuthConfig.isFacebookConfigured) {
-      throw AuthException(
-        message: SocialAuthConfig.facebookUnavailableMessage,
-      );
+    try {
+      final provider = FacebookAuthProvider()..addScope('email');
+      final credential = kIsWeb
+          ? await _firebaseAuth.signInWithPopup(provider)
+          : await _firebaseAuth.signInWithProvider(provider);
+      return credential.user;
+    } on FirebaseAuthException catch (e) {
+      throw _handleFirebaseException(e);
     }
-    throw AuthException(
-      message: 'Facebook sign-in is temporarily unavailable on this build.',
-      code: 'facebook_unavailable',
-    );
   }
 
   // Apple Sign In
   Future<User?> signInWithApple() async {
     try {
+      if (kIsWeb) {
+        final provider = AppleAuthProvider()
+          ..addScope('email')
+          ..addScope('name');
+        return (await _firebaseAuth.signInWithPopup(provider)).user;
+      }
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,

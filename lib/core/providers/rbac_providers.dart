@@ -182,8 +182,8 @@ final resourcePermissionProvider = FutureProvider.family<PermissionLevel,
 final highestUserRoleProvider = Provider<UserRole>((ref) {
   final user = ref.watch(currentUserProvider);
 
-  if (user == null) return UserRole.wholesaleBuyer;
-  if (user.roles.isEmpty) return UserRole.wholesaleBuyer;
+  if (user == null) return UserRole.coopMember;
+  if (user.roles.isEmpty) return UserRole.coopMember;
 
   return RBACService.getHighestRole(user.roles);
 });

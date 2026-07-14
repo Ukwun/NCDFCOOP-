@@ -37,8 +37,7 @@ class SearchQueryNotifier extends Notifier<String> {
   }
 }
 
-final searchQueryProvider =
-    NotifierProvider<SearchQueryNotifier, String>(() {
+final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(() {
   return SearchQueryNotifier();
 });
 

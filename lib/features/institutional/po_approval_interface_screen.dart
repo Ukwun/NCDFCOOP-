@@ -105,8 +105,8 @@ class _POApprovalInterfaceScreenState
                 // Budget Verification Info
                 if (workflow?.budgetVerification != null)
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Card(
                       color: workflow!.budgetVerification!.withinBudget
                           ? Colors.green.shade50
@@ -122,10 +122,10 @@ class _POApprovalInterfaceScreenState
                                   workflow.budgetVerification!.withinBudget
                                       ? Icons.check_circle
                                       : Icons.warning,
-                                  color: workflow
-                                          .budgetVerification!.withinBudget
-                                      ? Colors.green
-                                      : Colors.red,
+                                  color:
+                                      workflow.budgetVerification!.withinBudget
+                                          ? Colors.green
+                                          : Colors.red,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -238,12 +238,14 @@ class _POApprovalInterfaceScreenState
     final steps = [
       {
         'title': 'Department Approval',
-        'status': workflow?.departmentApproval?.status ?? ApprovalStatus.pending,
+        'status':
+            workflow?.departmentApproval?.status ?? ApprovalStatus.pending,
         'approver': workflow?.departmentApproval?.approverName ?? 'Pending',
       },
       {
         'title': 'Budget Verification',
-        'status': workflow?.budgetVerification?.status ?? ApprovalStatus.pending,
+        'status':
+            workflow?.budgetVerification?.status ?? ApprovalStatus.pending,
         'approver':
             workflow?.budgetVerification?.budgetOfficerName ?? 'Pending',
       },
@@ -502,8 +504,7 @@ class _POApprovalInterfaceScreenState
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
                 : const Text('Reject PO'),

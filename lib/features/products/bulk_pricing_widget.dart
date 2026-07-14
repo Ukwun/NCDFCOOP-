@@ -163,8 +163,7 @@ class _BulkPricingWidgetState extends State<BulkPricingWidget> {
               ...widget.tiers.asMap().entries.map((entry) {
                 final index = entry.key;
                 final tier = entry.value;
-                final isCurrentTier =
-                    selectedQuantity >= tier.minQuantity &&
+                final isCurrentTier = selectedQuantity >= tier.minQuantity &&
                     selectedQuantity <= tier.maxQuantity;
 
                 return Padding(

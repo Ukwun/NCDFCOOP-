@@ -175,45 +175,6 @@ class OnboardingScreen extends StatelessWidget {
               ),
             ),
           ),
-
-          // Status Bar (Simulated)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      '9:45',
-                      style: TextStyle(
-                        color: Color(0xFFFAFAFA),
-                        fontSize: 16,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    // Icons placeholder
-                    Row(
-                      children: [
-                        Container(width: 20, height: 20, color: Colors.white24),
-                        const SizedBox(width: 6),
-                        Container(width: 20, height: 20, color: Colors.white24),
-                        const SizedBox(width: 6),
-                        Container(width: 30, height: 20, color: Colors.white24),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

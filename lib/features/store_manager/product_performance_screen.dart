@@ -109,8 +109,8 @@ class _ProductPerformanceScreenState
                           (a, b) => b.totalRevenue.compareTo(a.totalRevenue));
                       break;
                     case 'sales':
-                      products.sort((a, b) =>
-                          b.quantitySold.compareTo(a.quantitySold));
+                      products.sort(
+                          (a, b) => b.quantitySold.compareTo(a.quantitySold));
                       break;
                     case 'turnover':
                       products.sort(
@@ -151,8 +151,7 @@ class _ProductPerformanceScreenState
         backgroundColor: isSelected ? Colors.teal : Colors.white,
         foregroundColor: isSelected ? Colors.white : Colors.teal,
         side: BorderSide(
-          color:
-              isSelected ? Colors.teal : Colors.teal.shade200,
+          color: isSelected ? Colors.teal : Colors.teal.shade200,
         ),
         padding: const EdgeInsets.symmetric(vertical: 8),
       ),
@@ -205,15 +204,11 @@ class _ProductPerformanceScreenState
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    product.isLowStock
-                        ? '⚠ Low Stock'
-                        : '✓ In Stock',
+                    product.isLowStock ? '⚠ Low Stock' : '✓ In Stock',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: product.isLowStock
-                          ? Colors.red
-                          : Colors.green,
+                      color: product.isLowStock ? Colors.red : Colors.green,
                     ),
                   ),
                 ),

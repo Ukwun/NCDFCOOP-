@@ -14,31 +14,33 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _rememberMe = false;
+  bool _isSubmitting = false;
+
+  Future<void> _runSocial(Future<void> Function() action) async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await action().timeout(const Duration(seconds: 30));
+      final result = ref.read(authControllerProvider);
+      if (result.hasError) throw result.error!;
+      if (mounted) context.go('/splash');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sign in could not be completed. Please try again.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Listen to auth state changes for error handling or navigation
-    ref.listen(authControllerProvider, (previous, next) {
-      if (next is AsyncError) {
-        final errorMessage = next.error.toString();
-        print('❌ SIGN IN ERROR: $errorMessage');
-        print('Stack trace: ${next.stackTrace}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      } else if (next is AsyncData && !next.isLoading) {
-        // On success, navigate to home
-        print('✅ SIGN IN SUCCESS - Navigating to home');
-        context.go('/');
-      }
-    });
-
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
+    ref.watch(authControllerProvider);
+    final isLoading = _isSubmitting;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -115,26 +117,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     _SocialButton(
                       icon: Icons.facebook,
                       label: 'Continue with Facebook',
-                      onTap: () => ref
+                      onTap: () => _runSocial(() => ref
                           .read(authControllerProvider.notifier)
-                          .signInWithFacebook(),
+                          .signInWithFacebook()),
                     ),
                     const SizedBox(height: 16),
                   ],
                   _SocialButton(
                     icon: Icons.g_mobiledata,
                     label: 'Continue with Google',
-                    onTap: () => ref
+                    onTap: () => _runSocial(() => ref
                         .read(authControllerProvider.notifier)
-                        .signInWithGoogle(),
+                        .signInWithGoogle()),
                   ),
                   const SizedBox(height: 16),
                   _SocialButton(
                     icon: Icons.apple,
                     label: 'Continue with Apple',
-                    onTap: () => ref
+                    onTap: () => _runSocial(() => ref
                         .read(authControllerProvider.notifier)
-                        .signInWithApple(),
+                        .signInWithApple()),
                   ),
                 ],
 

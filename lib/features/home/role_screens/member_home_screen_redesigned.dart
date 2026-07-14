@@ -34,7 +34,8 @@ class MemberHomeScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: 100),
-                      const Icon(Icons.person_off, size: 64, color: Colors.grey),
+                      const Icon(Icons.person_off,
+                          size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(
                         'Member Profile Not Found',
@@ -44,7 +45,8 @@ class MemberHomeScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Your member profile does not exist in our database.\nPlease contact support to register.',
-                        style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: Colors.grey),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
@@ -60,55 +62,55 @@ class MemberHomeScreen extends ConsumerWidget {
               }
 
               return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. LOYALTY CARD - Tier + Points (main focus)
-                _buildLoyaltyCard(context, data, user),
-                const SizedBox(height: 24),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. LOYALTY CARD - Tier + Points (main focus)
+                  _buildLoyaltyCard(context, data, user),
+                  const SizedBox(height: 24),
 
-                // 2. SAVINGS & IMPACT - Show member value
-                _buildSavingsAndImpactSection(context, data),
-                const SizedBox(height: 24),
+                  // 2. SAVINGS & IMPACT - Show member value
+                  _buildSavingsAndImpactSection(context, data),
+                  const SizedBox(height: 24),
 
-                // 3. QUICK ACTIONS - Points & Rewards
-                _buildLoyaltyActionsGrid(context),
-                const SizedBox(height: 24),
+                  // 3. QUICK ACTIONS - Points & Rewards
+                  _buildLoyaltyActionsGrid(context),
+                  const SizedBox(height: 24),
 
-                // 4. VOTING & GOVERNANCE
-                _buildVotingEngagementSection(context),
-                const SizedBox(height: 24),
+                  // 4. VOTING & GOVERNANCE
+                  _buildVotingEngagementSection(context),
+                  const SizedBox(height: 24),
 
-                // 5. TRANSPARENCY & REPORTS
-                _buildTransparencyReportsSection(context),
-                const SizedBox(height: 24),
+                  // 5. TRANSPARENCY & REPORTS
+                  _buildTransparencyReportsSection(context),
+                  const SizedBox(height: 24),
 
-                // 6. EXCLUSIVE MEMBER DEALS
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Exclusive Member Deals',
-                    style:
-                        AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                  // 6. EXCLUSIVE MEMBER DEALS
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Exclusive Member Deals',
+                      style: AppTextStyles.h3
+                          .copyWith(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _buildExclusiveDealsList(context, featuredAsync),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 12),
+                  _buildExclusiveDealsList(context, featuredAsync),
+                  const SizedBox(height: 24),
 
-                // 7. SHOP ALL MEMBER PRODUCTS
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'All Member Products',
-                    style:
-                        AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                  // 7. SHOP ALL MEMBER PRODUCTS
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'All Member Products',
+                      style: AppTextStyles.h3
+                          .copyWith(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _buildMemberProductsList(context, featuredAsync),
-                const SizedBox(height: 24),
-              ],
-            );
+                  const SizedBox(height: 12),
+                  _buildMemberProductsList(context, featuredAsync),
+                  const SizedBox(height: 24),
+                ],
+              );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, _) => Center(
@@ -680,55 +682,55 @@ class _ProductCard extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
                 ),
+                child: product.imageUrl != null
+                    ? Image(
+                        image: product.imageUrl!.startsWith('assets/')
+                            ? AssetImage(product.imageUrl!)
+                            : NetworkImage(product.imageUrl!) as ImageProvider,
+                        fit: BoxFit.cover,
+                      )
+                    : Icon(Icons.image, color: Colors.grey[300]),
               ),
-              child: product.imageUrl != null
-                  ? Image(
-                      image: product.imageUrl!.startsWith('assets/')
-                          ? AssetImage(product.imageUrl!)
-                          : NetworkImage(product.imageUrl!) as ImageProvider,
-                      fit: BoxFit.cover,
-                    )
-                  : Icon(Icons.image, color: Colors.grey[300]),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₦${product.wholesalePrice.toStringAsFixed(0)}',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 4),
+                  Text(
+                    '₦${product.wholesalePrice.toStringAsFixed(0)}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      ),  // closes Container
-    );  // closes GestureDetector
+          ],
+        ),
+      ), // closes Container
+    ); // closes GestureDetector
   }
 }
 

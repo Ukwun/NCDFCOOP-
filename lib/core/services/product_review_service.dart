@@ -5,7 +5,8 @@ import 'package:coop_commerce/models/product_review_models.dart';
 /// Service for managing product reviews
 /// Handles creation, retrieval, rating updates, and helpfulness tracking
 class ProductReviewService {
-  static final ProductReviewService _instance = ProductReviewService._internal();
+  static final ProductReviewService _instance =
+      ProductReviewService._internal();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   factory ProductReviewService() => _instance;
@@ -55,7 +56,8 @@ class ProductReviewService {
   Future<List<ProductReview>> getProductReviews({
     required String productId,
     int limit = 10,
-    String orderBy = 'recent', // 'recent', 'helpful', 'rating-high', 'rating-low'
+    String orderBy =
+        'recent', // 'recent', 'helpful', 'rating-high', 'rating-low'
   }) async {
     try {
       Query query = _firestore
@@ -86,8 +88,7 @@ class ProductReviewService {
           .toList();
     } catch (e) {
       print('Failed to get reviews: $e');
-      // Fallback to mock data
-      return mockProductReviews.where((r) => r.productId == productId).toList();
+      rethrow;
     }
   }
 
@@ -109,14 +110,12 @@ class ProductReviewService {
       return await _calculateRatingSummary(productId);
     } catch (e) {
       print('Failed to get rating summary: $e');
-      // Return mock data
-      return mockRatingSummaries[productId] ??
-          ProductRatingSummary(
-            productId: productId,
-            averageRating: 0.0,
-            totalReviews: 0,
-            ratingDistribution: {},
-          );
+      return ProductRatingSummary(
+        productId: productId,
+        averageRating: 0.0,
+        totalReviews: 0,
+        ratingDistribution: const {},
+      );
     }
   }
 
@@ -136,10 +135,10 @@ class ProductReviewService {
           .collection('helpfulness')
           .doc(userId)
           .set({
-            'helpful': true,
-            'userId': userId,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+        'helpful': true,
+        'userId': userId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       // Increment helpful count
       await _firestore
@@ -148,8 +147,8 @@ class ProductReviewService {
           .collection('reviews')
           .doc(reviewId)
           .update({
-            'helpfulCount': FieldValue.increment(1),
-          });
+        'helpfulCount': FieldValue.increment(1),
+      });
     } catch (e) {
       print('Failed to mark review helpful: $e');
       rethrow;
@@ -172,10 +171,10 @@ class ProductReviewService {
           .collection('helpfulness')
           .doc(userId)
           .set({
-            'helpful': false,
-            'userId': userId,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+        'helpful': false,
+        'userId': userId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       print('Failed to mark review not helpful: $e');
       rethrow;
@@ -245,7 +244,8 @@ class ProductReviewService {
   }
 
   /// Get top rated products (for admin dashboard)
-  Future<List<Map<String, dynamic>>> getTopRatedProducts({int limit = 10}) async {
+  Future<List<Map<String, dynamic>>> getTopRatedProducts(
+      {int limit = 10}) async {
     try {
       final snapshot = await _firestore
           .collectionGroup('rating_summary')
@@ -256,7 +256,8 @@ class ProductReviewService {
       return snapshot.docs
           .map((doc) => {
                 'productId': doc.reference.parent.parent?.id ?? '',
-                'averageRating': (doc['averageRating'] as num?)?.toDouble() ?? 0.0,
+                'averageRating':
+                    (doc['averageRating'] as num?)?.toDouble() ?? 0.0,
                 'totalReviews': doc['totalReviews'] ?? 0,
               })
           .toList();
@@ -339,19 +340,22 @@ class ProductReviewService {
 final productReviewServiceProvider = Provider((ref) => ProductReviewService());
 
 /// Get all reviews for a product
-final productReviewsProvider = FutureProvider.family<List<ProductReview>, String>((ref, productId) async {
+final productReviewsProvider =
+    FutureProvider.family<List<ProductReview>, String>((ref, productId) async {
   final service = ref.watch(productReviewServiceProvider);
   return service.getProductReviews(productId: productId);
 });
 
 /// Get rating summary for a product
-final productRatingSummaryProvider = FutureProvider.family<ProductRatingSummary, String>((ref, productId) async {
+final productRatingSummaryProvider =
+    FutureProvider.family<ProductRatingSummary, String>((ref, productId) async {
   final service = ref.watch(productReviewServiceProvider);
   return service.getProductRatingSummary(productId);
 });
 
 /// Get user's reviews
-final userReviewsProvider = FutureProvider.family<List<ProductReview>, String>((ref, userId) async {
+final userReviewsProvider =
+    FutureProvider.family<List<ProductReview>, String>((ref, userId) async {
   final service = ref.watch(productReviewServiceProvider);
   return service.getUserReviews(userId: userId);
 });

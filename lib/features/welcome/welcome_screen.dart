@@ -82,36 +82,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           child: SingleChildScrollView(
             child: Column(
               children: [
-                // Status Bar Area - Time & Icons
-                SizedBox(
-                  height: isSmallScreen ? 40 : 60,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '9:45',
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            color: AppColors.text,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Row(
-                          spacing: 6,
-                          children: [
-                            _buildStatusIcon('assets/icons/signal.png', 12),
-                            _buildStatusIcon('assets/icons/wifi.png', 12),
-                            _buildStatusIcon('assets/icons/battery.png', 16),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                SizedBox(height: isSmallScreen ? 16 : 32),
                 SizedBox(height: isSmallScreen ? 40 : 80),
 
                 // Logo with Animation

@@ -136,13 +136,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 }
 
 /// Alternative Splash Screen with Lottie Animation
-/// 
+///
 /// Requires: lottie: ^2.4.0 in pubspec.yaml
-/// 
+///
 /// Usage:
 /// ```dart
 /// import 'package:lottie/lottie.dart';
-/// 
+///
 /// // In build method:
 /// Lottie.asset(
 ///   'assets/animations/splash_animation.json',

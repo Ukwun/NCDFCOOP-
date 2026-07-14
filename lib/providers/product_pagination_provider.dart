@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Models (adapt based on your app's structure)
 // import '../models/product_model.dart';
@@ -126,33 +127,28 @@ class PaginationNotifier extends Notifier<PaginationState> {
     state = PaginationState();
   }
 
-  /// Mock API call to fetch products
-  /// Replace with actual API call
   Future<List<Product>> _fetchProductsPage({
     required int pageNumber,
     required int pageSize,
   }) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    // Mock data generation
-    final offset = pageNumber * pageSize;
-    final limit = pageSize;
-
-    return List.generate(
-      limit,
-      (index) {
-        final productIndex = offset + index;
-        return Product(
-          id: 'product_$productIndex',
-          name: 'Product ${productIndex + 1}',
-          image:
-              'https://via.placeholder.com/500x500?text=Product+${productIndex + 1}',
-          price: (10.0 + (productIndex * 2.5)).toDouble(),
-          description: 'This is product number ${productIndex + 1}',
-        );
-      },
-    );
+    final snapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .where('is_active', isEqualTo: true)
+        .orderBy('created_at', descending: true)
+        .limit((pageNumber + 1) * pageSize)
+        .get();
+    return snapshot.docs.skip(pageNumber * pageSize).map((doc) {
+      final data = doc.data();
+      final images = data['images'] is List ? data['images'] as List : const [];
+      return Product(
+        id: doc.id,
+        name: (data['name'] ?? data['productName'] ?? 'Product').toString(),
+        image: (data['imageUrl'] ?? (images.isNotEmpty ? images.first : ''))
+            .toString(),
+        price: ((data['retailPrice'] ?? data['price'] ?? 0) as num).toDouble(),
+        description: (data['description'] ?? '').toString(),
+      );
+    }).toList();
   }
 
   /// Filter products by category
@@ -189,19 +185,13 @@ class PaginationNotifier extends Notifier<PaginationState> {
   }
 
   Future<List<Product>> _searchProducts(String query) async {
-    // Simulate API call
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Mock search results
-    return [
-      Product(
-        id: 'search_1',
-        name: 'SearchResult for $query',
-        image: 'https://via.placeholder.com/500x500?text=Search+Result',
-        price: 25.99,
-        description: 'This matches your search query: $query',
-      ),
-    ];
+    final normalized = query.trim().toLowerCase();
+    final products = await _fetchProductsPage(pageNumber: 0, pageSize: 100);
+    return products
+        .where((product) =>
+            product.name.toLowerCase().contains(normalized) ||
+            product.description.toLowerCase().contains(normalized))
+        .toList();
   }
 }
 

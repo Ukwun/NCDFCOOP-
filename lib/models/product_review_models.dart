@@ -76,7 +76,9 @@ class ProductRatingSummary {
   /// Create from Firestore document
   factory ProductRatingSummary.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    final distMap = (data['ratingDistribution'] as Map<String, dynamic>?)?.cast<int, int>() ?? {};
+    final distMap = (data['ratingDistribution'] as Map<String, dynamic>?)
+            ?.cast<int, int>() ??
+        {};
     return ProductRatingSummary(
       productId: doc.id,
       averageRating: (data['averageRating'] as num?)?.toDouble() ?? 0.0,
@@ -150,7 +152,8 @@ final mockProductReviews = [
     userName: 'Chioma A.',
     rating: 5,
     title: 'Excellent quality rice!',
-    comment: 'Best parboiled rice I\'ve bought online. Grains are uniform and very clean. Delivery was fast.',
+    comment:
+        'Best parboiled rice I\'ve bought online. Grains are uniform and very clean. Delivery was fast.',
     helpfulCount: 24,
     createdAt: DateTime.now().subtract(Duration(days: 5)),
     verified: true,
@@ -162,7 +165,8 @@ final mockProductReviews = [
     userName: 'Adeola M.',
     rating: 4,
     title: 'Good quality, minor issue with packaging',
-    comment: 'The rice taste is good but the packaging could be better. Some grains leaked into the box.',
+    comment:
+        'The rice taste is good but the packaging could be better. Some grains leaked into the box.',
     helpfulCount: 12,
     createdAt: DateTime.now().subtract(Duration(days: 10)),
     verified: true,
@@ -174,7 +178,8 @@ final mockProductReviews = [
     userName: 'Oluwaseun B.',
     rating: 5,
     title: 'Perfect beans!',
-    comment: 'No stones, properly sorted, cooks evenly. This is my go-to brand now.',
+    comment:
+        'No stones, properly sorted, cooks evenly. This is my go-to brand now.',
     helpfulCount: 34,
     createdAt: DateTime.now().subtract(Duration(days: 3)),
     verified: true,
@@ -186,7 +191,8 @@ final mockProductReviews = [
     userName: 'Blessing O.',
     rating: 3,
     title: 'Average quality',
-    comment: 'Beans are okay but I found a few stones. Price is a bit high compared to market.',
+    comment:
+        'Beans are okay but I found a few stones. Price is a bit high compared to market.',
     helpfulCount: 8,
     createdAt: DateTime.now().subtract(Duration(days: 7)),
     verified: true,

@@ -132,9 +132,11 @@ class ConsumerHomeScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     image: DecorationImage(
-                      image: product.imageUrl != null && product.imageUrl!.startsWith('assets/')
+                      image: product.imageUrl != null &&
+                              product.imageUrl!.startsWith('assets/')
                           ? AssetImage(product.imageUrl!)
-                          : NetworkImage(product.imageUrl ?? '') as ImageProvider,
+                          : NetworkImage(product.imageUrl ?? '')
+                              as ImageProvider,
                       fit: BoxFit.cover,
                     ),
                   ),

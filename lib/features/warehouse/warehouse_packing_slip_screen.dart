@@ -172,13 +172,15 @@ class _WarehousePackingSlipScreenState
                 children: [
                   Text(
                     'Order Information',
-                    style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                    style:
+                        AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   _InfoRow('Order ID', widget.orderId),
                   _InfoRow('Pick List', widget.pickListId),
                   _InfoRow('Warehouse', widget.warehouseName),
-                  _InfoRow('Generated', DateTime.now().toString().split('.')[0]),
+                  _InfoRow(
+                      'Generated', DateTime.now().toString().split('.')[0]),
                 ],
               ),
             ),
@@ -197,7 +199,8 @@ class _WarehousePackingSlipScreenState
                 children: [
                   Text(
                     'Packing Details',
-                    style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                    style:
+                        AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -240,7 +243,8 @@ class _WarehousePackingSlipScreenState
                   children: [
                     Text(
                       'Packing Slip Preview',
-                      style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTextStyles.h3
+                          .copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     SingleChildScrollView(

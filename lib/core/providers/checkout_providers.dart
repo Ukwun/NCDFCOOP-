@@ -34,30 +34,41 @@ final userAddressesProvider = StreamProvider.family<List<Address>, String>(
 // Validate promo code
 final validatePromoCodeProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, code) async {
-  // Simulate API call
-  await Future.delayed(const Duration(milliseconds: 500));
-
-  if (code.isEmpty) {
+  final normalizedCode = code.trim().toUpperCase();
+  if (normalizedCode.isEmpty) {
     return {'valid': false, 'discount': 0.0, 'message': 'Enter a promo code'};
   }
 
-  // Mock promo codes - replace with actual service call
-  const validCodes = {
-    'SAVE30': 0.30,
-    'MEMBER20': 0.20,
-    'BULK15': 0.15,
-    'FIRST10': 0.10,
-  };
-
-  if (validCodes.containsKey(code)) {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('promotions')
+      .where('code', isEqualTo: normalizedCode)
+      .limit(1)
+      .get();
+  if (snapshot.docs.isEmpty) {
+    return {'valid': false, 'discount': 0.0, 'message': 'Invalid promo code'};
+  }
+  final data = snapshot.docs.first.data();
+  final now = DateTime.now();
+  final startsAt = (data['startDate'] as Timestamp?)?.toDate();
+  final endsAt = (data['endDate'] as Timestamp?)?.toDate();
+  final active = data['status'] == 'active' &&
+      (startsAt == null || !now.isBefore(startsAt)) &&
+      (endsAt == null || now.isBefore(endsAt));
+  final rawDiscount = (data['discountRate'] ?? data['discount'] ?? 0) as num;
+  final discount = rawDiscount > 1 ? rawDiscount / 100 : rawDiscount.toDouble();
+  if (!active || discount <= 0 || discount > 1) {
     return {
-      'valid': true,
-      'discount': validCodes[code]!,
-      'message': 'Promo code applied!'
+      'valid': false,
+      'discount': 0.0,
+      'message': 'This promo code is not active'
     };
   }
-
-  return {'valid': false, 'discount': 0.0, 'message': 'Invalid promo code'};
+  return {
+    'valid': true,
+    'discount': discount,
+    'promotionId': snapshot.docs.first.id,
+    'message': 'Promo code applied'
+  };
 });
 
 // ==================== STATE MANAGEMENT ====================

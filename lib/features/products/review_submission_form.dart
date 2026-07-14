@@ -100,12 +100,13 @@ class _ReviewSubmissionFormState extends ConsumerState<ReviewSubmissionForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      final authState = ref.read(authProvider);
-      final user = authState.whenData((u) => u);
-
-      const String userId = 'test_user_001'; // TODO: Get from auth
-      const String userName = 'Test Member'; // TODO: Get from auth
-      const String userPhotoUrl = '';
+      final user = ref.read(currentUserProvider);
+      if (user == null) {
+        throw StateError('Sign in before submitting a review.');
+      }
+      final userId = user.id;
+      final userName = user.name;
+      final userPhotoUrl = user.photoUrl ?? '';
 
       final actions = ref.read(reviewActionsProvider);
 

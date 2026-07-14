@@ -133,9 +133,7 @@ class WishlistNotifier extends Notifier<WishlistState> {
   /// Remove item from wishlist by product ID
   void removeItem(String productId) {
     state = state.copyWith(
-      items: state.items
-          .where((item) => item.productId != productId)
-          .toList(),
+      items: state.items.where((item) => item.productId != productId).toList(),
       error: null,
     );
   }
@@ -180,8 +178,7 @@ class WishlistNotifier extends Notifier<WishlistState> {
 }
 
 /// Base Wishlist Provider
-final wishlistProvider =
-    NotifierProvider<WishlistNotifier, WishlistState>(
+final wishlistProvider = NotifierProvider<WishlistNotifier, WishlistState>(
   WishlistNotifier.new,
 );
 
@@ -192,13 +189,15 @@ final wishlistItemCountProvider = Provider<int>((ref) {
 });
 
 /// Provider to check if specific product is in wishlist
-final isProductInWishlistProvider = Provider.family<bool, String>((ref, productId) {
+final isProductInWishlistProvider =
+    Provider.family<bool, String>((ref, productId) {
   final wishlist = ref.watch(wishlistProvider);
   return wishlist.contains(productId);
 });
 
 /// Provider to get wishlist item for a specific product
-final wishlistItemProvider = Provider.family<WishlistItem?, String>((ref, productId) {
+final wishlistItemProvider =
+    Provider.family<WishlistItem?, String>((ref, productId) {
   final wishlist = ref.watch(wishlistProvider);
   return wishlist.getItem(productId);
 });

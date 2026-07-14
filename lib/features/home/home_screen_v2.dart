@@ -81,7 +81,7 @@ class HomeScreenV2 extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('9:45', style: AppTextStyles.h4.copyWith(color: AppColors.text)),
+          Text('', style: AppTextStyles.h4.copyWith(color: AppColors.text)),
           Row(
             spacing: 6,
             children: [

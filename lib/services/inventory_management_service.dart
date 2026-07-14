@@ -9,7 +9,7 @@ class InventoryManagementService {
 
   InventoryManagementService({
     FirebaseFirestore? firestore,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   static const String _inventoryCollection = 'inventory';
   static const String _transactionCollection = 'stock_transactions';
@@ -142,7 +142,8 @@ class InventoryManagementService {
   }
 
   /// Get all inventory for a product across locations
-  Future<Map<String, InventoryItem>> getProductInventory(String productId) async {
+  Future<Map<String, InventoryItem>> getProductInventory(
+      String productId) async {
     try {
       final snapshot = await _firestore
           .collection(_inventoryCollection)
@@ -164,10 +165,8 @@ class InventoryManagementService {
   /// Get inventory summary for a location
   Future<InventorySummary?> getLocationSummary(String locationId) async {
     try {
-      final doc = await _firestore
-          .collection(_summaryCollection)
-          .doc(locationId)
-          .get();
+      final doc =
+          await _firestore.collection(_summaryCollection).doc(locationId).get();
 
       if (!doc.exists) return null;
       return InventorySummary.fromFirestore(doc.data()!, doc.id);
@@ -241,7 +240,10 @@ class InventoryManagementService {
               ? 'low_stock'
               : 'in_stock';
 
-      await _firestore.collection(_inventoryCollection).doc(inventoryId).update({
+      await _firestore
+          .collection(_inventoryCollection)
+          .doc(inventoryId)
+          .update({
         'currentStock': newCurrentStock,
         'status': newStatus,
         'updatedAt': FieldValue.serverTimestamp(),

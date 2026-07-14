@@ -95,8 +95,7 @@ class _StaffPerformanceScreenState
                   // Filter by role
                   if (_filterBy != 'all') {
                     staff = staff
-                        .where((s) =>
-                            s.role.toLowerCase().contains(_filterBy))
+                        .where((s) => s.role.toLowerCase().contains(_filterBy))
                         .toList();
                   }
 

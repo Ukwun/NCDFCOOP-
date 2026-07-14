@@ -36,15 +36,39 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.releaseSellerEarningsOnDelivery = exports.deleteMyAccount = exports.claimMemberReward = exports.requestSellerWithdrawal = exports.initializeFlutterwavePayment = exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = void 0;
+exports.releaseSellerEarningsOnDelivery = exports.deleteMyAccount = exports.claimMemberReward = exports.requestSellerWithdrawal = exports.initializeFlutterwavePayment = exports.stripeWebhook = exports.initializeStripeCheckout = exports.createMarketplaceOrder = exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const stripe_1 = __importDefault(require("stripe"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
+function requireTrustedApp(context) {
+    if (!context.app) {
+        throw new functions.https.HttpsError('failed-precondition', 'Requests must come from a verified CoopCommerce app.');
+    }
+}
+async function enforceRateLimit(uid, operation, maximum, windowSeconds = 60) {
+    const window = Math.floor(Date.now() / (windowSeconds * 1000));
+    const ref = db.collection('_rate_limits').doc(`${uid}_${operation}_${window}`);
+    await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(ref);
+        const count = Number(snapshot.data()?.count || 0);
+        if (count >= maximum) {
+            throw new functions.https.HttpsError('resource-exhausted', 'Too many requests. Please wait and try again.');
+        }
+        transaction.set(ref, {
+            uid,
+            operation,
+            count: count + 1,
+            expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + (windowSeconds + 60) * 1000),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+    });
+}
 // Express app for payment endpoints
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
@@ -1082,100 +1106,83 @@ async function sendNotification(userId, notification) {
  */
 exports.fulfillOrder = functions.firestore
     .document('orders/{orderId}')
-    .onCreate(async (snap, context) => {
+    .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const snap = change.after;
     const orderId = context.params.orderId;
     const orderData = snap.data();
+    if (before.paymentStatus === 'paid' || orderData.paymentStatus !== 'paid') {
+        return null;
+    }
     const userId = orderData.userId;
     try {
         console.log(`Processing order fulfillment for order: ${orderId}`);
-        // Deduct inventory for each item in the order
-        const items = orderData.items || [];
-        let inventoryDeductionSuccess = true;
-        const deductionResults = [];
-        for (const item of items) {
-            try {
-                const productId = item.product?.id || item.productId;
-                const quantity = item.quantity || 1;
-                if (!productId) {
-                    console.warn(`Skipping item without product ID in order ${orderId}`);
-                    continue;
+        const items = Array.isArray(orderData.items) ? orderData.items : [];
+        const shipmentRef = db.collection('shipments').doc(orderId);
+        const deductionResults = await db.runTransaction(async (transaction) => {
+            const latestOrder = await transaction.get(snap.ref);
+            const latestData = latestOrder.data() || {};
+            if (latestData.fulfillmentStatus === 'created_shipment')
+                return null;
+            if (latestData.paymentStatus !== 'paid')
+                throw new Error('Payment is not confirmed.');
+            const requested = new Map();
+            for (const item of items) {
+                const productId = String(item.product?.id || item.productId || '').trim();
+                const quantity = Number(item.quantity);
+                if (!productId || !Number.isInteger(quantity) || quantity < 1) {
+                    throw new Error('Order contains an invalid item.');
                 }
-                // Deduct from product inventory
-                const productRef = db.collection('products').doc(productId);
-                const productSnap = await productRef.get();
-                if (!productSnap.exists) {
-                    console.warn(`Product ${productId} not found`);
-                    deductionResults.push({
-                        productId,
-                        quantity,
-                        success: false,
-                        error: 'Product not found',
-                    });
-                    continue;
+                requested.set(productId, (requested.get(productId) || 0) + quantity);
+            }
+            if (requested.size === 0)
+                throw new Error('Order has no fulfillable items.');
+            const productEntries = [...requested.entries()].map(([productId, quantity]) => ({
+                productId,
+                quantity,
+                ref: db.collection('products').doc(productId),
+            }));
+            const productSnapshots = await Promise.all(productEntries.map(entry => transaction.get(entry.ref)));
+            const results = [];
+            productEntries.forEach((entry, index) => {
+                const productSnapshot = productSnapshots[index];
+                if (!productSnapshot.exists)
+                    throw new Error(`Product ${entry.productId} is unavailable.`);
+                const currentStock = Number(productSnapshot.data()?.stock ?? productSnapshot.data()?.quantity ?? 0);
+                if (!Number.isFinite(currentStock) || currentStock < entry.quantity) {
+                    throw new Error(`Insufficient stock for product ${entry.productId}.`);
                 }
-                const currentStock = productSnap.data()?.stock || 0;
-                const newStock = Math.max(0, currentStock - quantity);
-                await productRef.update({
+                const newStock = currentStock - entry.quantity;
+                transaction.update(entry.ref, {
                     stock: newStock,
                     lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
                 });
-                // Log inventory deduction activity
-                await db
-                    .collection('system_activities')
-                    .add({
-                    type: 'inventory_deducted',
-                    productId: productId,
-                    orderId: orderId,
-                    quantity: quantity,
-                    timestamp: admin.firestore.Timestamp.now(),
-                    data: {
-                        previousStock: currentStock,
-                        newStock: newStock,
-                        userId: userId,
-                    },
-                });
-                deductionResults.push({
-                    productId,
-                    quantity,
-                    success: true,
-                    previousStock: currentStock,
-                    newStock: newStock,
-                });
-                console.log(`✅ Deducted ${quantity} units of ${productId}. New stock: ${newStock}`);
-            }
-            catch (itemError) {
-                console.error(`Failed to deduct inventory for item in order ${orderId}:`, itemError);
-                inventoryDeductionSuccess = false;
-                deductionResults.push({
-                    productId: item.product?.id || item.productId,
-                    quantity: item.quantity,
-                    success: false,
-                    error: String(itemError),
-                });
-            }
-        }
-        // Create shipment record
-        const shipmentRef = db.collection('shipments').doc();
-        await shipmentRef.set({
-            shipmentId: shipmentRef.id,
-            orderId: orderId,
-            userId: userId,
-            items: items,
-            shippingAddress: orderData.shippingAddress,
-            status: 'pending_pickup', // pending_pickup → picked → in_transit → delivered
-            totalAmount: orderData.totalAmount,
-            createdAt: admin.firestore.Timestamp.now(),
-            updatedAt: admin.firestore.Timestamp.now(),
-            inventoryDeductionSuccess: inventoryDeductionSuccess,
-            inventoryDeductionDetails: deductionResults,
+                results.push({ productId: entry.productId, quantity: entry.quantity, previousStock: currentStock, newStock });
+            });
+            transaction.set(shipmentRef, {
+                shipmentId: shipmentRef.id,
+                orderId,
+                userId,
+                items,
+                shippingAddress: latestData.shippingAddress,
+                status: 'pending_pickup',
+                totalAmount: latestData.totalAmount,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                inventoryDeductionSuccess: true,
+                inventoryDeductionDetails: results,
+            });
+            transaction.update(snap.ref, {
+                shipmentId: shipmentRef.id,
+                status: 'confirmed',
+                paidAt: latestData.paidAt || admin.firestore.FieldValue.serverTimestamp(),
+                fulfillmentStatus: 'created_shipment',
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            return results;
         });
-        // Update order with shipment ID and status
-        await snap.ref.update({
-            shipmentId: shipmentRef.id,
-            status: 'confirmed', // pending_payment → confirmed → shipped → delivered
-            fulfillmentStatus: 'created_shipment',
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        if (deductionResults === null)
+            return null;
         // Send notification to customer
         await sendNotification(userId, {
             title: 'Order Confirmed! 🎉',
@@ -1238,9 +1245,8 @@ exports.onOrderPaymentConfirmed = functions.firestore
         after?.paymentStatus === 'paid') {
         const userId = after.userId;
         try {
-            // Update order status
+            // Record payment time without racing the fulfillment transaction's status.
             await change.after.ref.update({
-                status: 'payment_confirmed',
                 paidAt: admin.firestore.FieldValue.serverTimestamp(),
             });
             // Send notification to customer
@@ -1491,12 +1497,316 @@ exports.logProductView = functions.https.onCall(async (data, context) => {
  * Creates a Flutterwave checkout using the server-authoritative order total.
  * The secret key is injected by Secret Manager and never sent to the app.
  */
-exports.initializeFlutterwavePayment = functions
-    .runWith({ secrets: ['FLUTTERWAVE_SECRET_KEY'] })
+exports.createMarketplaceOrder = functions.https.onCall(async (data, context) => {
+    requireTrustedApp(context);
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in to place an order.');
+    }
+    await enforceRateLimit(context.auth.uid, 'create_order', 10, 300);
+    const rawItems = Array.isArray(data?.items) ? data.items : [];
+    if (rawItems.length === 0 || rawItems.length > 100) {
+        throw new functions.https.HttpsError('invalid-argument', 'A valid cart is required.');
+    }
+    const addressId = String(data?.addressId || '').trim();
+    const paymentMethodId = String(data?.paymentMethodId || '').trim();
+    if (!addressId || !paymentMethodId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Delivery address and payment method are required.');
+    }
+    const uid = context.auth.uid;
+    const [userSnapshot, addressSnapshot, paymentMethodSnapshot, configSnapshot] = await Promise.all([
+        db.collection('users').doc(uid).get(),
+        db.collection('users').doc(uid).collection('addresses').doc(addressId).get(),
+        db.collection('users').doc(uid).collection('paymentMethods').doc(paymentMethodId).get(),
+        db.collection('commerce_config').doc('checkout').get(),
+    ]);
+    if (!addressSnapshot.exists || !paymentMethodSnapshot.exists) {
+        throw new functions.https.HttpsError('failed-precondition', 'The selected delivery or payment details are unavailable.');
+    }
+    if (!configSnapshot.exists || configSnapshot.data()?.active !== true) {
+        throw new functions.https.HttpsError('failed-precondition', 'Checkout configuration is not active.');
+    }
+    const role = String(userSnapshot.data()?.marketplaceRole || 'coopMember');
+    const config = configSnapshot.data();
+    const taxRate = Number(config.taxRate);
+    const deliveryFee = Number(config.deliveryFee);
+    if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 1 ||
+        !Number.isFinite(deliveryFee) || deliveryFee < 0) {
+        throw new functions.https.HttpsError('failed-precondition', 'Checkout configuration is invalid.');
+    }
+    const normalizedItems = [];
+    let subtotal = 0;
+    const sellerIds = new Set();
+    for (const rawItem of rawItems) {
+        const productId = String(rawItem?.productId || rawItem?.id || '').trim();
+        const quantity = Number(rawItem?.quantity || 0);
+        if (!productId || !Number.isInteger(quantity) || quantity < 1 || quantity > 10000) {
+            throw new functions.https.HttpsError('invalid-argument', 'A cart item is invalid.');
+        }
+        const productSnapshot = await db.collection('products').doc(productId).get();
+        if (!productSnapshot.exists) {
+            throw new functions.https.HttpsError('not-found', 'A product is no longer available.');
+        }
+        const product = productSnapshot.data();
+        if (product.status && product.status !== 'approved' || product.is_active === false) {
+            throw new functions.https.HttpsError('failed-precondition', 'A product is no longer active.');
+        }
+        const stock = Number(product.stock ?? product.quantity ?? 0);
+        if (!Number.isFinite(stock) || stock < quantity) {
+            throw new functions.https.HttpsError('failed-precondition', `${product.name || 'A product'} has insufficient stock.`);
+        }
+        const priceValue = role === 'wholesaleBuyer'
+            ? (product.wholesale_price ?? product.wholesalePrice ?? product.price)
+            : role === 'coopMember'
+                ? (product.member_price ?? product.memberPrice ?? product.price)
+                : product.price;
+        const unitPrice = Number(priceValue);
+        if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+            throw new functions.https.HttpsError('failed-precondition', 'A product price is invalid.');
+        }
+        const sellerId = String(product.sellerUserId || product.uploadedBy || product.sellerId || '');
+        if (sellerId)
+            sellerIds.add(sellerId);
+        const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
+        subtotal += lineTotal;
+        normalizedItems.push({
+            productId,
+            name: String(product.name || 'Product'),
+            sku: String(product.sku || productId),
+            quantity,
+            unitPrice,
+            price: unitPrice,
+            lineTotal,
+            sellerUserId: sellerId,
+        });
+    }
+    subtotal = Math.round(subtotal * 100) / 100;
+    const tax = Math.round(subtotal * taxRate * 100) / 100;
+    const totalAmount = Math.round((subtotal + tax + deliveryFee) * 100) / 100;
+    const orderRef = db.collection('orders').doc();
+    await orderRef.set({
+        orderId: orderRef.id,
+        userId: uid,
+        buyerId: uid,
+        buyerRole: role,
+        sellerIds: [...sellerIds],
+        sellerUserIds: [...sellerIds],
+        items: normalizedItems,
+        shippingAddress: addressSnapshot.data(),
+        paymentMethodId,
+        paymentMethod: paymentMethodSnapshot.data()?.type || 'card',
+        currency: String(config.currency || 'NGN'),
+        subtotal,
+        tax,
+        taxRate,
+        deliveryFee,
+        totalAmount,
+        status: 'pending_payment',
+        paymentStatus: 'awaiting_payment',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { orderId: orderRef.id, subtotal, tax, deliveryFee, totalAmount };
+});
+/** Creates a Stripe-hosted checkout from a server-authoritative order. */
+exports.initializeStripeCheckout = functions
+    .runWith({ secrets: ['STRIPE_SECRET_KEY'] })
     .https.onCall(async (data, context) => {
+    requireTrustedApp(context);
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Sign in to pay.');
     }
+    await enforceRateLimit(context.auth.uid, 'initialize_stripe_checkout', 5, 60);
+    const orderId = String(data?.orderId || '').trim();
+    if (!orderId) {
+        throw new functions.https.HttpsError('invalid-argument', 'orderId is required.');
+    }
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+        throw new functions.https.HttpsError('failed-precondition', 'Stripe payments are not configured.');
+    }
+    const orderRef = db.collection('orders').doc(orderId);
+    const orderSnapshot = await orderRef.get();
+    if (!orderSnapshot.exists) {
+        throw new functions.https.HttpsError('not-found', 'Order was not found.');
+    }
+    const order = orderSnapshot.data() || {};
+    if ((order.buyerId || order.userId) !== context.auth.uid) {
+        throw new functions.https.HttpsError('permission-denied', 'This order belongs to another user.');
+    }
+    if (order.paymentStatus === 'paid') {
+        throw new functions.https.HttpsError('already-exists', 'This order is already paid.');
+    }
+    if (order.status !== 'pending_payment' || order.paymentStatus !== 'awaiting_payment') {
+        throw new functions.https.HttpsError('failed-precondition', 'This order cannot be paid.');
+    }
+    const amount = Math.round(Number(order.totalAmount) * 100);
+    const currency = String(order.currency || 'NGN').toLowerCase();
+    if (!Number.isSafeInteger(amount) || amount < 50 || !/^[a-z]{3}$/.test(currency)) {
+        throw new functions.https.HttpsError('failed-precondition', 'The order total is invalid.');
+    }
+    const stripe = new stripe_1.default(secretKey);
+    const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        ui_mode: 'hosted',
+        client_reference_id: orderId,
+        customer_email: context.auth.token.email,
+        success_url: `https://coop-commerce-8d43f.web.app/payment-success?order_id=${encodeURIComponent(orderId)}`,
+        cancel_url: `https://coop-commerce-8d43f.web.app/payment-cancelled?order_id=${encodeURIComponent(orderId)}`,
+        line_items: [{
+                quantity: 1,
+                price_data: {
+                    currency,
+                    unit_amount: amount,
+                    product_data: {
+                        name: `CoopCommerce order ${orderId}`,
+                        description: `${Array.isArray(order.items) ? order.items.length : 0} marketplace item(s)`,
+                    },
+                },
+            }],
+        metadata: { orderId, userId: context.auth.uid },
+        payment_intent_data: { metadata: { orderId, userId: context.auth.uid } },
+    }, { idempotencyKey: `checkout_${orderId}` });
+    if (!session.url) {
+        throw new functions.https.HttpsError('internal', 'Stripe did not return a checkout URL.');
+    }
+    await Promise.all([
+        db.collection('payments').doc(session.id).set({
+            provider: 'stripe',
+            stripeCheckoutSessionId: session.id,
+            orderId,
+            userId: context.auth.uid,
+            amount: Number(order.totalAmount),
+            amountMinor: amount,
+            currency: currency.toUpperCase(),
+            status: 'pending',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true }),
+        orderRef.update({
+            paymentProvider: 'stripe',
+            stripeCheckoutSessionId: session.id,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+    ]);
+    return { authorizationUrl: session.url, checkoutSessionId: session.id };
+});
+/** Stripe is the sole authority that can transition an order to paid. */
+exports.stripeWebhook = functions
+    .runWith({ secrets: ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'] })
+    .https.onRequest(async (request, response) => {
+    if (request.method !== 'POST') {
+        response.set('Allow', 'POST').status(405).send('Method not allowed');
+        return;
+    }
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const signature = request.headers['stripe-signature'];
+    if (!secretKey || !webhookSecret || typeof signature !== 'string') {
+        response.status(400).send('Stripe webhook is not configured');
+        return;
+    }
+    let event;
+    try {
+        const stripe = new stripe_1.default(secretKey);
+        event = stripe.webhooks.constructEvent(request.rawBody, signature, webhookSecret);
+    }
+    catch (error) {
+        console.error('Stripe signature verification failed:', error);
+        response.status(400).send('Invalid signature');
+        return;
+    }
+    const eventRef = db.collection('_stripe_webhook_events').doc(event.id);
+    if ((await eventRef.get()).exists) {
+        response.status(200).json({ received: true, duplicate: true });
+        return;
+    }
+    const supported = new Set([
+        'checkout.session.completed',
+        'checkout.session.async_payment_succeeded',
+        'checkout.session.async_payment_failed',
+        'checkout.session.expired',
+    ]);
+    if (!supported.has(event.type)) {
+        await eventRef.set({ type: event.type, processedAt: admin.firestore.FieldValue.serverTimestamp() });
+        response.status(200).json({ received: true });
+        return;
+    }
+    const session = event.data.object;
+    const orderId = String(session.metadata?.orderId || session.client_reference_id || '');
+    const userId = String(session.metadata?.userId || '');
+    if (!orderId || !userId) {
+        response.status(400).send('Missing order metadata');
+        return;
+    }
+    try {
+        await db.runTransaction(async (transaction) => {
+            const orderRef = db.collection('orders').doc(orderId);
+            const paymentRef = db.collection('payments').doc(session.id);
+            const orderSnapshot = await transaction.get(orderRef);
+            if (!orderSnapshot.exists)
+                throw new Error('Order not found');
+            const order = orderSnapshot.data() || {};
+            const expectedAmount = Math.round(Number(order.totalAmount) * 100);
+            const expectedCurrency = String(order.currency || 'NGN').toLowerCase();
+            if ((order.buyerId || order.userId) !== userId ||
+                session.amount_total !== expectedAmount ||
+                session.currency !== expectedCurrency) {
+                throw new Error('Stripe session does not match the order');
+            }
+            const paid = (event.type === 'checkout.session.completed' && session.payment_status === 'paid') ||
+                event.type === 'checkout.session.async_payment_succeeded';
+            const failed = event.type === 'checkout.session.async_payment_failed' ||
+                event.type === 'checkout.session.expired';
+            if (paid && order.paymentStatus !== 'paid') {
+                transaction.update(orderRef, {
+                    paymentStatus: 'paid',
+                    paymentProvider: 'stripe',
+                    stripeCheckoutSessionId: session.id,
+                    stripePaymentIntentId: session.payment_intent || null,
+                    paidAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+            else if (failed && order.paymentStatus !== 'paid') {
+                transaction.update(orderRef, {
+                    paymentStatus: 'payment_failed',
+                    paymentFailureReason: event.type,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+            transaction.set(paymentRef, {
+                provider: 'stripe',
+                stripeCheckoutSessionId: session.id,
+                stripePaymentIntentId: session.payment_intent || null,
+                orderId,
+                userId,
+                amountMinor: session.amount_total,
+                currency: session.currency?.toUpperCase(),
+                status: paid ? 'completed' : failed ? 'failed' : 'pending',
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            transaction.set(eventRef, {
+                type: event.type,
+                orderId,
+                sessionId: session.id,
+                processedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        });
+        response.status(200).json({ received: true });
+    }
+    catch (error) {
+        console.error('Stripe webhook processing failed:', error);
+        response.status(500).send('Webhook processing failed');
+    }
+});
+exports.initializeFlutterwavePayment = functions
+    .runWith({ secrets: ['FLUTTERWAVE_SECRET_KEY'] })
+    .https.onCall(async (data, context) => {
+    requireTrustedApp(context);
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in to pay.');
+    }
+    await enforceRateLimit(context.auth.uid, 'initialize_payment', 5, 60);
     const orderId = String(data.orderId || '').trim();
     const paymentType = data.paymentType === 'bank_transfer'
         ? 'bank_transfer'
@@ -1570,9 +1880,11 @@ exports.initializeFlutterwavePayment = functions
 });
 /** Places a seller withdrawal request while reserving the requested balance. */
 exports.requestSellerWithdrawal = functions.https.onCall(async (data, context) => {
+    requireTrustedApp(context);
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Sign in to withdraw.');
     }
+    await enforceRateLimit(context.auth.uid, 'seller_withdrawal', 3, 3600);
     const amount = Number(data.amount);
     if (!Number.isFinite(amount) || amount < 1000) {
         throw new functions.https.HttpsError('invalid-argument', 'Minimum withdrawal is NGN 1,000.');
@@ -1619,46 +1931,64 @@ exports.requestSellerWithdrawal = functions.https.onCall(async (data, context) =
 });
 /** Redeems a member reward using a server-authoritative points transaction. */
 exports.claimMemberReward = functions.https.onCall(async (data, context) => {
+    requireTrustedApp(context);
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Sign in to claim a reward.');
     }
+    await enforceRateLimit(context.auth.uid, 'reward_claim', 10, 3600);
     const memberId = String(data?.memberId || '');
     const rewardId = String(data?.rewardId || '');
     if (memberId !== context.auth.uid) {
         throw new functions.https.HttpsError('permission-denied', 'You can only use your own points.');
     }
-    const rewards = {
-        discount_voucher_500: { title: 'Discount Voucher', points: 500, value: 500, type: 'voucher' },
-        free_shipping_300: { title: 'Free Shipping', points: 300, value: 0, type: 'shipping' },
-        gift_card_1000: { title: 'Gift Card', points: 1000, value: 1000, type: 'gift_card' },
-    };
-    const reward = rewards[rewardId];
-    if (!reward) {
-        throw new functions.https.HttpsError('invalid-argument', 'This reward is not available.');
-    }
     const memberRef = db.collection('members').doc(memberId);
+    const rewardRef = db.collection('rewards').doc(rewardId);
     const claimRef = db.collection('reward_claims').doc();
     await db.runTransaction(async (transaction) => {
-        const snapshot = await transaction.get(memberRef);
-        if (!snapshot.exists) {
+        const [memberSnapshot, rewardSnapshot] = await Promise.all([
+            transaction.get(memberRef),
+            transaction.get(rewardRef),
+        ]);
+        if (!memberSnapshot.exists) {
             throw new functions.https.HttpsError('not-found', 'Member profile was not found.');
         }
-        const available = Number(snapshot.data()?.loyaltyPoints || 0);
-        if (available < reward.points) {
+        if (!rewardSnapshot.exists) {
+            throw new functions.https.HttpsError('not-found', 'Reward was not found.');
+        }
+        const reward = rewardSnapshot.data();
+        const now = admin.firestore.Timestamp.now();
+        if (reward.active !== true ||
+            (reward.startsAt && reward.startsAt.toMillis() > now.toMillis()) ||
+            (reward.endsAt && reward.endsAt.toMillis() < now.toMillis()) ||
+            (reward.stock != null && Number(reward.stock) <= 0)) {
+            throw new functions.https.HttpsError('failed-precondition', 'This reward is not currently available.');
+        }
+        const pointsRequired = Number(reward.pointsRequired || 0);
+        if (!Number.isInteger(pointsRequired) || pointsRequired <= 0) {
+            throw new functions.https.HttpsError('failed-precondition', 'Reward configuration is invalid.');
+        }
+        const available = Number(memberSnapshot.data()?.loyaltyPoints || 0);
+        if (available < pointsRequired) {
             throw new functions.https.HttpsError('failed-precondition', 'You do not have enough points.');
         }
         transaction.update(memberRef, {
-            loyaltyPoints: available - reward.points,
+            loyaltyPoints: available - pointsRequired,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+        if (reward.stock != null) {
+            transaction.update(rewardRef, {
+                stock: admin.firestore.FieldValue.increment(-1),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
         transaction.set(claimRef, {
             userId: memberId,
             memberId,
             rewardId,
-            title: reward.title,
-            rewardType: reward.type,
-            rewardValue: reward.value,
-            pointsUsed: reward.points,
+            title: String(reward.title || reward.name || 'Member reward'),
+            rewardType: String(reward.rewardType || reward.type || 'voucher'),
+            rewardValue: reward.rewardValue ?? reward.value ?? null,
+            pointsUsed: pointsRequired,
             status: 'active',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -1667,6 +1997,7 @@ exports.claimMemberReward = functions.https.onCall(async (data, context) => {
 });
 /** Deletes the authenticated account and its private marketplace records. */
 exports.deleteMyAccount = functions.https.onCall(async (_data, context) => {
+    requireTrustedApp(context);
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Sign in to delete your account.');
     }

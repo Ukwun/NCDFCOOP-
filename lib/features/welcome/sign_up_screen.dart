@@ -19,6 +19,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -27,47 +28,37 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     super.dispose();
   }
 
-  void _handleSignUp() {
-    if (_formKey.currentState!.validate()) {
-      ref.read(authControllerProvider.notifier).signUpWithMembership(
+  Future<void> _handleSignUp() async {
+    if (_isSubmitting || !_formKey.currentState!.validate()) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await ref.read(authControllerProvider.notifier).signUpWithMembership(
             _emailController.text.trim(),
             _passwordController.text,
             membershipType: widget.membershipType,
             rememberMe: _rememberMe,
           );
+      if (!mounted) return;
+      final result = ref.read(authControllerProvider);
+      if (result.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      context.go('/role-selection');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
-
-    ref.listen(authControllerProvider, (previous, next) {
-      if (next is AsyncError) {
-        final errorMessage = next.error.toString();
-        print('❌ SIGN UP ERROR: $errorMessage');
-        print('Stack trace: ${next.stackTrace}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      } else if (next is AsyncData && !next.isLoading) {
-        print('✅ SIGN UP SUCCESS - Navigating to role selection');
-        // Navigate to role selection screen instead of home
-        context.go(
-          '/role-selection',
-          extra: {
-            'userId': next.value?.id ?? 'unknown',
-            'userEmail': _emailController.text.trim(),
-            'userName': _emailController.text.split('@')[0],
-          },
-        );
-      }
-    });
+    ref.watch(authControllerProvider);
+    final isLoading = _isSubmitting;
 
     return Scaffold(
       backgroundColor: AppColors.background,

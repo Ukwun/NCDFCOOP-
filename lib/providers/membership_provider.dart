@@ -27,7 +27,7 @@ final hasActiveMembershipProvider = FutureProvider<bool>((ref) async {
   try {
     final membership = await UserPersistence.getMembership();
     if (membership == null) return false;
-    
+
     final expiryDate = DateTime.parse(membership['expiryDate'] as String);
     return expiryDate.isAfter(DateTime.now());
   } catch (e) {

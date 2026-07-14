@@ -45,7 +45,8 @@ class ProductPerformance {
       minimumStock: (data['minimumStock'] as num?)?.toInt() ?? 0,
       turnoverRate: (data['turnoverRate'] as num?)?.toDouble() ?? 0.0,
       profitMargin: (data['profitMargin'] as num?)?.toDouble() ?? 0.0,
-      periodStart: (data['periodStart'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      periodStart:
+          (data['periodStart'] as Timestamp?)?.toDate() ?? DateTime.now(),
       periodEnd: (data['periodEnd'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -108,7 +109,8 @@ class StaffPerformance {
           (data['averageTransactionValue'] as num?)?.toDouble() ?? 0.0,
       customersSaved: (data['customersSaved'] as num?)?.toInt() ?? 0,
       performanceScore: (data['performanceScore'] as num?)?.toDouble() ?? 0.0,
-      periodStart: (data['periodStart'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      periodStart:
+          (data['periodStart'] as Timestamp?)?.toDate() ?? DateTime.now(),
       periodEnd: (data['periodEnd'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -168,7 +170,8 @@ class InventoryHealth {
       deadStockPercentage:
           (data['deadStockPercentage'] as num?)?.toDouble() ?? 0.0,
       inventoryValue: (data['inventoryValue'] as num?)?.toDouble() ?? 0.0,
-      lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastUpdated:
+          (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -229,9 +232,9 @@ class StoreSalesMetrics {
       customersServed: (data['customersServed'] as num?)?.toInt() ?? 0,
       paymentMethodBreakdown:
           Map<String, double>.from(data['paymentMethodBreakdown'] ?? {}),
-      topProducts:
-          List<String>.from(data['topProducts'] as List? ?? []),
-      periodStart: (data['periodStart'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      topProducts: List<String>.from(data['topProducts'] as List? ?? []),
+      periodStart:
+          (data['periodStart'] as Timestamp?)?.toDate() ?? DateTime.now(),
       periodEnd: (data['periodEnd'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -291,7 +294,8 @@ class StoreAnalyticsSummary {
       averageStaffPerformance:
           (data['averageStaffPerformance'] as num?)?.toDouble() ?? 0.0,
       inventoryStatus: data['inventoryStatus'] ?? 'Unknown',
-      generatedAt: (data['generatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      generatedAt:
+          (data['generatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

@@ -23,24 +23,24 @@ class AppSettings {
   });
 
   Map<String, dynamic> toJson() => {
-    'darkMode': darkMode,
-    'pushNotifications': pushNotifications,
-    'emailNotifications': emailNotifications,
-    'marketingEmails': marketingEmails,
-    'locationServices': locationServices,
-    'biometricAuth': biometricAuth,
-    'language': language,
-  };
+        'darkMode': darkMode,
+        'pushNotifications': pushNotifications,
+        'emailNotifications': emailNotifications,
+        'marketingEmails': marketingEmails,
+        'locationServices': locationServices,
+        'biometricAuth': biometricAuth,
+        'language': language,
+      };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
-    darkMode: json['darkMode'] ?? false,
-    pushNotifications: json['pushNotifications'] ?? true,
-    emailNotifications: json['emailNotifications'] ?? true,
-    marketingEmails: json['marketingEmails'] ?? false,
-    locationServices: json['locationServices'] ?? true,
-    biometricAuth: json['biometricAuth'] ?? false,
-    language: json['language'] ?? 'en',
-  );
+        darkMode: json['darkMode'] ?? false,
+        pushNotifications: json['pushNotifications'] ?? true,
+        emailNotifications: json['emailNotifications'] ?? true,
+        marketingEmails: json['marketingEmails'] ?? false,
+        locationServices: json['locationServices'] ?? true,
+        biometricAuth: json['biometricAuth'] ?? false,
+        language: json['language'] ?? 'en',
+      );
 
   AppSettings copyWith({
     bool? darkMode,
@@ -50,15 +50,16 @@ class AppSettings {
     bool? locationServices,
     bool? biometricAuth,
     String? language,
-  }) => AppSettings(
-    darkMode: darkMode ?? this.darkMode,
-    pushNotifications: pushNotifications ?? this.pushNotifications,
-    emailNotifications: emailNotifications ?? this.emailNotifications,
-    marketingEmails: marketingEmails ?? this.marketingEmails,
-    locationServices: locationServices ?? this.locationServices,
-    biometricAuth: biometricAuth ?? this.biometricAuth,
-    language: language ?? this.language,
-  );
+  }) =>
+      AppSettings(
+        darkMode: darkMode ?? this.darkMode,
+        pushNotifications: pushNotifications ?? this.pushNotifications,
+        emailNotifications: emailNotifications ?? this.emailNotifications,
+        marketingEmails: marketingEmails ?? this.marketingEmails,
+        locationServices: locationServices ?? this.locationServices,
+        biometricAuth: biometricAuth ?? this.biometricAuth,
+        language: language ?? this.language,
+      );
 }
 
 /// Handles app settings persistence
@@ -162,7 +163,8 @@ class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
 }
 
 /// Riverpod provider for app settings
-final appSettingsProvider = AsyncNotifierProvider<AppSettingsNotifier, AppSettings>(
+final appSettingsProvider =
+    AsyncNotifierProvider<AppSettingsNotifier, AppSettings>(
   AppSettingsNotifier.new,
 );
 

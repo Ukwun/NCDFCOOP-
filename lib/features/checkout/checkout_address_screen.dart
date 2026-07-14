@@ -73,8 +73,12 @@ class _CheckoutAddressScreenState extends ConsumerState<CheckoutAddressScreen> {
           country: data['country'] ?? 'Nigeria',
           phoneNumber: data['phoneNumber'] ?? '',
           isDefault: data['isDefault'] ?? false,
-          createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : null,
-          updatedAt: data['updatedAt'] != null ? (data['updatedAt'] as Timestamp).toDate() : null,
+          createdAt: data['createdAt'] != null
+              ? (data['createdAt'] as Timestamp).toDate()
+              : null,
+          updatedAt: data['updatedAt'] != null
+              ? (data['updatedAt'] as Timestamp).toDate()
+              : null,
         );
       }).toList();
     } catch (e) {
@@ -387,7 +391,7 @@ class _CheckoutAddressScreenState extends ConsumerState<CheckoutAddressScreen> {
                 ),
 
               // Address Form (shown only when adding new address)
-              if (_showForm) ...[  
+              if (_showForm) ...[
                 const SizedBox(height: 20),
                 Text(
                   'Enter Address Details',

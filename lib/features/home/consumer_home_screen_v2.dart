@@ -18,7 +18,8 @@ class ConsumerHomeScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     // Get role-specific featured products for consumer
     final userRole = 'consumer';
-    final featuredAsync = ref.watch(roleAwareFeaturedProductsProvider(userRole));
+    final featuredAsync =
+        ref.watch(roleAwareFeaturedProductsProvider(userRole));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -141,8 +142,8 @@ class ConsumerHomeScreen extends ConsumerWidget {
               data: (products) {
                 if (products.isEmpty) {
                   return Center(
-                    child: Text('No deals available',
-                        style: AppTextStyles.body),
+                    child:
+                        Text('No deals available', style: AppTextStyles.body),
                   );
                 }
                 return ListView.builder(
@@ -178,7 +179,8 @@ class ConsumerHomeScreen extends ConsumerWidget {
                                     color: AppColors.background,
                                     image: product.imageUrl != null
                                         ? DecorationImage(
-                                            image: product.imageUrl!.startsWith('assets/')
+                                            image: product.imageUrl!
+                                                    .startsWith('assets/')
                                                 ? AssetImage(product.imageUrl!)
                                                 : NetworkImage(
                                                     product.imageUrl!,
@@ -196,8 +198,7 @@ class ConsumerHomeScreen extends ConsumerWidget {
                                     children: [
                                       Text(
                                         product.name,
-                                        style: AppTextStyles.bodySmall
-                                            .copyWith(
+                                        style: AppTextStyles.bodySmall.copyWith(
                                           fontWeight: FontWeight.w600,
                                         ),
                                         maxLines: 1,
@@ -346,8 +347,8 @@ class ConsumerHomeScreen extends ConsumerWidget {
 
   Widget _buildProductCard(BuildContext context, Product product) {
     return GestureDetector(
-      onTap: () =>
-          context.goNamed('product-detail', pathParameters: {'productId': product.id}),
+      onTap: () => context
+          .goNamed('product-detail', pathParameters: {'productId': product.id}),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -382,8 +383,7 @@ class ConsumerHomeScreen extends ConsumerWidget {
                   children: [
                     Text(
                       product.name,
-                      style:
-                          AppTextStyles.bodySmall.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 2,

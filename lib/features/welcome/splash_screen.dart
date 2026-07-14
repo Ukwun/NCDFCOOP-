@@ -47,20 +47,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     });
 
     // Failsafe: never allow splash to hang indefinitely
-    _failsafeTimer = Timer(const Duration(seconds: 6), () {
+    _failsafeTimer = Timer(const Duration(seconds: 8), () async {
       if (mounted && !_hasNavigated) {
+        final onboardingCompleted =
+            await ref.read(onboardingCompletedProvider.future);
+        if (!mounted || _hasNavigated) return;
         _hasNavigated = true;
-        context.go('/welcome');
+        context.go(onboardingCompleted ? '/signin' : '/onboarding');
       }
     });
   }
 
-  void _navigateBasedOnAuthStatus() {
+  Future<void> _navigateBasedOnAuthStatus() async {
     if (_hasNavigated) return;
+
+    // Wait for Firebase and the app-level profile to agree before choosing a
+    // destination. This prevents stale local users from reaching role setup.
+    await ref.read(authControllerProvider.future);
+    await ref.read(initializePersistedUserProvider.future);
+    if (!mounted || _hasNavigated) return;
 
     final isAuthenticated = ref.read(isAuthenticatedProvider);
     final currentUser = ref.read(global_auth.currentUserProvider);
-    final authState = ref.read(authStateProvider);
 
     // Prefer persisted app user context first; Firebase stream can lag on some devices.
     if (currentUser != null) {
@@ -75,25 +83,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       return;
     }
 
-    // If Firebase says authenticated but app-level user context is not ready yet,
-    // avoid routing to '/' because redirect guards can bounce back to splash.
-    if (isAuthenticated && currentUser == null) {
+    if (isAuthenticated && currentUser != null) {
       _hasNavigated = true;
-      if (authState.isLoading) {
-        context.go('/welcome');
-      } else {
-        context.go('/signin');
-      }
-      return;
-    }
-
-    if (isAuthenticated) {
-      _hasNavigated = true;
-      context.go('/');
+      context.go(currentUser.roleSelectionCompleted ? '/' : '/role-selection');
     } else {
-      // User is not authenticated, show onboarding
+      final onboardingCompleted =
+          await ref.read(onboardingCompletedProvider.future);
+      if (!mounted || _hasNavigated) return;
       _hasNavigated = true;
-      context.go('/onboarding');
+      context.go(onboardingCompleted ? '/signin' : '/onboarding');
     }
   }
 
@@ -182,44 +180,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                   ),
                 ],
-              ),
-            ),
-
-            // Status Bar (Simulated to match design)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        '9:45',
-                        style: TextStyle(
-                          color: Color(0xFFFAFAFA),
-                          fontSize: 16,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          _buildStatusIcon(),
-                          const SizedBox(width: 6),
-                          _buildStatusIcon(),
-                          const SizedBox(width: 6),
-                          _buildStatusIcon(width: 30),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
           ],

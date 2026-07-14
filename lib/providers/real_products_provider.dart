@@ -5,9 +5,8 @@ import './membership_provider.dart';
 /// Get all products with user's membership applied
 final productsWithMemberPricingProvider =
     FutureProvider<List<Product>>((ref) async {
-  final membershipTier =
-      await ref.watch(userMembershipTierProvider.future);
-  
+  final membershipTier = await ref.watch(userMembershipTierProvider.future);
+
   // Non-members see all regular products
   // Members see all products (including exclusive ones)
   if (membershipTier == null) {
@@ -21,21 +20,16 @@ final productsWithMemberPricingProvider =
 /// Get member-exclusive products only
 final memberExclusiveProductsProvider =
     FutureProvider<List<Product>>((ref) async {
-  final membershipTier =
-      await ref.watch(userMembershipTierProvider.future);
+  final membershipTier = await ref.watch(userMembershipTierProvider.future);
 
   if (membershipTier == null) return [];
 
-  return realProducts
-      .where((p) => p.isMemberExclusive)
-      .toList();
+  return realProducts.where((p) => p.isMemberExclusive).toList();
 });
 
 /// Get total savings for user based on membership
-final totalPotentialSavingsProvider =
-    FutureProvider<double>((ref) async {
-  final membershipTier =
-      await ref.watch(userMembershipTierProvider.future);
+final totalPotentialSavingsProvider = FutureProvider<double>((ref) async {
+  final membershipTier = await ref.watch(userMembershipTierProvider.future);
 
   if (membershipTier == null) return 0;
 
@@ -49,8 +43,7 @@ final totalPotentialSavingsProvider =
 /// Get products by category with membership pricing
 final productsByCategoryProvider =
     FutureProvider.family<List<Product>, String>((ref, category) async {
-  final membershipTier =
-      await ref.watch(userMembershipTierProvider.future);
+  final membershipTier = await ref.watch(userMembershipTierProvider.future);
 
   final filtered = realProducts.where((p) => p.category == category);
 
@@ -64,8 +57,7 @@ final productsByCategoryProvider =
 /// Search products with membership pricing applied
 final searchProductsProvider =
     FutureProvider.family<List<Product>, String>((ref, query) async {
-  final membershipTier =
-      await ref.watch(userMembershipTierProvider.future);
+  final membershipTier = await ref.watch(userMembershipTierProvider.future);
 
   final searchQuery = query.toLowerCase();
   final filtered = realProducts.where((p) =>
@@ -83,8 +75,7 @@ final searchProductsProvider =
 /// Get specific product with user's pricing
 final productDetailProvider =
     FutureProvider.family<Product?, String>((ref, productId) async {
-  final membershipTier =
-      await ref.watch(userMembershipTierProvider.future);
+  final membershipTier = await ref.watch(userMembershipTierProvider.future);
 
   Product? product;
   try {

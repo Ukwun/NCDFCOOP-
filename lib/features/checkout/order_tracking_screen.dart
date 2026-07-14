@@ -16,6 +16,7 @@ import 'package:coop_commerce/providers/cart_provider.dart';
 import 'package:coop_commerce/core/providers/home_providers.dart';
 import 'package:coop_commerce/features/checkout/order_tracking_helpers.dart';
 import 'package:coop_commerce/features/selling/seller_earnings_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -259,7 +260,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                       Column(
                         children: [
                           const SizedBox(height: AppSpacing.lg),
-                          _buildMapPlaceholder(),
+                          _buildLocationStatus(),
                           const SizedBox(height: AppSpacing.lg),
                         ],
                       ),
@@ -391,7 +392,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
 
   String _roleFocusText(UserRole role) => roleFocusText(role);
 
-  Widget _buildMapPlaceholder() {
+  Widget _buildLocationStatus() {
     return Container(
       height: 300,
       decoration: BoxDecoration(
@@ -409,7 +410,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
             ),
             SizedBox(height: 16),
             Text(
-              'Live tracking map',
+              'Live GPS is not available for this delivery yet',
               style: TextStyle(color: Colors.grey),
             ),
           ],
@@ -1065,13 +1066,16 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
               ),
               if (order.driverPhone != null)
                 GestureDetector(
-                  onTap: () {
-                    // Call driver
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Calling ${order.driverPhone}'),
-                      ),
-                    );
+                  onTap: () async {
+                    final phone = order.driverPhone!.replaceAll(' ', '');
+                    final launched = await launchUrl(Uri.parse('tel:$phone'));
+                    if (!launched && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Unable to open the phone dialer.'),
+                        ),
+                      );
+                    }
                   },
                   child: Container(
                     width: 44,

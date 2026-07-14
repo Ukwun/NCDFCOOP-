@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/core/config/social_auth_config.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'auth_provider.dart';
 
@@ -16,6 +17,8 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
+  bool _rememberMe = true;
 
   @override
   void dispose() {
@@ -25,40 +28,78 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
   }
 
   void _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_isSubmitting || !_formKey.currentState!.validate()) {
       return;
     }
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    // Trigger login
-    await ref.read(authControllerProvider.notifier).signIn(email, password);
+    setState(() => _isSubmitting = true);
+    try {
+      await ref.read(authControllerProvider.notifier).signIn(
+            email,
+            password,
+            rememberMe: _rememberMe,
+          );
+      final result = ref.read(authControllerProvider);
+      if (result.hasError) throw result.error!;
+      if (mounted) context.go('/splash');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_friendlyLoginError(error)),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  String _friendlyLoginError(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('invalid-credential') ||
+        message.contains('wrong-password') ||
+        message.contains('user-not-found')) {
+      return 'The email or password is incorrect.';
+    }
+    if (message.contains('network') || message.contains('too long')) {
+      return 'We could not reach the sign-in service. Check your connection and try again.';
+    }
+    if (message.contains('too-many-requests')) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+    return 'Sign in failed. Please try again.';
+  }
+
+  Future<void> _handleSocialSignIn(Future<void> Function() action) async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await action().timeout(const Duration(seconds: 30));
+      final result = ref.read(authControllerProvider);
+      if (result.hasError) throw result.error!;
+      if (mounted) context.go('/splash');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_friendlyLoginError(error)),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     // Listen to auth state changes
-    ref.listen(authControllerProvider, (previous, next) {
-      if (next is AsyncError) {
-        final errorMessage = next.error.toString();
-        print('❌ LOGIN ERROR: $errorMessage');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      } else if (next is AsyncData && !next.isLoading) {
-        // On success, navigate to home
-        print('✅ LOGIN SUCCESS - Navigating to home');
-        context.go('/');
-      }
-    });
-
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
+    ref.watch(authControllerProvider);
+    final isLoading = _isSubmitting;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -71,7 +112,7 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/signin');
+              context.go('/welcome');
             }
           },
         ),
@@ -194,6 +235,17 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                CheckboxListTile(
+                  value: _rememberMe,
+                  onChanged: isLoading
+                      ? null
+                      : (value) => setState(() => _rememberMe = value ?? true),
+                  title: const Text('Keep me signed in'),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  activeColor: AppColors.primary,
+                ),
+
                 // Forgot Password Link
                 Align(
                   alignment: Alignment.centerRight,
@@ -244,6 +296,50 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('or', style: AppTextStyles.bodySmall),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (SocialAuthConfig.isFacebookConfigured) ...[
+                  _ProviderButton(
+                    icon: Icons.facebook,
+                    label: 'Continue with Facebook',
+                    onPressed: isLoading
+                        ? null
+                        : () => _handleSocialSignIn(() => ref
+                            .read(authControllerProvider.notifier)
+                            .signInWithFacebook()),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _ProviderButton(
+                  icon: Icons.g_mobiledata,
+                  label: 'Continue with Google',
+                  onPressed: isLoading
+                      ? null
+                      : () => _handleSocialSignIn(() => ref
+                          .read(authControllerProvider.notifier)
+                          .signInWithGoogle()),
+                ),
+                const SizedBox(height: 12),
+                _ProviderButton(
+                  icon: Icons.apple,
+                  label: 'Continue with Apple',
+                  onPressed: isLoading
+                      ? null
+                      : () => _handleSocialSignIn(() => ref
+                          .read(authControllerProvider.notifier)
+                          .signInWithApple()),
+                ),
+                const SizedBox(height: 24),
+
                 // Sign Up Link
                 Center(
                   child: GestureDetector(
@@ -267,6 +363,38 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProviderButton extends StatelessWidget {
+  const _ProviderButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 26),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.text,
+          side: const BorderSide(color: AppColors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

@@ -21,7 +21,8 @@ class InventoryLocation {
     required this.isActive,
   });
 
-  factory InventoryLocation.fromFirestore(Map<String, dynamic> data, String docId) {
+  factory InventoryLocation.fromFirestore(
+      Map<String, dynamic> data, String docId) {
     return InventoryLocation(
       locationId: docId,
       name: data['name'] ?? '',
@@ -99,8 +100,10 @@ class InventoryItem {
       reorderPoint: data['reorderPoint'] ?? 20,
       reorderQuantity: data['reorderQuantity'] ?? 50,
       costPerUnit: (data['costPerUnit'] ?? 0.0).toDouble(),
-      lastCountDate: (data['lastCountDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastRestockDate: (data['lastRestockDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastCountDate:
+          (data['lastCountDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastRestockDate:
+          (data['lastRestockDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: data['status'] ?? 'in_stock',
       isTracked: data['isTracked'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -174,7 +177,8 @@ class StockTransaction {
   final String type; // inbound, outbound, adjustment, return, damage
   final int quantity;
   final String reason;
-  final String referenceType; // purchase_order, sales_order, internal_transfer, etc.
+  final String
+      referenceType; // purchase_order, sales_order, internal_transfer, etc.
   final String? referenceId;
   final String createdBy;
   final DateTime createdAt;
@@ -197,7 +201,8 @@ class StockTransaction {
     required this.isVerified,
   });
 
-  factory StockTransaction.fromFirestore(Map<String, dynamic> data, String docId) {
+  factory StockTransaction.fromFirestore(
+      Map<String, dynamic> data, String docId) {
     return StockTransaction(
       transactionId: docId,
       inventoryId: data['inventoryId'] ?? '',
@@ -266,7 +271,8 @@ class InventoryAlert {
     this.resolvedBy,
   });
 
-  factory InventoryAlert.fromFirestore(Map<String, dynamic> data, String docId) {
+  factory InventoryAlert.fromFirestore(
+      Map<String, dynamic> data, String docId) {
     return InventoryAlert(
       alertId: docId,
       inventoryId: data['inventoryId'] ?? '',
@@ -327,7 +333,8 @@ class InventorySummary {
     required this.stockByCategory,
   });
 
-  factory InventorySummary.fromFirestore(Map<String, dynamic> data, String docId) {
+  factory InventorySummary.fromFirestore(
+      Map<String, dynamic> data, String docId) {
     return InventorySummary(
       locationId: docId,
       totalItems: data['totalItems'] ?? 0,
@@ -336,7 +343,8 @@ class InventorySummary {
       lowStockItems: data['lowStockItems'] ?? 0,
       outOfStockItems: data['outOfStockItems'] ?? 0,
       totalValue: (data['totalValue'] ?? 0.0).toDouble(),
-      lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastUpdated:
+          (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
       stockByCategory: Map<String, int>.from(data['stockByCategory'] ?? {}),
     );
   }
@@ -390,7 +398,8 @@ class ReorderSuggestion {
     required this.isAccepted,
   });
 
-  factory ReorderSuggestion.fromFirestore(Map<String, dynamic> data, String docId) {
+  factory ReorderSuggestion.fromFirestore(
+      Map<String, dynamic> data, String docId) {
     return ReorderSuggestion(
       suggestionId: docId,
       inventoryId: data['inventoryId'] ?? '',
@@ -399,12 +408,14 @@ class ReorderSuggestion {
       suggestedQuantity: data['suggestedQuantity'] ?? 0,
       currentStock: data['currentStock'] ?? 0,
       forecastedDemand: data['forecastedDemand'] ?? 0,
-      forecastedDemandWeekly: (data['forecastedDemandWeekly'] ?? 0.0).toDouble(),
+      forecastedDemandWeekly:
+          (data['forecastedDemandWeekly'] ?? 0.0).toDouble(),
       daysToStockout: data['daysToStockout'] ?? 999,
       priority: data['priority'] ?? 'low',
       confidence: (data['confidence'] ?? 0.5).toDouble(),
       reason: data['reason'] ?? '',
-      generatedAt: (data['generatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      generatedAt:
+          (data['generatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isAccepted: data['isAccepted'] ?? false,
     );
   }

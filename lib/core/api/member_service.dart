@@ -43,16 +43,16 @@ class Member {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'email': email,
-    'membershipNumber': membershipNumber,
-    'membershipTier': membershipTier,
-    'totalSavings': totalSavings,
-    'pointsBalance': pointsBalance,
-    'memberSince': memberSince.toIso8601String(),
-    'lastPurchaseDate': lastPurchaseDate?.toIso8601String(),
-  };
+        'id': id,
+        'name': name,
+        'email': email,
+        'membershipNumber': membershipNumber,
+        'membershipTier': membershipTier,
+        'totalSavings': totalSavings,
+        'pointsBalance': pointsBalance,
+        'memberSince': memberSince.toIso8601String(),
+        'lastPurchaseDate': lastPurchaseDate?.toIso8601String(),
+      };
 }
 
 /// Member savings summary
@@ -82,12 +82,12 @@ class SavingsSummary {
   }
 
   Map<String, dynamic> toJson() => {
-    'totalSavings': totalSavings,
-    'savingsThisMonth': savingsThisMonth,
-    'savingsThisYear': savingsThisYear,
-    'itemsSaved': itemsSaved,
-    'savingsPercentage': savingsPercentage,
-  };
+        'totalSavings': totalSavings,
+        'savingsThisMonth': savingsThisMonth,
+        'savingsThisYear': savingsThisYear,
+        'itemsSaved': itemsSaved,
+        'savingsPercentage': savingsPercentage,
+      };
 }
 
 /// Member service for API calls

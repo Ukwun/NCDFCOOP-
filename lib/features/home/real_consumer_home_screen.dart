@@ -16,8 +16,7 @@ class RealConsumerHomeScreen extends ConsumerWidget {
     final membershipTier = ref.watch(userMembershipTierProvider);
     final membershipExpiry = ref.watch(userMembershipExpiryProvider);
     final totalSavings = ref.watch(totalPotentialSavingsProvider);
-    final exclusiveProducts =
-        ref.watch(memberExclusiveProductsProvider);
+    final exclusiveProducts = ref.watch(memberExclusiveProductsProvider);
     final allProducts = ref.watch(productsWithMemberPricingProvider);
 
     return Scaffold(
@@ -58,8 +57,7 @@ class RealConsumerHomeScreen extends ConsumerWidget {
               _buildUpgradePrompt(context),
 
             // Featured Products Section
-            if (membershipTier.value != null &&
-                membershipTier.value != 'basic')
+            if (membershipTier.value != null && membershipTier.value != 'basic')
               _buildExclusiveSection(context, exclusiveProducts),
 
             // All Products with Real Pricing
@@ -251,8 +249,7 @@ class RealConsumerHomeScreen extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: products
-                    .map((product) =>
-                        _buildProductCard(context, product))
+                    .map((product) => _buildProductCard(context, product))
                     .toList(),
               ),
             ),
@@ -367,7 +364,9 @@ class RealConsumerHomeScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isMemberExclusive ? Colors.amber.withOpacity(0.3) : Colors.grey[300]!,
+            color: isMemberExclusive
+                ? Colors.amber.withOpacity(0.3)
+                : Colors.grey[300]!,
           ),
           borderRadius: BorderRadius.circular(8),
           color: isMemberExclusive ? Colors.amber.withOpacity(0.05) : null,

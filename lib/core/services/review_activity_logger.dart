@@ -105,7 +105,8 @@ class ReviewActivityLogger {
       });
 
       final action = isHelpful ? 'helpful' : 'not_helpful';
-      debugPrint('✅ Review marked as $action: Review #$reviewId for $productName');
+      debugPrint(
+          '✅ Review marked as $action: Review #$reviewId for $productName');
     } catch (e) {
       debugPrint('❌ Error logging review helpful: $e');
       // Silent fail - don't block UI
@@ -173,7 +174,8 @@ class ReviewActivityLogger {
   /// Get review metrics for user
   Future<Map<String, dynamic>> getReviewMetrics(String userId) async {
     try {
-      final activities = await getUserReviewActivities(userId: userId, limit: 100);
+      final activities =
+          await getUserReviewActivities(userId: userId, limit: 100);
 
       int reviewsSubmitted = 0;
       int helpfulVotes = 0;
@@ -215,12 +217,14 @@ class ReviewActivityLogger {
         'totalReviewsDeleted': reviewsDeleted,
         'averageReviewRating': double.parse(averageRating.toStringAsFixed(1)),
         'helpfulnessRatio': helpfulVotes + unhelpfulVotes > 0
-            ? (helpfulVotes / (helpfulVotes + unhelpfulVotes) * 100).toStringAsFixed(1)
+            ? (helpfulVotes / (helpfulVotes + unhelpfulVotes) * 100)
+                .toStringAsFixed(1)
             : 'N/A',
         'lastReviewTime': activities
-            .where((a) => (a['action'] as String?) == 'submit_review')
-            .isNotEmpty
-            ? activities.firstWhere((a) => (a['action'] as String?) == 'submit_review')['timestamp']
+                .where((a) => (a['action'] as String?) == 'submit_review')
+                .isNotEmpty
+            ? activities.firstWhere(
+                (a) => (a['action'] as String?) == 'submit_review')['timestamp']
             : null,
       };
     } catch (e) {
@@ -240,7 +244,8 @@ class ReviewActivityLogger {
   Future<Map<String, int>> getMostReviewedCategories(String userId,
       {int limit = 5}) async {
     try {
-      final activities = await getUserReviewActivities(userId: userId, limit: 100);
+      final activities =
+          await getUserReviewActivities(userId: userId, limit: 100);
 
       final Map<String, int> categoryCount = {};
 

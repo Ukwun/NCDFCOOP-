@@ -15,10 +15,8 @@ class ProductsService {
   }) async {
     try {
       debugPrint('📦 Fetching ALL products from Firestore...');
-      
-      final snapshot = await _firestore
-          .collection(_productsCollection)
-          .get();
+
+      final snapshot = await _firestore.collection(_productsCollection).get();
 
       if (snapshot.docs.isEmpty) {
         debugPrint('⚠️  No products found in Firestore - returning empty list');
@@ -41,7 +39,7 @@ class ProductsService {
   Future<List<Product>> getProductsByCategory(String category) async {
     try {
       debugPrint('📦 Fetching products in category: $category');
-      
+
       final snapshot = await _firestore
           .collection(_productsCollection)
           .where('category', isEqualTo: category)
@@ -65,14 +63,16 @@ class ProductsService {
 
     try {
       debugPrint('🔍 Searching for: "$query"');
-      
+
       final allProducts = await getAllProducts();
       final searchQuery = query.toLowerCase();
 
-      final results = allProducts.where((product) =>
-          product.name.toLowerCase().contains(searchQuery) ||
-          product.description.toLowerCase().contains(searchQuery) ||
-          product.category.toLowerCase().contains(searchQuery)).toList();
+      final results = allProducts
+          .where((product) =>
+              product.name.toLowerCase().contains(searchQuery) ||
+              product.description.toLowerCase().contains(searchQuery) ||
+              product.category.toLowerCase().contains(searchQuery))
+          .toList();
 
       debugPrint('✅ Found ${results.length} products matching "$query"');
       return results;
@@ -85,17 +85,16 @@ class ProductsService {
   /// Get product by ID
   Future<Product?> getProductById(String productId) async {
     try {
-      final doc = await _firestore
-          .collection(_productsCollection)
-          .doc(productId)
-          .get();
+      final doc =
+          await _firestore.collection(_productsCollection).doc(productId).get();
 
       if (!doc.exists) {
         debugPrint('⚠️  Product not found: $productId');
         return null;
       }
 
-      final product = Product.fromJson({...doc.data() as Map<String, dynamic>, 'id': doc.id});
+      final product = Product.fromJson(
+          {...doc.data() as Map<String, dynamic>, 'id': doc.id});
       debugPrint('✅ Fetched product: ${product.name}');
       return product;
     } catch (e) {
@@ -108,7 +107,7 @@ class ProductsService {
   Future<List<Product>> getFeaturedProducts({int limit = 10}) async {
     try {
       debugPrint('⭐ Fetching featured products...');
-      
+
       final snapshot = await _firestore
           .collection(_productsCollection)
           .where('isFeatured', isEqualTo: true)
@@ -131,7 +130,7 @@ class ProductsService {
   Future<List<Product>> getSaleProducts({int limit = 20}) async {
     try {
       debugPrint('🔥 Fetching sale products...');
-      
+
       final snapshot = await _firestore
           .collection(_productsCollection)
           .where('onSale', isEqualTo: true)
@@ -152,10 +151,8 @@ class ProductsService {
 
   /// Stream products in real-time
   Stream<List<Product>> streamProducts() {
-    return _firestore
-        .collection(_productsCollection)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
+    return _firestore.collection(_productsCollection).snapshots().map(
+        (snapshot) => snapshot.docs
             .map((doc) => Product.fromJson({...doc.data(), 'id': doc.id}))
             .toList());
   }
@@ -184,10 +181,7 @@ class ProductsService {
   /// Update product from Firestore (for real-time inventory/pricing)
   Future<void> syncProductFromFirestore(String productId) async {
     try {
-      await _firestore
-          .collection(_productsCollection)
-          .doc(productId)
-          .get();
+      await _firestore.collection(_productsCollection).doc(productId).get();
       debugPrint('✅ Synced product: $productId');
     } catch (e) {
       debugPrint('❌ Error syncing product: $e');
@@ -197,10 +191,8 @@ class ProductsService {
   /// Get product count
   Future<int> getProductCount() async {
     try {
-      final snapshot = await _firestore
-          .collection(_productsCollection)
-          .count()
-          .get();
+      final snapshot =
+          await _firestore.collection(_productsCollection).count().get();
       return snapshot.count ?? 0;
     } catch (e) {
       debugPrint('❌ Error getting product count: $e');

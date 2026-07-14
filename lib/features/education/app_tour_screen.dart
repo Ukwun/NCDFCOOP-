@@ -17,31 +17,36 @@ class _AppTourScreenState extends State<AppTourScreen> {
   final List<TourSlide> slides = [
     TourSlide(
       title: 'Welcome to Coop Commerce',
-      description: 'Join a cooperative marketplace where members own, decide, and benefit together.',
+      description:
+          'Join a cooperative marketplace where members own, decide, and benefit together.',
       icon: '🎉',
       color: const Color(0xFF1A4E00),
     ),
     TourSlide(
       title: 'Your Role Matters',
-      description: 'You\'re not just a customer—you\'re a cooperative owner with a voice and vote.',
+      description:
+          'You\'re not just a customer—you\'re a cooperative owner with a voice and vote.',
       icon: '👑',
       color: const Color(0xFF8D560F),
     ),
     TourSlide(
       title: 'Fair Pricing',
-      description: 'Access exclusive member-only prices and flash sales with early bird access.',
+      description:
+          'Access exclusive member-only prices and flash sales with early bird access.',
       icon: '💳',
       color: const Color(0xFF130F8D),
     ),
     TourSlide(
       title: 'Earn & Share',
-      description: 'Earn rewards on every purchase and share in community dividends.',
+      description:
+          'Earn rewards on every purchase and share in community dividends.',
       icon: '💰',
       color: const Color(0xFF8D0F43),
     ),
     TourSlide(
       title: 'Track Your Impact',
-      description: 'Use analytics to see your savings and support local communities.',
+      description:
+          'Use analytics to see your savings and support local communities.',
       icon: '📊',
       color: const Color(0xFFE61456),
     ),
@@ -59,7 +64,8 @@ class _AppTourScreenState extends State<AppTourScreen> {
     ),
     TourSlide(
       title: 'You\'re Ready!',
-      description: 'Start exploring and enjoy the benefits of cooperative commerce.',
+      description:
+          'Start exploring and enjoy the benefits of cooperative commerce.',
       icon: '🚀',
       color: const Color(0xFF2B0B3A),
     ),
@@ -348,24 +354,24 @@ class _AppTourScreenState extends State<AppTourScreen> {
       child: Column(
         children: features
             .map((feature) => Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.check_circle,
-                color: AppColors.primary,
-                size: 22,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  feature,
-                  style: AppTextStyles.bodySmall,
-                ),
-              ),
-            ],
-          ),
-        ))
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(
+                          feature,
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ))
             .toList(),
       ),
     );

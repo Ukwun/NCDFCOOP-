@@ -289,8 +289,8 @@ class MiniMemberTierCard extends StatelessWidget {
       orElse: () => MemberTierProgressWidget.tiers[2],
     );
 
-    final nextTierData =
-        MemberTierProgressWidget.tiers[MemberTierProgressWidget.tiers
+    final nextTierData = MemberTierProgressWidget.tiers[MemberTierProgressWidget
+                .tiers
                 .indexWhere((t) => t.name == currentTier) +
             1] ??
         MemberTierProgressWidget.tiers.last;

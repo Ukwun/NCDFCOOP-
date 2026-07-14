@@ -60,8 +60,6 @@ class _OrderConfirmationScreenState
   @override
   Widget build(BuildContext context) {
     final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
-    final currentUser = ref.watch(currentUserProvider);
-
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -69,12 +67,6 @@ class _OrderConfirmationScreenState
         body: SafeArea(
           child: orderAsync.when(
             data: (order) {
-              // If order is null but user's membership tier has been updated, show success
-              if (order == null &&
-                  currentUser != null &&
-                  currentUser.membershipTier != 'free') {
-                return _buildMockOrderSuccess(context, currentUser);
-              }
               if (order == null) {
                 return Center(
                   child:

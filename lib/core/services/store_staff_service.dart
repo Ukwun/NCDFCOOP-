@@ -105,11 +105,12 @@ class StoreStaffService {
           .collection('pos_transactions');
 
       if (startDate != null) {
-        query =
-            query.where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+        query = query.where('timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
       }
       if (endDate != null) {
-        query = query.where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+        query = query.where('timestamp',
+            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
       }
 
       final snapshot =
@@ -125,7 +126,8 @@ class StoreStaffService {
   }
 
   /// Get a single transaction
-  Future<POSTransaction?> getTransaction(String storeId, String transactionId) async {
+  Future<POSTransaction?> getTransaction(
+      String storeId, String transactionId) async {
     try {
       final doc = await _firestore
           .collection('stores')
@@ -262,7 +264,8 @@ class StoreStaffService {
   // ==================== DAILY SALES ====================
 
   /// Get or create daily sales summary
-  Future<DailySalesSummary> getDailySalesSummary(String storeId, String storeName) async {
+  Future<DailySalesSummary> getDailySalesSummary(
+      String storeId, String storeName) async {
     try {
       final today = DateTime.now();
       final dateKey = '${today.year}-${today.month}-${today.day}';
@@ -320,7 +323,8 @@ class StoreStaffService {
 
         if (doc.exists) {
           final existing = doc.data() as Map<String, dynamic>;
-          final currentTotal = (existing['totalRevenue'] as num?)?.toDouble() ?? 0;
+          final currentTotal =
+              (existing['totalRevenue'] as num?)?.toDouble() ?? 0;
           final currentCount = (existing['totalTransactions'] as int?) ?? 0;
           final paymentBreakdown =
               Map<String, int>.from(existing['paymentMethodBreakdown'] ?? {});

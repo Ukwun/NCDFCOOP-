@@ -18,7 +18,8 @@ class SearchHistoryEntry {
     required this.isBookmarked,
   });
 
-  factory SearchHistoryEntry.fromFirestore(Map<String, dynamic> data, String docId) {
+  factory SearchHistoryEntry.fromFirestore(
+      Map<String, dynamic> data, String docId) {
     return SearchHistoryEntry(
       id: docId,
       query: data['query'] ?? '',

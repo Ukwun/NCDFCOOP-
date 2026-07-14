@@ -467,6 +467,9 @@ final activePromosProvider = StreamProvider<List<PromoBanner>>((ref) {
 /// Mock products fallback (when Firebase is unavailable)
 // ignore: unused_element
 List<Product> _getDefaultMockProducts() {
+  if (!const bool.fromEnvironment('ENABLE_DEMO_CATALOG', defaultValue: false)) {
+    return const [];
+  }
   return [
     // GRAINS
     Product(

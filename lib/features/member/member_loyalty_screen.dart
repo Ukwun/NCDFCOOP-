@@ -15,7 +15,51 @@ class MemberLoyaltyScreen extends ConsumerWidget {
     final memberId = currentUser?.id;
 
     final memberAsync = ref.watch(currentMemberProvider);
+    final rewardsAsync = ref.watch(availableMemberRewardsProvider);
     final member = memberAsync.value;
+    if (currentUser == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Member Loyalty')),
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () => context.go('/signin'),
+            child: const Text('Sign in to continue'),
+          ),
+        ),
+      );
+    }
+    if (memberAsync.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (memberAsync.hasError || member == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Member Loyalty')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.loyalty_outlined, size: 52),
+                const SizedBox(height: 16),
+                const Text(
+                  'Your verified member loyalty record is unavailable.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () => ref.invalidate(currentMemberProvider),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final memberName = member?.fullName.trim().isNotEmpty == true
         ? member!.fullName
         : currentUser?.name ?? 'Member';
@@ -143,69 +187,30 @@ class MemberLoyaltyScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              _buildRedemptionOption(
-                context: context,
-                ref: ref,
-                memberId: memberId,
-                currentPoints: currentPoints,
-                icon: Icons.local_offer,
-                title: 'Discount Voucher',
-                description: '500 points = ₦500 discount',
-                points: 500,
-              ),
-              const SizedBox(height: 12),
-              _buildRedemptionOption(
-                context: context,
-                ref: ref,
-                memberId: memberId,
-                currentPoints: currentPoints,
-                icon: Icons.local_shipping,
-                title: 'Free Shipping',
-                description: '300 points = Free delivery on next order',
-                points: 300,
-              ),
-              const SizedBox(height: 12),
-              _buildRedemptionOption(
-                context: context,
-                ref: ref,
-                memberId: memberId,
-                currentPoints: currentPoints,
-                icon: Icons.card_giftcard,
-                title: 'Gift Card',
-                description: '1000 points = ₦1000 gift card',
-                points: 1000,
+              rewardsAsync.when(
+                data: (rewards) => rewards.isEmpty
+                    ? const Text('No rewards are available right now.')
+                    : Column(
+                        children: rewards
+                            .map((reward) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _buildRedemptionOption(
+                                    context: context,
+                                    ref: ref,
+                                    memberId: memberId,
+                                    currentPoints: currentPoints,
+                                    reward: reward,
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const Text(
+                  'Rewards are temporarily unavailable. Please try again later.',
+                ),
               ),
               const SizedBox(height: 24),
 
-              // How to Earn Points Section
-              const Text(
-                'How to Earn Points',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              _buildEarningRule(
-                icon: Icons.shopping_cart,
-                title: 'Shopping',
-                description: 'Earn 1 point per ₦100 spent',
-              ),
-              const SizedBox(height: 8),
-              _buildEarningRule(
-                icon: Icons.star_rate,
-                title: 'Reviews',
-                description: 'Earn 50 points per product review',
-              ),
-              const SizedBox(height: 8),
-              _buildEarningRule(
-                icon: Icons.card_giftcard,
-                title: 'Referrals',
-                description: 'Earn 200 points per successful referral',
-              ),
-              const SizedBox(height: 8),
-              _buildEarningRule(
-                icon: Icons.cake,
-                title: 'Birthday',
-                description: 'Get 500 bonus points in your birth month',
-              ),
               const SizedBox(height: 32),
             ],
           ),
@@ -311,11 +316,16 @@ class MemberLoyaltyScreen extends ConsumerWidget {
     required WidgetRef ref,
     required String? memberId,
     required int currentPoints,
-    required IconData icon,
-    required String title,
-    required String description,
-    required int points,
+    required Reward reward,
   }) {
+    final title = reward.name;
+    final description = reward.description;
+    final points = reward.pointsRequired;
+    final icon = switch (reward.rewardType) {
+      'shipping' || 'freeship' => Icons.local_shipping,
+      'gift_card' => Icons.card_giftcard,
+      _ => Icons.local_offer,
+    };
     return GestureDetector(
       onTap: () async {
         if (memberId == null || memberId.isEmpty) {
@@ -330,16 +340,6 @@ class MemberLoyaltyScreen extends ConsumerWidget {
           );
           return;
         }
-
-        final reward = Reward(
-          id: '${title.toLowerCase().replaceAll(' ', '_')}_$points',
-          name: title,
-          description: description,
-          pointsRequired: points,
-          rewardType: 'voucher',
-          rewardValue: points,
-          isClaimed: false,
-        );
 
         try {
           await ref.read(claimRewardProvider((memberId, reward)).future);

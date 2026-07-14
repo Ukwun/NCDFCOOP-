@@ -87,7 +87,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '🔍',
               title: 'Browse Products',
-              description: 'Search, filter, and discover thousands of products from local and global brands.',
+              description:
+                  'Search, filter, and discover thousands of products from local and global brands.',
               steps: [
                 'Open the Home tab',
                 'Search by category or product name',
@@ -98,7 +99,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '⭐',
               title: 'Product Reviews',
-              description: 'Read and write honest reviews to help the community make informed choices.',
+              description:
+                  'Read and write honest reviews to help the community make informed choices.',
               steps: [
                 'Click on any product',
                 'Scroll to "Reviews" section',
@@ -109,7 +111,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '💳',
               title: 'Member-Only Pricing',
-              description: 'Access exclusive deals and fair prices based on your membership tier.',
+              description:
+                  'Access exclusive deals and fair prices based on your membership tier.',
               steps: [
                 'View products at your tier\'s price',
                 'Upgrade membership for better rates',
@@ -119,7 +122,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '🛍️',
               title: 'Flash Sales',
-              description: 'Get early access to limited-time flash sales as a member.',
+              description:
+                  'Get early access to limited-time flash sales as a member.',
               steps: [
                 'Check Home tab for "Flash Sales" section',
                 'Members get 2 hours early access',
@@ -142,7 +146,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '📊',
               title: 'Analytics Dashboard',
-              description: 'Track your impact, savings, and community contributions in real-time.',
+              description:
+                  'Track your impact, savings, and community contributions in real-time.',
               steps: [
                 'Go to Dashboard or Profile',
                 'View your total savings',
@@ -154,7 +159,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '🎁',
               title: 'Rewards & Points',
-              description: 'Earn points on every purchase and redeem for discounts.',
+              description:
+                  'Earn points on every purchase and redeem for discounts.',
               steps: [
                 'Earn 1 point per ₦1 spent',
                 'Gold members earn 5% bonus points',
@@ -176,7 +182,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '🤝',
               title: 'Member Voting',
-              description: 'Have a voice in cooperative decisions that affect everyone.',
+              description:
+                  'Have a voice in cooperative decisions that affect everyone.',
               steps: [
                 'Check notifications for active votes',
                 'Review voting topics carefully',
@@ -200,7 +207,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '📝',
               title: 'Invoices & Billing',
-              description: 'Generate and manage invoices for your orders and transactions.',
+              description:
+                  'Generate and manage invoices for your orders and transactions.',
               steps: [
                 'Go to Orders section',
                 'Tap "Generate Invoice" on any order',
@@ -211,7 +219,8 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             FeatureItem(
               icon: '📦',
               title: 'Bulk Ordering',
-              description: 'Place large orders with special bulk pricing and terms.',
+              description:
+                  'Place large orders with special bulk pricing and terms.',
               steps: [
                 'Wholesale members see bulk pricing',
                 'Set up recurring orders',
@@ -427,20 +436,21 @@ class _FeaturesGuideScreenState extends State<FeaturesGuideScreen>
             ),
             const SizedBox(height: AppSpacing.sm),
             ...canAccess.map((access) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppColors.primary, size: 18),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      access,
-                      style: AppTextStyles.bodySmall,
-                    ),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          color: AppColors.primary, size: 18),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          access,
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                )),
           ],
         ),
       ),

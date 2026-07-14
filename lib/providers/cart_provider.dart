@@ -141,7 +141,7 @@ class CartNotifier extends Notifier<CartState> {
   Future<void> initializeCart() async {
     try {
       state = state.copyWith(isLoading: true);
-      
+
       final user = _auth.currentUser;
       if (user != null) {
         final items = await _persistenceService.loadCart(user.uid);
@@ -184,7 +184,7 @@ class CartNotifier extends Notifier<CartState> {
       final user = _auth.currentUser;
       if (user != null) {
         await _persistenceService.saveCart(user.uid, state.items);
-        
+
         // Log cart activity
         try {
           final cartLogger = CartActivityLogger(ActivityTrackingService());
@@ -213,11 +213,13 @@ class CartNotifier extends Notifier<CartState> {
       final removedItem = state.items.firstWhere(
         (item) => item.productId == productId,
         orElse: () => CartItem(
-          id: '', productId: '', productName: '', 
-          memberPrice: 0, marketPrice: 0
-        ),
+            id: '',
+            productId: '',
+            productName: '',
+            memberPrice: 0,
+            marketPrice: 0),
       );
-      
+
       final updatedItems =
           state.items.where((item) => item.productId != productId).toList();
       state = state.copyWith(items: updatedItems, error: null);
@@ -226,7 +228,7 @@ class CartNotifier extends Notifier<CartState> {
       final user = _auth.currentUser;
       if (user != null) {
         await _persistenceService.removeItemFromCart(user.uid, productId);
-        
+
         // Log cart activity
         if (removedItem.productName.isNotEmpty) {
           try {
@@ -269,8 +271,9 @@ class CartNotifier extends Notifier<CartState> {
         // Persist to Firestore if user is logged in
         final user = _auth.currentUser;
         if (user != null) {
-          await _persistenceService.updateItemQuantity(user.uid, productId, quantity);
-          
+          await _persistenceService.updateItemQuantity(
+              user.uid, productId, quantity);
+
           // Log cart activity
           try {
             final cartLogger = CartActivityLogger(ActivityTrackingService());
@@ -282,7 +285,8 @@ class CartNotifier extends Notifier<CartState> {
               oldQuantity: oldQuantity,
               newQuantity: quantity,
             );
-            debugPrint('✅ Cart quantity updated: ${updatedItem.productName} ($oldQuantity → $quantity)');
+            debugPrint(
+                '✅ Cart quantity updated: ${updatedItem.productName} ($oldQuantity → $quantity)');
           } catch (logError) {
             debugPrint('⚠️ Error logging quantity update: $logError');
             // Silent fail - don't block UI
@@ -315,14 +319,14 @@ class CartNotifier extends Notifier<CartState> {
     try {
       final itemCount = state.itemCount;
       final totalValue = state.subtotal;
-      
+
       state = const CartState();
 
       // Persist to Firestore if user is logged in
       final user = _auth.currentUser;
       if (user != null) {
         await _persistenceService.clearCart(user.uid);
-        
+
         // Log cart activity
         try {
           final cartLogger = CartActivityLogger(ActivityTrackingService());
@@ -330,7 +334,8 @@ class CartNotifier extends Notifier<CartState> {
             itemCount: itemCount,
             totalValue: totalValue,
           );
-          debugPrint('✅ Cart cleared logged: $itemCount items (₦${totalValue.toStringAsFixed(2)})');
+          debugPrint(
+              '✅ Cart cleared logged: $itemCount items (₦${totalValue.toStringAsFixed(2)})');
         } catch (logError) {
           debugPrint('⚠️ Error logging cart clear: $logError');
           // Silent fail - don't block UI
@@ -352,7 +357,7 @@ class CartNotifier extends Notifier<CartState> {
 
       // Sync local items to Firestore
       await _persistenceService.syncLocalCartToFirestore(user.uid, localItems);
-      
+
       // Reload cart from Firestore
       await initializeCart();
     } catch (e) {

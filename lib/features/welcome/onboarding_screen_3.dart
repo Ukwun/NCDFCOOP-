@@ -250,7 +250,7 @@ class OnboardingScreen3 extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      '9:45',
+                      '',
                       style: TextStyle(
                         color: Color(0xFFFAFAFA),
                         fontSize: 16,

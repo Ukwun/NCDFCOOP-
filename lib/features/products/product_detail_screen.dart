@@ -1444,167 +1444,172 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ),
       ),
       bottomNavigationBar: productDetail.maybeWhen(
-        data: (product) => Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (activeRole == UserRole.wholesaleBuyer &&
-                  product.uploadedBy.isNotEmpty) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.tonalIcon(
-                    onPressed: () => _requestQuote(product),
-                    icon: const Icon(Icons.request_quote_outlined),
-                    label: const Text('Request quote from this seller'),
+        data: (product) => SafeArea(
+          top: false,
+          child: Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (activeRole == UserRole.wholesaleBuyer &&
+                    product.uploadedBy.isNotEmpty) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => _requestQuote(product),
+                      icon: const Icon(Icons.request_quote_outlined),
+                      label: const Text('Request quote from this seller'),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                // Quantity Selector
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: AppSpacing.lg,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () {
+                          setState(() {
+                            if (quantity > 1) quantity--;
+                          });
+                        },
+                      ),
+                      Text(
+                        quantity.toString(),
+                        style: AppTextStyles.h4,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          setState(() => quantity++);
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-              // Quantity Selector
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  spacing: AppSpacing.lg,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove),
-                      onPressed: () {
-                        setState(() {
-                          if (quantity > 1) quantity--;
-                        });
-                      },
-                    ),
-                    Text(
-                      quantity.toString(),
-                      style: AppTextStyles.h4,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () {
-                        setState(() => quantity++);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              // Add to Cart Button
-              Consumer(
-                builder: (context, ref, child) {
-                  final canOrder =
-                      product.stock > 0 && quantity <= product.stock;
-                  return SizedBox(
-                    width: double.infinity,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 50,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: canOrder
-                                    ? AppColors.primary
-                                    : AppColors.muted,
-                              ),
-                              onPressed: canOrder
-                                  ? () async {
-                                      await _addItemToCart(
-                                        productId: product.id,
-                                        productName: product.name,
-                                        price: product.retailPrice,
-                                        imageUrl: product.imageUrl,
-                                      );
-
-                                      if (!mounted) return;
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            '$quantity x ${product.name} added to cart',
-                                            style: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          duration: const Duration(seconds: 2),
-                                          action: SnackBarAction(
-                                            label: 'View Cart',
-                                            onPressed: () {
-                                              context.pushNamed('cart');
-                                            },
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  : null,
-                              child: Text(
-                                canOrder ? 'Add to Cart' : 'Out of Stock',
-                                style: AppTextStyles.labelLarge.copyWith(
-                                  color: Colors.white,
+                const SizedBox(height: AppSpacing.lg),
+                // Add to Cart Button
+                Consumer(
+                  builder: (context, ref, child) {
+                    final canOrder =
+                        product.stock > 0 && quantity <= product.stock;
+                    return SizedBox(
+                      width: double.infinity,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: canOrder
+                                      ? AppColors.primary
+                                      : AppColors.muted,
                                 ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: SizedBox(
-                            height: 50,
-                            child: OutlinedButton(
-                              onPressed: canOrder
-                                  ? () async {
-                                      if (quantity <
-                                          product.minimumOrderQuantity) {
+                                onPressed: canOrder
+                                    ? () async {
+                                        await _addItemToCart(
+                                          productId: product.id,
+                                          productName: product.name,
+                                          price: product.retailPrice,
+                                          imageUrl: product.imageUrl,
+                                        );
+
+                                        if (!mounted) return;
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Minimum order quantity is ${product.minimumOrderQuantity}',
+                                              '$quantity x ${product.name} added to cart',
+                                              style: AppTextStyles.bodyMedium
+                                                  .copyWith(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            duration:
+                                                const Duration(seconds: 2),
+                                            action: SnackBarAction(
+                                              label: 'View Cart',
+                                              onPressed: () {
+                                                context.pushNamed('cart');
+                                              },
                                             ),
                                           ),
                                         );
-                                        return;
                                       }
-
-                                      await _startOrderFlow(
-                                        productId: product.id,
-                                        productName: product.name,
-                                        price: product.retailPrice,
-                                        imageUrl: product.imageUrl,
-                                      );
-                                    }
-                                  : null,
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                  color: canOrder
-                                      ? AppColors.primary
-                                      : AppColors.border,
-                                ),
-                              ),
-                              child: Text(
-                                'Start Order',
-                                style: AppTextStyles.labelLarge.copyWith(
-                                  color: canOrder
-                                      ? AppColors.primary
-                                      : AppColors.textLight,
+                                    : null,
+                                child: Text(
+                                  canOrder ? 'Add to Cart' : 'Out of Stock',
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: SizedBox(
+                              height: 50,
+                              child: OutlinedButton(
+                                onPressed: canOrder
+                                    ? () async {
+                                        if (quantity <
+                                            product.minimumOrderQuantity) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Minimum order quantity is ${product.minimumOrderQuantity}',
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+
+                                        await _startOrderFlow(
+                                          productId: product.id,
+                                          productName: product.name,
+                                          price: product.retailPrice,
+                                          imageUrl: product.imageUrl,
+                                        );
+                                      }
+                                    : null,
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: canOrder
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  'Start Order',
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    color: canOrder
+                                        ? AppColors.primary
+                                        : AppColors.textLight,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         orElse: () => SizedBox.fromSize(),

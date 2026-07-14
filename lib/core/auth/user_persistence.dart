@@ -6,7 +6,8 @@ import '../../features/welcome/user_model.dart';
 /// Activity log entry for tracking user interactions
 class ActivityLog {
   final String id;
-  final String type; // 'view', 'purchase', 'cart_add', 'wishlist', 'login', 'logout'
+  final String
+      type; // 'view', 'purchase', 'cart_add', 'wishlist', 'login', 'logout'
   final String? productId;
   final String? productName;
   final DateTime timestamp;
@@ -22,22 +23,22 @@ class ActivityLog {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'type': type,
-    'productId': productId,
-    'productName': productName,
-    'timestamp': timestamp.toIso8601String(),
-    'metadata': metadata,
-  };
+        'id': id,
+        'type': type,
+        'productId': productId,
+        'productName': productName,
+        'timestamp': timestamp.toIso8601String(),
+        'metadata': metadata,
+      };
 
   factory ActivityLog.fromJson(Map<String, dynamic> json) => ActivityLog(
-    id: json['id'],
-    type: json['type'],
-    productId: json['productId'],
-    productName: json['productName'],
-    timestamp: DateTime.parse(json['timestamp']),
-    metadata: json['metadata'],
-  );
+        id: json['id'],
+        type: json['type'],
+        productId: json['productId'],
+        productName: json['productName'],
+        timestamp: DateTime.parse(json['timestamp']),
+        metadata: json['metadata'],
+      );
 }
 
 /// Handles user data persistence across app sessions
@@ -46,7 +47,7 @@ class UserPersistence {
   static const String _authTokenKey = 'coop_commerce_auth_token';
   static const String _membershipKey = 'coop_commerce_membership';
   static const String _activityLogKey = 'coop_commerce_activity_log';
-  
+
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   /// Save user data locally
@@ -81,7 +82,7 @@ class UserPersistence {
     try {
       final userJson = await _secureStorage.read(key: _userKey);
       if (userJson == null) return null;
-      
+
       final userData = jsonDecode(userJson) as Map<String, dynamic>;
       final user = User.fromJson(userData);
       debugPrint('✅ User retrieved: ${user.email}');
@@ -97,16 +98,16 @@ class UserPersistence {
     try {
       final membershipJson = await _secureStorage.read(key: _membershipKey);
       if (membershipJson == null) return null;
-      
+
       final membership = jsonDecode(membershipJson) as Map<String, dynamic>;
       final expiryDate = DateTime.parse(membership['expiryDate'] as String);
-      
+
       // Check if membership is still active
       if (expiryDate.isBefore(DateTime.now())) {
         debugPrint('⏰ Membership expired on ${membership['expiryDate']}');
         return null;
       }
-      
+
       debugPrint('✅ Membership retrieved: ${membership['tier']}');
       return membership;
     } catch (e) {
@@ -154,10 +155,10 @@ class UserPersistence {
 
       // Get existing activity log
       final activityLog = await getActivityLog();
-      
+
       // Add new activity
       activityLog.add(activity);
-      
+
       // Keep only last 100 activities to avoid excessive storage
       if (activityLog.length > 100) {
         activityLog.removeRange(0, activityLog.length - 100);
@@ -169,8 +170,9 @@ class UserPersistence {
         key: _activityLogKey,
         value: jsonEncode(jsonList),
       );
-      
-      debugPrint('✅ Activity logged: $type${productName != null ? ' - $productName' : ''}');
+
+      debugPrint(
+          '✅ Activity logged: $type${productName != null ? ' - $productName' : ''}');
     } catch (e) {
       debugPrint('⚠️ Error logging activity: $e');
       // Don't throw - activity logging should not crash the app
@@ -182,9 +184,11 @@ class UserPersistence {
     try {
       final json = await _secureStorage.read(key: _activityLogKey);
       if (json == null) return [];
-      
+
       final List<dynamic> list = jsonDecode(json);
-      return list.map((item) => ActivityLog.fromJson(item as Map<String, dynamic>)).toList();
+      return list
+          .map((item) => ActivityLog.fromJson(item as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       debugPrint('⚠️ Error reading activity log: $e');
       return [];
@@ -194,7 +198,8 @@ class UserPersistence {
   /// Get recent activities (last N entries)
   static Future<List<ActivityLog>> getRecentActivities({int limit = 10}) async {
     final allActivities = await getActivityLog();
-    final recentStart = allActivities.length > limit ? allActivities.length - limit : 0;
+    final recentStart =
+        allActivities.length > limit ? allActivities.length - limit : 0;
     return allActivities.sublist(recentStart).toList().reversed.toList();
   }
 

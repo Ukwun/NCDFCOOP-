@@ -27,12 +27,12 @@ class Category {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'description': description,
-    'imageUrl': imageUrl,
-    'productCount': productCount,
-  };
+        'id': id,
+        'name': name,
+        'description': description,
+        'imageUrl': imageUrl,
+        'productCount': productCount,
+      };
 }
 
 /// Category service for API calls

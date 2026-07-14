@@ -122,7 +122,8 @@ class AuthService {
           'NCDFCOOP User',
       'photoUrl': firebaseUser.photoURL ?? existing?['photoUrl'],
       'token': idToken,
-      'marketplaceRole': existing?['marketplaceRole'] ?? 'wholesaleBuyer',
+      if (existing?['marketplaceRole'] != null)
+        'marketplaceRole': existing!['marketplaceRole'],
     };
 
     if (!snapshot.exists) {
@@ -131,15 +132,9 @@ class AuthService {
         'email': profile['email'],
         'name': profile['name'],
         'photoUrl': profile['photoUrl'],
-        'marketplaceRole': profile['marketplaceRole'],
         'roleSelectionCompleted': false,
         'onboardingCompleted': false,
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } else if (existing?['marketplaceRole'] == null) {
-      await profileRef.update({
-        'marketplaceRole': 'wholesaleBuyer',
         'updatedAt': FieldValue.serverTimestamp(),
       });
     }
@@ -165,10 +160,13 @@ class AuthService {
   Future<User> _registerWithFirebase(RegisterRequest request) async {
     final credential = await firebase_auth.FirebaseAuth.instance
         .createUserWithEmailAndPassword(
-      email: request.email.trim(),
-      password: request.password,
-    );
-    await credential.user!.updateDisplayName(request.name);
+          email: request.email.trim(),
+          password: request.password,
+        )
+        .timeout(const Duration(seconds: 20));
+    await credential.user!
+        .updateDisplayName(request.name)
+        .timeout(const Duration(seconds: 5));
     return _firebaseUserToAppUser(
       credential.user!,
       fallbackName: request.name,
@@ -198,17 +196,13 @@ class AuthService {
       await _firebaseUserToAppUser(firebaseUser);
       return;
     }
-    final token = await _localStorage.getToken();
-    final user = await _localStorage.getUser();
-
-    if (token != null && user != null) {
-      _latestUser = user;
-      _apiClient.setAuthToken(token);
-      _authStateController.add(user);
-    } else {
-      _latestUser = null;
-      _authStateController.add(null);
-    }
+    // Firebase is authoritative. Never resurrect a signed-out identity from
+    // legacy local tokens or cached profile data.
+    await _localStorage.clearToken();
+    await _localStorage.clearUser();
+    _latestUser = null;
+    _apiClient.setAuthToken('');
+    _authStateController.add(null);
   }
 
   String _normalizeIdentity(String value) {

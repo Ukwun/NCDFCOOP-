@@ -43,7 +43,10 @@ final currentRoleProvider = Provider<UserRole>((ref) {
   for (final role in user?.roles ?? const <UserRole>[]) {
     if (role.isSupported) return role;
   }
-  return UserRole.wholesaleBuyer;
+  // A missing role must never grant commercial buyer capabilities. The router
+  // sends incomplete profiles through role selection; this is only a
+  // least-privilege safety fallback while the profile is hydrating.
+  return UserRole.coopMember;
 });
 
 /// Current context for the active role
@@ -110,7 +113,7 @@ final canPerformActionProvider = Provider.family<bool, Permission>(
 /// Get current user's available roles
 final availableRolesProvider = Provider<List<UserRole>>((ref) {
   final user = ref.watch(currentUserProvider);
-  return user?.roles ?? [UserRole.wholesaleBuyer];
+  return user?.roles ?? const [];
 });
 
 /// Get context for a specific role

@@ -43,26 +43,20 @@ class ScaffoldWithNavBar extends ConsumerWidget {
           else
             _CompactUtilityHeader(
               title: compactHeaderTitle,
-              onProfileTap: () {
-                ref.read(activityLoggerProvider.notifier).logButtonTap(
-                      buttonName: 'compact_header_profile',
-                      screenName: 'compact_header',
-                      context: 'profile_navigation',
-                      success: true,
-                    );
-                context.pushNamed('my-ncdfcoop');
-              },
             ),
           // Main Content
           Expanded(child: navigationShell),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (int index) => _onTap(context, ref, index),
-        backgroundColor: surfaceColor,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.2),
-        destinations: destinations,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: NavigationBar(
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: (int index) => _onTap(context, ref, index),
+          backgroundColor: surfaceColor,
+          indicatorColor: AppColors.primary.withValues(alpha: 0.2),
+          destinations: destinations,
+        ),
       ),
     );
   }
@@ -269,11 +263,9 @@ class ScaffoldWithNavBar extends ConsumerWidget {
 class _CompactUtilityHeader extends ConsumerStatefulWidget {
   const _CompactUtilityHeader({
     required this.title,
-    required this.onProfileTap,
   });
 
   final String title;
-  final VoidCallback onProfileTap;
 
   @override
   ConsumerState<_CompactUtilityHeader> createState() =>
@@ -458,11 +450,6 @@ class _CompactUtilityHeaderState extends ConsumerState<_CompactUtilityHeader> {
                 },
                 icon: const Icon(Icons.notifications_outlined),
                 tooltip: 'Notifications',
-              ),
-              IconButton(
-                onPressed: widget.onProfileTap,
-                icon: const Icon(Icons.person_outline),
-                tooltip: 'Profile',
               ),
             ],
           ],

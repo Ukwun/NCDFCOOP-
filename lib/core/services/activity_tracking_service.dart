@@ -63,22 +63,22 @@ class UserActivityEvent {
 
   /// Convert to JSON for Firestore storage
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'userId': userId,
-    'type': type.value,
-    'timestamp': timestamp,
-    'productId': productId,
-    'productName': productName,
-    'metadata': metadata,
-    'deviceId': deviceId,
-    'sessionId': sessionId,
-  };
+        'id': id,
+        'userId': userId,
+        'type': type.value,
+        'timestamp': timestamp,
+        'productId': productId,
+        'productName': productName,
+        'metadata': metadata,
+        'deviceId': deviceId,
+        'sessionId': sessionId,
+      };
 
   /// Create from JSON
   factory UserActivityEvent.fromJson(Map<String, dynamic> json) {
     final typeValue = json['type'] as String?;
     ActivityType type = ActivityType.productView;
-    
+
     switch (typeValue) {
       case 'product_view':
         type = ActivityType.productView;
@@ -152,7 +152,8 @@ class ActivityTrackingService {
 
   static const String _usersCollection = 'users';
   static const String _activitiesSubcollection = 'activities';
-  static const String _activitiesAnalyticsCollection = 'user_activities_analytics';
+  static const String _activitiesAnalyticsCollection =
+      'user_activities_analytics';
 
   /// Log a user activity event to Firestore
   Future<void> logActivity({
@@ -209,13 +210,14 @@ class ActivityTrackingService {
     required String productName,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.productView,
-    productId: productId,
-    productName: productName,
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.productView,
+        productId: productId,
+        productName: productName,
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Log cart add
   Future<void> logCartAdd({
@@ -225,17 +227,18 @@ class ActivityTrackingService {
     required double price,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.cartAdd,
-    productId: productId,
-    productName: productName,
-    metadata: {
-      'quantity': quantity,
-      'price': price,
-    },
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.cartAdd,
+        productId: productId,
+        productName: productName,
+        metadata: {
+          'quantity': quantity,
+          'price': price,
+        },
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Log cart remove
   Future<void> logCartRemove({
@@ -243,13 +246,14 @@ class ActivityTrackingService {
     required String productName,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.cartRemove,
-    productId: productId,
-    productName: productName,
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.cartRemove,
+        productId: productId,
+        productName: productName,
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Log wishlist add
   Future<void> logWishlistAdd({
@@ -257,13 +261,14 @@ class ActivityTrackingService {
     required String productName,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.wishlistAdd,
-    productId: productId,
-    productName: productName,
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.wishlistAdd,
+        productId: productId,
+        productName: productName,
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Log wishlist remove
   Future<void> logWishlistRemove({
@@ -271,13 +276,14 @@ class ActivityTrackingService {
     required String productName,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.wishlistRemove,
-    productId: productId,
-    productName: productName,
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.wishlistRemove,
+        productId: productId,
+        productName: productName,
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Log purchase
   Future<void> logPurchase({
@@ -286,17 +292,18 @@ class ActivityTrackingService {
     required double totalAmount,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.purchase,
-    metadata: {
-      'orderId': orderId,
-      'productIds': productIds,
-      'totalAmount': totalAmount,
-      'itemCount': productIds.length,
-    },
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.purchase,
+        metadata: {
+          'orderId': orderId,
+          'productIds': productIds,
+          'totalAmount': totalAmount,
+          'itemCount': productIds.length,
+        },
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Log product review
   Future<void> logReview({
@@ -305,16 +312,17 @@ class ActivityTrackingService {
     required int rating,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.review,
-    productId: productId,
-    productName: productName,
-    metadata: {
-      'rating': rating,
-    },
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.review,
+        productId: productId,
+        productName: productName,
+        metadata: {
+          'rating': rating,
+        },
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Log search
   Future<void> logSearch({
@@ -322,15 +330,16 @@ class ActivityTrackingService {
     required int resultsCount,
     String? deviceId,
     String? sessionId,
-  }) => logActivity(
-    type: ActivityType.search,
-    metadata: {
-      'query': searchQuery,
-      'resultsCount': resultsCount,
-    },
-    deviceId: deviceId,
-    sessionId: sessionId,
-  );
+  }) =>
+      logActivity(
+        type: ActivityType.search,
+        metadata: {
+          'query': searchQuery,
+          'resultsCount': resultsCount,
+        },
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
 
   /// Get user activity history
   Future<List<UserActivityEvent>> getUserActivityHistory({
@@ -398,10 +407,9 @@ class ActivityTrackingService {
         query = query.where('type', isEqualTo: filterType.value);
       }
 
-      return query.snapshots().map((snapshot) =>
-          snapshot.docs
-              .map((doc) => UserActivityEvent.fromJson(doc.data()))
-              .toList());
+      return query.snapshots().map((snapshot) => snapshot.docs
+          .map((doc) => UserActivityEvent.fromJson(doc.data()))
+          .toList());
     } catch (e) {
       debugPrint('❌ Error streaming activity: $e');
       return Stream.value([]);
@@ -434,7 +442,9 @@ class ActivityTrackingService {
       }
 
       final snapshot = await query.get();
-      final events = snapshot.docs.map((doc) => UserActivityEvent.fromJson(doc.data())).toList();
+      final events = snapshot.docs
+          .map((doc) => UserActivityEvent.fromJson(doc.data()))
+          .toList();
 
       // Calculate analytics
       final Map<String, int> typeCount = {};
@@ -456,7 +466,8 @@ class ActivityTrackingService {
         // Purchases
         if (event.type == ActivityType.purchase) {
           totalPurchases++;
-          totalSpent += (event.metadata?['totalAmount'] as num?)?.toDouble() ?? 0.0;
+          totalSpent +=
+              (event.metadata?['totalAmount'] as num?)?.toDouble() ?? 0.0;
         }
       }
 
@@ -467,7 +478,8 @@ class ActivityTrackingService {
         'uniqueProductsViewed': viewedProducts.length,
         'totalPurchases': totalPurchases,
         'totalSpent': totalSpent,
-        'averageSpentPerPurchase': totalPurchases > 0 ? totalSpent / totalPurchases : 0.0,
+        'averageSpentPerPurchase':
+            totalPurchases > 0 ? totalSpent / totalPurchases : 0.0,
       };
     } catch (e) {
       debugPrint('❌ Error getting analytics: $e');
@@ -496,7 +508,8 @@ class ActivityTrackingService {
       for (final doc in snapshot.docs) {
         final event = UserActivityEvent.fromJson(doc.data());
         if (event.productId != null) {
-          productCounts[event.productId!] = (productCounts[event.productId!] ?? 0) + 1;
+          productCounts[event.productId!] =
+              (productCounts[event.productId!] ?? 0) + 1;
           if (event.productName != null) {
             productNames[event.productId!] = event.productName!;
           }
@@ -505,15 +518,15 @@ class ActivityTrackingService {
 
       // Sort by count and return top N
       final sortedEntries = productCounts.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-      
+        ..sort((a, b) => b.value.compareTo(a.value));
+
       final sorted = sortedEntries
           .take(limit)
           .map((e) => {
-            'productId': e.key,
-            'productName': productNames[e.key] ?? '',
-            'viewCount': e.value,
-          })
+                'productId': e.key,
+                'productName': productNames[e.key] ?? '',
+                'viewCount': e.value,
+              })
           .toList();
 
       return sorted;

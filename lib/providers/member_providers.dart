@@ -84,6 +84,33 @@ final memberBenefitsProvider = FutureProvider<List<MemberBenefit>>((ref) async {
   }
 });
 
+/// Active, administrator-configured rewards. Empty means no offer is live.
+final availableMemberRewardsProvider =
+    FutureProvider<List<Reward>>((ref) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('rewards')
+      .where('active', isEqualTo: true)
+      .get();
+  final now = DateTime.now();
+  final rewards = snapshot.docs
+      .where((document) {
+        final data = document.data();
+        final startsAt = data['startsAt'] as Timestamp?;
+        final endsAt = data['endsAt'] as Timestamp?;
+        final stock = (data['stock'] as num?)?.toInt();
+        return (startsAt == null || !startsAt.toDate().isAfter(now)) &&
+            (endsAt == null || !endsAt.toDate().isBefore(now)) &&
+            (stock == null || stock > 0);
+      })
+      .map((document) {
+        return Reward.fromMap({...document.data(), 'id': document.id});
+      })
+      .where((reward) => reward.pointsRequired > 0)
+      .toList();
+  rewards.sort((a, b) => a.pointsRequired.compareTo(b.pointsRequired));
+  return rewards;
+});
+
 /// Benefits filtered by current member's tier
 final memberTierBenefitsProvider =
     FutureProvider<List<MemberBenefit>>((ref) async {

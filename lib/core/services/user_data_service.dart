@@ -46,31 +46,33 @@ class RealUserData {
       tier: data['tier'] ?? 'regular',
       rewardsPoints: data['rewardsPoints'] ?? 0,
       lifetimePoints: data['lifetimePoints'] ?? 0,
-      memberSince: (data['memberSince'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      memberSince:
+          (data['memberSince'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isActive: data['isActive'] ?? true,
       totalSpent: (data['totalSpent'] ?? 0).toDouble(),
       ordersCount: data['ordersCount'] ?? 0,
-      lastPurchaseDate: (data['lastPurchaseDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastPurchaseDate:
+          (data['lastPurchaseDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       favoriteCategories: List<String>.from(data['favoriteCategories'] ?? []),
       discountPercentage: (data['discountPercentage'] ?? 0).toDouble(),
     );
   }
 
   Map<String, dynamic> toFirestore() => {
-    'email': email,
-    'name': name,
-    'photoUrl': photoUrl,
-    'tier': tier,
-    'rewardsPoints': rewardsPoints,
-    'lifetimePoints': lifetimePoints,
-    'memberSince': memberSince,
-    'isActive': isActive,
-    'totalSpent': totalSpent,
-    'ordersCount': ordersCount,
-    'lastPurchaseDate': lastPurchaseDate,
-    'favoriteCategories': favoriteCategories,
-    'discountPercentage': discountPercentage,
-  };
+        'email': email,
+        'name': name,
+        'photoUrl': photoUrl,
+        'tier': tier,
+        'rewardsPoints': rewardsPoints,
+        'lifetimePoints': lifetimePoints,
+        'memberSince': memberSince,
+        'isActive': isActive,
+        'totalSpent': totalSpent,
+        'ordersCount': ordersCount,
+        'lastPurchaseDate': lastPurchaseDate,
+        'favoriteCategories': favoriteCategories,
+        'discountPercentage': discountPercentage,
+      };
 }
 
 /// User data service - fetches REAL user data from Firestore
@@ -102,10 +104,8 @@ class UserDataService {
   /// Get user data by ID from Firestore
   Future<RealUserData?> getUserById(String userId) async {
     try {
-      final doc = await _firestore
-          .collection(_usersCollection)
-          .doc(userId)
-          .get();
+      final doc =
+          await _firestore.collection(_usersCollection).doc(userId).get();
 
       if (!doc.exists) {
         debugPrint('⚠️  User not found in Firestore: $userId');
@@ -113,7 +113,8 @@ class UserDataService {
       }
 
       final userData = RealUserData.fromFirestore(doc);
-      debugPrint('✅ Fetched user data: ${userData.name} (tier: ${userData.tier})');
+      debugPrint(
+          '✅ Fetched user data: ${userData.name} (tier: ${userData.tier})');
       return userData;
     } catch (e) {
       debugPrint('❌ Error fetching user data: $e');
@@ -124,8 +125,9 @@ class UserDataService {
   /// Update user rewards points (add or subtract)
   Future<void> updateRewardsPoints(String userId, int pointsChange) async {
     try {
-      debugPrint('💰 Updating rewards for user: $userId (+$pointsChange points)');
-      
+      debugPrint(
+          '💰 Updating rewards for user: $userId (+$pointsChange points)');
+
       await _firestore.collection(_usersCollection).doc(userId).update({
         'rewardsPoints': FieldValue.increment(pointsChange),
         'lifetimePoints': FieldValue.increment(pointsChange),
@@ -159,7 +161,7 @@ class UserDataService {
 
       if (userData.tier != newTier) {
         debugPrint('⬆️  Upgrading user tier: ${userData.tier} → $newTier');
-        
+
         await _firestore.collection(_usersCollection).doc(userId).update({
           'tier': newTier,
           'discountPercentage': discountPercentage,
@@ -180,7 +182,7 @@ class UserDataService {
   }) async {
     try {
       debugPrint('🛒 Recording purchase for user: $userId (₦$amount)');
-      
+
       final rewardsPoints = (amount * 0.01).toInt(); // 1 point per ₦1
 
       // Update user purchase history
@@ -192,7 +194,8 @@ class UserDataService {
         'lifetimePoints': FieldValue.increment(rewardsPoints),
       });
 
-      debugPrint('✅ Purchase recorded: ₦$amount (earned $rewardsPoints points)');
+      debugPrint(
+          '✅ Purchase recorded: ₦$amount (earned $rewardsPoints points)');
 
       // Check if tier should be updated
       await updateMembershipTier(userId);
@@ -204,7 +207,8 @@ class UserDataService {
   /// Track user activity (view, search, cart, purchase)
   Future<void> trackActivity({
     required String userId,
-    required String activityType, // 'view', 'search', 'cart', 'purchase', 'review'
+    required String
+        activityType, // 'view', 'search', 'cart', 'purchase', 'review'
     String? productId,
     String? productName,
     String? category,
@@ -238,7 +242,8 @@ class UserDataService {
   /// Get user's favorite categories based on activity
   Future<List<String>> getFavoriteCategories(String userId) async {
     try {
-      final doc = await _firestore.collection(_usersCollection).doc(userId).get();
+      final doc =
+          await _firestore.collection(_usersCollection).doc(userId).get();
       if (!doc.exists) return [];
 
       final favorites = List<String>.from(doc.get('favoriteCategories') ?? []);
@@ -256,7 +261,7 @@ class UserDataService {
   }) async {
     try {
       debugPrint('📜 Fetching purchase history for user: $userId');
-      
+
       final snapshot = await _firestore
           .collection(_ordersCollection)
           .where('userId', isEqualTo: userId)
@@ -264,10 +269,12 @@ class UserDataService {
           .limit(limit)
           .get();
 
-      final orders = snapshot.docs.map((doc) => {
-        ...doc.data(),
-        'id': doc.id,
-      }).toList();
+      final orders = snapshot.docs
+          .map((doc) => {
+                ...doc.data(),
+                'id': doc.id,
+              })
+          .toList();
 
       debugPrint('✅ Fetched ${orders.length} orders');
       return orders;
@@ -284,7 +291,7 @@ class UserDataService {
   }) async {
     try {
       debugPrint('👀 Fetching recent activities for user: $userId');
-      
+
       final snapshot = await _firestore
           .collection(_activitiesCollection)
           .where('userId', isEqualTo: userId)
@@ -292,10 +299,12 @@ class UserDataService {
           .limit(limit)
           .get();
 
-      final activities = snapshot.docs.map((doc) => {
-        ...doc.data(),
-        'id': doc.id,
-      }).toList();
+      final activities = snapshot.docs
+          .map((doc) => {
+                ...doc.data(),
+                'id': doc.id,
+              })
+          .toList();
 
       debugPrint('✅ Fetched ${activities.length} activities');
       return activities;
@@ -322,7 +331,7 @@ class UserDataService {
   }) async {
     try {
       debugPrint('📝 Creating user document in Firestore: $userId');
-      
+
       final userData = RealUserData(
         userId: userId,
         email: email,
@@ -353,7 +362,8 @@ class UserDataService {
   // Private helpers
   Future<void> _updateFavoriteCategories(String userId, String category) async {
     try {
-      final doc = await _firestore.collection(_usersCollection).doc(userId).get();
+      final doc =
+          await _firestore.collection(_usersCollection).doc(userId).get();
       if (!doc.exists) return;
 
       final favorites = List<String>.from(doc.get('favoriteCategories') ?? []);

@@ -7,9 +7,9 @@ import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/core/providers/checkout_flow_provider.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/providers/cart_provider.dart';
-import 'package:coop_commerce/core/services/payment_gateway_service.dart';
 import 'package:coop_commerce/providers/user_activity_providers.dart';
-import 'package:coop_commerce/services/payments/flutterwave_payment_button.dart';
+import 'package:coop_commerce/services/payments/stripe_payment_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CheckoutConfirmationScreen extends ConsumerWidget {
   const CheckoutConfirmationScreen({super.key});
@@ -438,117 +438,101 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
     required double totalAmount,
     required List<CartItem> cartItems,
   }) {
-    return FlutterwavePaymentButton(
-      orderId: orderId,
-      amount: totalAmount,
-      customerEmail: customerEmail,
-      customerName: customerName,
-      phoneNumber: '+234', // Will be updated with actual phone number
-      customerId: customerId,
-      onPaymentInitiated: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🔄 Processing payment...'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      },
-      onCardPaymentSuccess: (reference) {
-        final activityLogger = ref.read(activityLoggerProvider.notifier);
-        final productIds = cartItems.map((item) => item.productId).toList();
-        final productNames = cartItems.map((item) => item.productName).toList();
-        final categories = List<String>.generate(
-          cartItems.length,
-          (_) => 'general',
-        );
-
-        activityLogger.logPurchase(
-          orderId: orderId,
-          productIds: productIds,
-          productNames: productNames,
-          totalAmount: totalAmount,
-          categories: categories,
-        );
-        activityLogger.logPaymentResult(
-          orderId: orderId,
-          success: true,
-          amount: totalAmount,
-          paymentMethod: 'flutterwave_card',
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('✅ Card payment successful! Your order is confirmed.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        // The webhook will confirm the order
-        // Navigate to success screen after short delay
-        Future.delayed(const Duration(seconds: 2), () {
-          if (context.mounted) {
-            context.go(
-              '/payment-success',
-              extra: {
-                'orderId': orderId,
-                'transactionId': reference,
-                'amount': totalAmount,
-              },
-            );
-          }
-        });
-      },
-      onBankTransferDetails: (bankDetails) {
-        final activityLogger = ref.read(activityLoggerProvider.notifier);
-        activityLogger.logCheckoutStarted(
-          cartTotal: totalAmount,
-          itemCount: cartItems.length,
-          paymentMethod: 'bank_transfer',
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                '💳 Bank transfer initiated. Complete the transfer to confirm your order.'),
-            backgroundColor: Colors.blue,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        // Navigate to bank transfer confirmation screen
-        Future.delayed(const Duration(seconds: 2), () {
-          if (context.mounted) {
-            context.go(
-              '/bank-transfer-pending',
-              extra: {
-                'orderId': orderId,
-                'amount': totalAmount,
-                'bankDetails': bankDetails,
-              },
-            );
-          }
-        });
-      },
-      onPaymentFailed: () {
-        final activityLogger = ref.read(activityLoggerProvider.notifier);
-        activityLogger.logPaymentResult(
-          orderId: orderId,
-          success: false,
-          amount: totalAmount,
-          paymentMethod: 'flutterwave_card',
-          errorMessage: 'Payment was cancelled or failed by gateway.',
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Payment cancelled or failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      },
+    return FilledButton.icon(
+      onPressed: customerId.isEmpty
+          ? null
+          : () => _startSecureCheckout(
+                context: context,
+                ref: ref,
+                userId: customerId,
+              ),
+      icon: const Icon(Icons.lock_outline),
+      label: Text('Continue securely • ₦${totalAmount.toStringAsFixed(2)}'),
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(54),
+        backgroundColor: AppColors.primary,
+      ),
     );
   }
 
+  Future<void> _startSecureCheckout({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String userId,
+  }) async {
+    final checkout = ref.read(checkoutFlowProvider);
+    if (checkout.selectedAddress == null ||
+        checkout.selectedPaymentMethod == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Complete delivery and payment details first.')),
+      );
+      return;
+    }
+    var dialogOpen = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final items = await ref.read(userCartItemsProvider(userId).future);
+      if (items.isEmpty) throw StateError('Your cart is empty.');
+      final calculation = await ref.read(orderCalculationProvider({
+        'subtotal': ref.read(cartProvider).subtotal,
+        'promoCode': checkout.promoCode,
+      }).future);
+      final created = await ref.read(secureCreateOrderProvider({
+        'items': items,
+        'addressId': checkout.selectedAddress!.id,
+        'paymentMethodId': checkout.selectedPaymentMethod!.id,
+      }).future);
+      if (!created.success || created.orderId == null) {
+        throw StateError(created.error ?? 'The order could not be created.');
+      }
+      final response = await StripePaymentService().createCheckoutSession(
+        orderId: created.orderId!,
+      );
+      if (response['success'] != true) {
+        throw StateError(response['error']?.toString() ??
+            'The payment provider is unavailable.');
+      }
+      final uri = Uri.tryParse(response['authorizationUrl']?.toString() ?? '');
+      if (context.mounted && dialogOpen) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogOpen = false;
+      }
+      if (uri == null ||
+          !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw StateError('Unable to open the secure payment page.');
+      }
+      ref.read(activityLoggerProvider.notifier).logCheckoutStarted(
+            cartTotal: calculation.total,
+            itemCount: items.length,
+            paymentMethod: 'stripe',
+          );
+      if (context.mounted) {
+        context.goNamed('order-tracking',
+            pathParameters: {'orderId': created.orderId!});
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceFirst('Bad state: ', '')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (context.mounted && dialogOpen) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+  }
+
+  /* Removed legacy client-authoritative order/payment flow. Orders and payment
+     status are now created and verified only by Cloud Functions.
   Future<void> _handlePlaceOrder(
     BuildContext context,
     WidgetRef ref,
@@ -807,4 +791,5 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
       debugPrint('Error updating order payment status: $error');
     }
   }
+  */
 }

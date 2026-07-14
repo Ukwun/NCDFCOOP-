@@ -27,18 +27,9 @@ class _WholesaleBuyerHomeScreenState
   static const Color _brandPrimary = AppColors.primary;
   static const Color _brandAccent = AppColors.accent;
 
-  final TextEditingController _searchController = TextEditingController();
-
-  String _searchText = '';
   String _selectedCategory = 'All';
   bool _inStockOnly = false;
   final Map<String, int> _desiredQuantities = {};
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +64,12 @@ class _WholesaleBuyerHomeScreenState
               },
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
+                padding: EdgeInsets.fromLTRB(
+                  14,
+                  10,
+                  14,
+                  24 + MediaQuery.paddingOf(context).bottom,
+                ),
                 children: [
                   _buildTopModeTabs(context),
                   const SizedBox(height: 12),
@@ -124,8 +120,6 @@ class _WholesaleBuyerHomeScreenState
                       ),
                     ),
                   if (currentUser != null) const SizedBox(height: 12),
-                  _buildSearchBar(context),
-                  const SizedBox(height: 12),
                   _buildLiveSummaryStrip(cartState, ordersAsync),
                   const SizedBox(height: 12),
                   _buildRoleRelationshipIntelligence(
@@ -172,19 +166,13 @@ class _WholesaleBuyerHomeScreenState
   }
 
   List<Product> _filterProducts(List<Product> products) {
-    final query = _searchText.toLowerCase();
-
     final filtered = products.where((product) {
-      final matchesSearch = query.isEmpty ||
-          product.name.toLowerCase().contains(query) ||
-          product.description.toLowerCase().contains(query);
-
       final matchesCategory = _selectedCategory == 'All' ||
           _labelizeCategory(product.categoryId) == _selectedCategory;
 
       final matchesStock = !_inStockOnly || product.stock > 0;
 
-      return matchesSearch && matchesCategory && matchesStock;
+      return matchesCategory && matchesStock;
     }).toList();
 
     filtered.sort((a, b) {
@@ -245,68 +233,6 @@ class _WholesaleBuyerHomeScreenState
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildSearchBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _brandPrimary.withValues(alpha: 0.28)),
-        boxShadow: [
-          BoxShadow(
-            color: _brandPrimary.withValues(alpha: 0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.search, color: AppColors.textSecondary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() {
-                  _searchText = value.trim();
-                });
-              },
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Search products, SKUs, categories',
-                hintStyle: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textLight,
-                ),
-              ),
-            ),
-          ),
-          if (_searchText.isNotEmpty)
-            IconButton(
-              onPressed: () {
-                _searchController.clear();
-                setState(() {
-                  _searchText = '';
-                });
-              },
-              icon: const Icon(Icons.close, size: 18),
-            ),
-          FilledButton(
-            onPressed: () => _openSearch(context),
-            style: FilledButton.styleFrom(
-              backgroundColor: _brandPrimary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Search'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -727,10 +653,8 @@ class _WholesaleBuyerHomeScreenState
           },
         ),
         const SizedBox(width: 8),
-        Text(
-          _searchText.isEmpty
-              ? 'Showing top wholesale opportunities'
-              : 'Filtered by "$_searchText"',
+        const Text(
+          'Showing top wholesale opportunities',
           style: const TextStyle(color: AppColors.textSecondary),
         ),
       ],
@@ -1051,11 +975,6 @@ class _WholesaleBuyerHomeScreenState
         ? product.wholesalePrice * 1.15
         : product.retailPrice;
     return (baseline - product.wholesalePrice).clamp(0, double.infinity);
-  }
-
-  void _openSearch(BuildContext context) {
-    FocusScope.of(context).unfocus();
-    context.pushNamed('search');
   }
 }
 

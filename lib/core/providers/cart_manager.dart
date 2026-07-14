@@ -22,11 +22,11 @@ class CartItem {
 /// Cart Manager - handles all cart operations with feedback
 class CartManager extends ChangeNotifier {
   final List<CartItem> _items = [];
-  
+
   List<CartItem> get items => [..._items];
-  
+
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
-  
+
   double get totalPrice => _items.fold(0, (sum, item) => sum + item.total);
 
   void addItem({
@@ -36,7 +36,7 @@ class CartManager extends ChangeNotifier {
     required String image,
   }) {
     final existingIndex = _items.indexWhere((item) => item.id == id);
-    
+
     if (existingIndex >= 0) {
       _items[existingIndex].quantity++;
     } else {
@@ -48,7 +48,7 @@ class CartManager extends ChangeNotifier {
         image: image,
       ));
     }
-    
+
     notifyListeners();
   }
 

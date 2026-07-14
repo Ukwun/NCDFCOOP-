@@ -149,7 +149,8 @@ class CartActivityLogger {
         return;
       }
 
-      final action = newQuantity > oldQuantity ? 'quantity_increase' : 'quantity_decrease';
+      final action =
+          newQuantity > oldQuantity ? 'quantity_increase' : 'quantity_decrease';
 
       // Log to activity tracker
       await _activityTracker.logActivity(
@@ -188,7 +189,8 @@ class CartActivityLogger {
         'createdAt': DateTime.now().toIso8601String(),
       });
 
-      debugPrint('✅ Cart quantity updated logged: $productName ($oldQuantity → $newQuantity)');
+      debugPrint(
+          '✅ Cart quantity updated logged: $productName ($oldQuantity → $newQuantity)');
     } catch (e) {
       debugPrint('❌ Error logging quantity update: $e');
       // Silent fail - don't block UI
@@ -223,7 +225,8 @@ class CartActivityLogger {
         'createdAt': DateTime.now().toIso8601String(),
       });
 
-      debugPrint('✅ Cart cleared logged: $itemCount items (₦${totalValue.toStringAsFixed(2)})');
+      debugPrint(
+          '✅ Cart cleared logged: $itemCount items (₦${totalValue.toStringAsFixed(2)})');
     } catch (e) {
       debugPrint('❌ Error logging cart clear: $e');
       // Silent fail - don't block UI
@@ -254,7 +257,8 @@ class CartActivityLogger {
   /// Get cart metrics for user (items added, removed, etc)
   Future<Map<String, dynamic>> getCartMetrics(String userId) async {
     try {
-      final activities = await getUserCartActivities(userId: userId, limit: 100);
+      final activities =
+          await getUserCartActivities(userId: userId, limit: 100);
 
       int addCount = 0;
       int removeCount = 0;
@@ -283,7 +287,8 @@ class CartActivityLogger {
         'totalValueAdded': totalValueAdded,
         'totalQuantityAdded': totalQuantityAdded,
         'averageAddValue': addCount > 0 ? totalValueAdded / addCount : 0,
-        'lastActivityTime': activities.isNotEmpty ? activities.first['timestamp'] : null,
+        'lastActivityTime':
+            activities.isNotEmpty ? activities.first['timestamp'] : null,
       };
     } catch (e) {
       debugPrint('❌ Error calculating cart metrics: $e');

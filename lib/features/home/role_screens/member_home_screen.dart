@@ -31,50 +31,41 @@ class MemberHomeScreen extends ConsumerWidget {
         child: SingleChildScrollView(
           child: memberData.when(
             data: (data) {
-              // Handle null member data - create fallback from current user
-              final displayData = data ??
-                  (user != null
-                      ? MemberData(
-                          memberId: user.id,
-                          tier: 'bronze',
-                          rewardsPoints: 0,
-                          lifetimePoints: 0,
-                          memberSince: DateTime.now(),
-                          isActive: true,
-                          discountPercentage: 0.0,
-                          ordersCount: 0,
-                          totalSpent: 0.0,
-                        )
-                      : null);
+              final displayData = data;
 
-              // If still no data, show error
               if (displayData == null) {
+                final isSignedIn = user != null;
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: 100),
-                      const Icon(Icons.person_off,
+                      Icon(isSignedIn ? Icons.badge_outlined : Icons.person_off,
                           size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(
-                        'Not Logged In',
+                        isSignedIn
+                            ? 'Member profile not ready'
+                            : 'Not Logged In',
                         style: AppTextStyles.h2,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Please log in to view member benefits.',
+                        isSignedIn
+                            ? 'We could not find your member record. Retry after your account setup is complete.'
+                            : 'Please log in to view member benefits.',
                         style: AppTextStyles.bodyMedium
                             .copyWith(color: Colors.grey),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () {
-                          context.go('/signin');
-                        },
-                        child: const Text('Log In'),
+                      ElevatedButton.icon(
+                        onPressed: () => isSignedIn
+                            ? ref.invalidate(memberDataProvider(user.id))
+                            : context.go('/signin'),
+                        icon: Icon(isSignedIn ? Icons.refresh : Icons.login),
+                        label: Text(isSignedIn ? 'Retry' : 'Log In'),
                       ),
                     ],
                   ),
@@ -144,16 +135,10 @@ class MemberHomeScreen extends ConsumerWidget {
                   // ═════════════════════════════════════════════════
                   // 4. VOTING & GOVERNANCE - Community involvement
                   // ═════════════════════════════════════════════════
-                  _buildVotingEngagementSection(context),
-
-                  const SizedBox(height: 24),
 
                   // ═════════════════════════════════════════════════
                   // 5. TRANSPARENCY & REPORTS - Cooperative financials
                   // ═════════════════════════════════════════════════
-                  _buildTransparencyReportsSection(context),
-
-                  const SizedBox(height: 24),
 
                   // ═════════════════════════════════════════════════
                   // 6. EXCLUSIVE MEMBER DEALS - Secondary to loyalty
@@ -194,20 +179,6 @@ class MemberHomeScreen extends ConsumerWidget {
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, _) {
-              final fallbackData = user != null
-                  ? MemberData(
-                      memberId: user.id,
-                      tier: 'bronze',
-                      rewardsPoints: 0,
-                      lifetimePoints: 0,
-                      memberSince: DateTime.now(),
-                      isActive: true,
-                      discountPercentage: 0.0,
-                      ordersCount: 0,
-                      totalSpent: 0.0,
-                    )
-                  : null;
-
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -227,7 +198,7 @@ class MemberHomeScreen extends ConsumerWidget {
                         ),
                       ),
                       child: Text(
-                        'Some member data is temporarily unavailable. You can still browse and buy products.',
+                        'Member benefits are temporarily unavailable. No balances, points, or status will be estimated.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.orange.shade900,
                           fontWeight: FontWeight.w600,
@@ -239,12 +210,16 @@ class MemberHomeScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   _buildPlaceholderProductsSection(context, featuredAsync),
                   const SizedBox(height: 24),
-                  _buildLoyaltyActionsGrid(context, ref, user?.id ?? ''),
-                  const SizedBox(height: 24),
-                  _buildVotingEngagementSection(context),
-                  const SizedBox(height: 24),
-                  _buildTransparencyReportsSection(context),
-                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: OutlinedButton.icon(
+                      onPressed: user == null
+                          ? null
+                          : () => ref.invalidate(memberDataProvider(user.id)),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry member data'),
+                    ),
+                  ),
                   const SizedBox(height: 80),
                 ],
               );

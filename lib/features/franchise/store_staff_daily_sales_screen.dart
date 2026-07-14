@@ -34,7 +34,8 @@ class _StoreStaffDailySalesScreenState
   void _loadSummary() {
     final service = StoreStaffService();
     setState(() {
-      _summaryFuture = service.getDailySalesSummary(widget.storeId, widget.storeName);
+      _summaryFuture =
+          service.getDailySalesSummary(widget.storeId, widget.storeName);
     });
   }
 
@@ -85,9 +86,12 @@ class _StoreStaffDailySalesScreenState
               children: [
                 // Status Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: summary.status == 'open' ? Colors.blue[50] : Colors.green[50],
+                    color: summary.status == 'open'
+                        ? Colors.blue[50]
+                        : Colors.green[50],
                     border: Border.all(
                       color: summary.status == 'open'
                           ? Colors.blue[200]!
@@ -171,7 +175,8 @@ class _StoreStaffDailySalesScreenState
                     children: [
                       Text(
                         'Top Products',
-                        style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.h3
+                            .copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       ListView.builder(
@@ -191,8 +196,7 @@ class _StoreStaffDailySalesScreenState
                                 ),
                               ),
                               title: Text(product.productName),
-                              subtitle:
-                                  Text('${product.unitsSold} units sold'),
+                              subtitle: Text('${product.unitsSold} units sold'),
                               trailing: Text(
                                 '₦${product.revenue.toStringAsFixed(0)}',
                                 style: const TextStyle(
@@ -255,17 +259,18 @@ class _StoreStaffDailySalesScreenState
           )
           .toList()
           .expand((widget) {
-        return [widget];
-      }).toList()
+            return [widget];
+          })
+          .toList()
           .dropLast(1)
           .fold<List<Widget>>(
-        [],
-        (list, widget) => [
-          ...list,
-          widget,
-          const SizedBox(width: 12),
-        ],
-      ),
+            [],
+            (list, widget) => [
+              ...list,
+              widget,
+              const SizedBox(width: 12),
+            ],
+          ),
     );
   }
 

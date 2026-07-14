@@ -17,7 +17,8 @@ class InstitutionalBuyerHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final userRole = 'institutionalBuyer';
-    final featuredAsync = ref.watch(roleAwareFeaturedProductsProvider(userRole));
+    final featuredAsync =
+        ref.watch(roleAwareFeaturedProductsProvider(userRole));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -126,7 +127,8 @@ class InstitutionalBuyerHomeScreen extends ConsumerWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.green[400],
                   borderRadius: BorderRadius.circular(20),
@@ -498,8 +500,7 @@ class InstitutionalBuyerHomeScreen extends ConsumerWidget {
                       },
                     ),
                   ),
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, _) => Text(
               'Error loading products',
               style: AppTextStyles.body.copyWith(color: Colors.red),

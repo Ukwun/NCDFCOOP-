@@ -97,7 +97,8 @@ class PersonalizedRecommendationsSection extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
             SizedBox(
               height: 280,
-              child: Center(child: Text('Could not load recommendations: $err')),
+              child:
+                  Center(child: Text('Could not load recommendations: $err')),
             ),
           ],
         ),

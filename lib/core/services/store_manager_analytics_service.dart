@@ -17,8 +17,7 @@ class StoreManagerAnalyticsService {
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Get store analytics summary
-  Future<StoreAnalyticsSummary> getStoreAnalyticsSummary(
-      String storeId) async {
+  Future<StoreAnalyticsSummary> getStoreAnalyticsSummary(String storeId) async {
     try {
       final doc = await _firestore.collection('stores').doc(storeId).get();
 
@@ -30,11 +29,9 @@ class StoreManagerAnalyticsService {
 
       // Calculate metrics from data
       final totalRevenue = (data['totalRevenue'] as num?)?.toDouble() ?? 0.0;
-      final transactionCount =
-          (data['transactionCount'] as num?)?.toInt() ?? 0;
+      final transactionCount = (data['transactionCount'] as num?)?.toInt() ?? 0;
       final profitMargin = (data['profitMargin'] as num?)?.toDouble() ?? 0.0;
-      final customersServed =
-          (data['customersServed'] as num?)?.toInt() ?? 0;
+      final customersServed = (data['customersServed'] as num?)?.toInt() ?? 0;
       final topProductCount = (data['topProductCount'] as num?)?.toInt() ?? 0;
       final staffCount = (data['staffCount'] as num?)?.toInt() ?? 0;
       final averageStaffPerformance =
@@ -65,8 +62,7 @@ class StoreManagerAnalyticsService {
     try {
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
-      final endOfDay =
-          DateTime(today.year, today.month, today.day, 23, 59, 59);
+      final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
 
       final snapshot = await _firestore
           .collection('stores')
@@ -74,8 +70,7 @@ class StoreManagerAnalyticsService {
           .collection('daily_sales')
           .where('timestamp',
               isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('timestamp',
-              isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
           .get();
 
       double totalRevenue = 0;
@@ -107,11 +102,9 @@ class StoreManagerAnalyticsService {
       }
 
       // Get top 5 products
-      final topProducts = topProductsMap.entries
-          .toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-      final topProductIds =
-          topProducts.take(5).map((e) => e.key).toList();
+      final topProducts = topProductsMap.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final topProductIds = topProducts.take(5).map((e) => e.key).toList();
 
       double profitMargin = 0;
       if (totalRevenue > 0) {
@@ -123,9 +116,8 @@ class StoreManagerAnalyticsService {
         storeId: storeId,
         totalRevenue: totalRevenue,
         transactionCount: transactionCount,
-        averageTransactionValue: transactionCount > 0
-            ? totalRevenue / transactionCount
-            : 0,
+        averageTransactionValue:
+            transactionCount > 0 ? totalRevenue / transactionCount : 0,
         profitMargin: profitMargin,
         customersServed: uniqueCustomers.length,
         paymentMethodBreakdown: paymentBreakdown,
@@ -218,8 +210,7 @@ class StoreManagerAnalyticsService {
   Future<List<ProductPerformance>> getLowStockAlerts(String storeId) async {
     try {
       final products = await getProductPerformanceMetrics(storeId);
-      final lowStock =
-          products.where((p) => p.isLowStock).toList();
+      final lowStock = products.where((p) => p.isLowStock).toList();
 
       return lowStock;
     } catch (e) {
@@ -258,8 +249,7 @@ class StoreManagerAnalyticsService {
         if (date != null) {
           final dateKey =
               '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-          dailyRevenue[dateKey] =
-              (dailyRevenue[dateKey] ?? 0.0) + amount;
+          dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0.0) + amount;
         }
       }
 
@@ -267,8 +257,7 @@ class StoreManagerAnalyticsService {
         'totalRevenue': totalRevenue,
         'transactionCount': transactionCount,
         'averageDaily': transactionCount > 0
-            ? totalRevenue /
-                ((endDate.difference(startDate).inDays) + 1)
+            ? totalRevenue / ((endDate.difference(startDate).inDays) + 1)
             : 0,
         'dailyBreakdown': dailyRevenue,
         'period': {

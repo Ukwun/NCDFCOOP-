@@ -6,7 +6,7 @@ class DeliveryTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
 
   const DeliveryTrackingScreen({Key? key, required this.orderId})
-    : super(key: key);
+      : super(key: key);
 
   @override
   ConsumerState<DeliveryTrackingScreen> createState() =>

@@ -70,7 +70,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('9:45',
+              Text('',
                   style: AppTextStyles.h4.copyWith(color: AppColors.surface)),
               Row(spacing: 6, children: [
                 _buildStatusIcon('assets/icons/signal.png'),

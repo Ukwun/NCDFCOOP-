@@ -125,8 +125,8 @@ class CoopMemberHomeScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Gold → Platinum',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: Colors.white70),
+                    style:
+                        AppTextStyles.bodySmall.copyWith(color: Colors.white70),
                   ),
                   Text(
                     '1,550 pts to go',
@@ -188,8 +188,8 @@ class CoopMemberHomeScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     '+450 points earned',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: Colors.green),
+                    style:
+                        AppTextStyles.bodySmall.copyWith(color: Colors.green),
                   ),
                 ],
               ),
@@ -310,7 +310,8 @@ class CoopMemberHomeScreen extends ConsumerWidget {
                                     color: AppColors.background,
                                     image: product.imageUrl != null
                                         ? DecorationImage(
-                                            image: product.imageUrl!.startsWith('assets/')
+                                            image: product.imageUrl!
+                                                    .startsWith('assets/')
                                                 ? AssetImage(product.imageUrl!)
                                                 : NetworkImage(
                                                     product.imageUrl!,
@@ -328,8 +329,7 @@ class CoopMemberHomeScreen extends ConsumerWidget {
                                     children: [
                                       Text(
                                         product.name,
-                                        style: AppTextStyles.bodySmall
-                                            .copyWith(
+                                        style: AppTextStyles.bodySmall.copyWith(
                                           fontWeight: FontWeight.w600,
                                         ),
                                         maxLines: 1,
@@ -360,8 +360,7 @@ class CoopMemberHomeScreen extends ConsumerWidget {
                                       const SizedBox(height: 4),
                                       Text(
                                         'Min: 5 packs',
-                                        style: AppTextStyles.bodySmall
-                                            .copyWith(
+                                        style: AppTextStyles.bodySmall.copyWith(
                                           color: Colors.orange,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -536,9 +535,11 @@ class CoopMemberHomeScreen extends ConsumerWidget {
                             color: AppColors.background,
                             image: product.imageUrl != null
                                 ? DecorationImage(
-                                    image: product.imageUrl!.startsWith('assets/')
-                                        ? AssetImage(product.imageUrl!)
-                                        : NetworkImage(product.imageUrl!) as ImageProvider,
+                                    image:
+                                        product.imageUrl!.startsWith('assets/')
+                                            ? AssetImage(product.imageUrl!)
+                                            : NetworkImage(product.imageUrl!)
+                                                as ImageProvider,
                                     fit: BoxFit.cover,
                                   )
                                 : null,

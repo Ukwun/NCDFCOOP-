@@ -126,7 +126,8 @@ class DailySalesSummary {
       totalRevenue: (data['totalRevenue'] as num?)?.toDouble() ?? 0.0,
       totalCost: (data['totalCost'] as num?)?.toDouble() ?? 0.0,
       totalProfit: (data['totalProfit'] as num?)?.toDouble() ?? 0.0,
-      averageTransaction: (data['averageTransaction'] as num?)?.toDouble() ?? 0.0,
+      averageTransaction:
+          (data['averageTransaction'] as num?)?.toDouble() ?? 0.0,
       paymentMethodBreakdown:
           Map<String, int>.from(data['paymentMethodBreakdown'] ?? {}),
       topProductCount: data['topProductCount'] ?? 0,
@@ -227,7 +228,8 @@ class StoreInventoryItem {
       minimumLevel: data['minimumLevel'] ?? 5,
       costPrice: (data['costPrice'] as num?)?.toDouble() ?? 0.0,
       salePrice: (data['salePrice'] as num?)?.toDouble() ?? 0.0,
-      lastAdjustment: (data['lastAdjustment'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastAdjustment:
+          (data['lastAdjustment'] as Timestamp?)?.toDate() ?? DateTime.now(),
       adjustmentNotes: data['adjustmentNotes'],
     );
   }

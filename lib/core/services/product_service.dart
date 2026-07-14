@@ -4,6 +4,9 @@ import 'package:coop_commerce/core/audit/audit_service.dart';
 
 /// Mock products for development and fallback
 List<Product> _getMockProducts() {
+  if (!const bool.fromEnvironment('ENABLE_DEMO_CATALOG', defaultValue: false)) {
+    return const [];
+  }
   return [
     Product(
       id: 'mock_001',
@@ -471,13 +474,14 @@ class ProductService {
 
       return Product.fromFirestore(doc.data() ?? {});
     } catch (e) {
-      // Fallback to mock products
       final mockProducts = _getMockProducts();
-      final product = mockProducts.firstWhere(
-        (p) => p.id == productId,
-        orElse: () => mockProducts.first,
-      );
-      return product;
+      if (mockProducts.isNotEmpty) {
+        return mockProducts.firstWhere(
+          (p) => p.id == productId,
+          orElse: () => mockProducts.first,
+        );
+      }
+      throw StateError('Product $productId is unavailable.');
     }
   }
 

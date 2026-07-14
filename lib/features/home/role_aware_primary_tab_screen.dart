@@ -3,7 +3,7 @@ import 'package:coop_commerce/features/cart/cart_screen.dart';
 import 'package:coop_commerce/features/dashboard/personalized_dashboard_screen.dart';
 import 'package:coop_commerce/features/home/role_aware_home_screen.dart';
 import 'package:coop_commerce/features/messages/messages_screen.dart';
-import 'package:coop_commerce/features/ncdfcoop/my_ncdfcoop_screen.dart';
+import 'package:coop_commerce/features/profile/role_aware_profile_screen.dart';
 import 'package:coop_commerce/features/offers/offers_screen.dart';
 import 'package:coop_commerce/features/products/products_listing_screen.dart';
 import 'package:coop_commerce/features/profile/payment_methods_screen.dart';
@@ -63,7 +63,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 3:
         return const CartScreen();
       case 4:
-        return const MyNCDFCOOPScreen();
+        return const RoleAwareProfileScreen();
       default:
         return const RoleAwareHomeScreen();
     }
@@ -80,7 +80,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 3:
         return const SellerEarningsScreen();
       case 4:
-        return const MyNCDFCOOPScreen();
+        return const RoleAwareProfileScreen();
       default:
         return const SellerHomeScreen();
     }
@@ -97,7 +97,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 3:
         return const CartScreen();
       case 4:
-        return const MyNCDFCOOPScreen();
+        return const RoleAwareProfileScreen();
       default:
         return const WholesaleBuyerHomeScreen();
     }
@@ -114,7 +114,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 3:
         return const CartScreen();
       case 4:
-        return const MyNCDFCOOPScreen();
+        return const RoleAwareProfileScreen();
       default:
         return const RoleAwareHomeScreen();
     }

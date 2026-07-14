@@ -126,7 +126,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '9:45',
+                '',
                 style: AppTextStyles.h4.copyWith(color: AppColors.surface),
               ),
               Row(

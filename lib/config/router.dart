@@ -11,7 +11,6 @@ import 'package:coop_commerce/features/welcome/onboarding_screen.dart';
 import 'package:coop_commerce/features/welcome/onboarding_screen_2.dart';
 import 'package:coop_commerce/features/welcome/onboarding_screen_3.dart';
 import 'package:coop_commerce/features/welcome/feature_discovery_screen.dart';
-import 'package:coop_commerce/features/welcome/sign_in_screen.dart';
 import 'package:coop_commerce/features/welcome/login_form_screen.dart';
 import 'package:coop_commerce/features/welcome/sign_up_screen.dart';
 import 'package:coop_commerce/features/auth/screens/role_selection_screen.dart';
@@ -27,9 +26,7 @@ import 'package:coop_commerce/features/profile/notifications_screen.dart';
 import 'package:coop_commerce/features/profile/help_support_screen.dart';
 import 'package:coop_commerce/features/profile/settings_screen.dart';
 import 'package:coop_commerce/features/profile/orders_screen.dart';
-import 'package:coop_commerce/features/shopping/reorder_screen.dart';
 import 'package:coop_commerce/features/shopping/track_orders_screen.dart';
-import 'package:coop_commerce/features/shopping/my_rewards_screen.dart';
 import 'package:coop_commerce/features/products/category_products_screen.dart';
 import 'package:coop_commerce/features/products/products_listing_screen.dart';
 import 'package:coop_commerce/features/cart/cart_screen.dart';
@@ -43,15 +40,11 @@ import 'package:coop_commerce/models/order.dart' as order_model;
 import 'package:coop_commerce/features/search/search_screen.dart';
 import 'package:coop_commerce/features/member/member_benefits_screen.dart';
 import 'package:coop_commerce/features/member/member_loyalty_screen.dart';
-import 'package:coop_commerce/features/member/voting_dashboard_screen.dart';
-import 'package:coop_commerce/features/member/transparency_reports_screen.dart';
-import 'package:coop_commerce/features/orders/enhanced_order_tracking_screen.dart';
 import 'package:coop_commerce/features/benefits/exclusive_pricing_page.dart';
 import 'package:coop_commerce/features/benefits/members_only_page.dart';
 import 'package:coop_commerce/features/benefits/bulk_access_page.dart';
 import 'package:coop_commerce/features/benefits/flash_sales_page.dart';
 import 'package:coop_commerce/features/benefits/community_dividends_page.dart';
-import 'package:coop_commerce/features/premium/subscription_payment_screen.dart';
 import 'package:coop_commerce/features/premium/premium_membership_page.dart';
 import 'package:coop_commerce/features/products/product_detail_screen.dart';
 import 'package:coop_commerce/features/support/help_center_screen.dart';
@@ -119,7 +112,6 @@ import 'package:coop_commerce/features/selling/screens/seller_product_detail_scr
 import 'package:coop_commerce/features/inventory/inventory_dashboard_screen.dart';
 import 'package:coop_commerce/features/inventory/warehouse_management_screen.dart';
 import 'package:coop_commerce/features/inventory/reorder_management_screen.dart';
-import 'package:coop_commerce/features/shipping/shipment_tracking_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -336,6 +328,7 @@ class AppRouter {
 
         final isOnPublicRoute = state.uri.path == '/welcome' ||
             state.uri.path == '/signin' ||
+            state.uri.path == '/login-form' ||
             state.uri.path.startsWith('/signup') ||
             isOnSplash ||
             state.uri.path.startsWith('/onboarding') ||
@@ -344,18 +337,12 @@ class AppRouter {
             state.uri.path == '/about-cooperatives' ||
             state.uri.path == '/features-guide' ||
             state.uri.path == '/app-tour' ||
-            state.uri.path == '/help-center' ||
-            state.uri.path == '/role-selection';
+            state.uri.path == '/help-center';
 
-        // Hard failsafe: never allow indefinite stay on splash.
+        // Cold-start navigation belongs to SplashScreen so the brand intro is
+        // visible and session/onboarding checks happen in one place.
         if (isOnSplash) {
-          if (currentUser != null) {
-            return currentUser.roleSelectionCompleted ? '/' : '/role-selection';
-          }
-
-          if (!authState.isLoading && !isAuthenticated) {
-            return '/welcome';
-          }
+          return null;
         }
 
         // If auth state is loading but we have a persisted user, proceed with authenticated flow
@@ -378,6 +365,9 @@ class AppRouter {
 
         // Unauthenticated users can access public authentication routes
         if (!isAuthenticated && currentUser == null) {
+          if (state.uri.path == '/role-selection') {
+            return '/signin';
+          }
           if (isOnPublicRoute) {
             return null;
           }
@@ -490,7 +480,7 @@ class AppRouter {
           path: '/signin',
           name: 'signin',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const SignInScreen(),
+          builder: (context, state) => const LoginFormScreen(),
         ),
 
         // Login Form Route
@@ -498,7 +488,7 @@ class AppRouter {
           path: '/login-form',
           name: 'login-form',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const LoginFormScreen(),
+          redirect: (context, state) => '/signin',
         ),
 
         // Sign Up Route (without type - default to member)
@@ -600,14 +590,14 @@ class AppRouter {
           path: '/member/voting',
           name: 'member-voting',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const VotingDashboardScreen(),
+          redirect: (context, state) => '/member-benefits',
         ),
 
         GoRoute(
           path: '/member/transparency',
           name: 'member-transparency',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const TransparencyReportsScreen(),
+          redirect: (context, state) => '/member-benefits',
         ),
 
         // Products Routes
@@ -674,8 +664,7 @@ class AppRouter {
           path: '/orders/tracking',
           name: 'delivery-tracking',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) =>
-              const EnhancedOrderTrackingScreen(orderId: 'ORD-2026-001234'),
+          builder: (context, state) => const OrdersScreen(),
         ),
 
         // Phase 4: Shipment Tracking Route (New)
@@ -683,13 +672,7 @@ class AppRouter {
           path: '/shipments/tracking',
           name: 'shipment-tracking',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            // Get userId from auth provider (will be passed from profile)
-            // For now, we'll use a placeholder that can be overridden
-            final userId =
-                state.uri.queryParameters['userId'] ?? 'current_user';
-            return ShipmentTrackingScreen(memberId: userId);
-          },
+          builder: (context, state) => const OrdersScreen(),
         ),
 
         // Phase 4: Inventory Management Routes (Admin/Staff)
@@ -1194,6 +1177,7 @@ class AppRouter {
           path: '/member-savings',
           name: 'member-savings',
           parentNavigatorKey: _rootNavigatorKey,
+          redirect: (context, state) => '/member/loyalty',
           builder: (context, state) {
             return Scaffold(
               appBar: AppBar(
@@ -1280,6 +1264,7 @@ class AppRouter {
           path: '/bulk-order',
           name: 'bulk-order',
           parentNavigatorKey: _rootNavigatorKey,
+          redirect: (context, state) => '/products',
           builder: (context, state) {
             return Scaffold(
               appBar: AppBar(title: const Text('Bulk Order')),
@@ -1330,7 +1315,7 @@ class AppRouter {
           path: '/reorder',
           name: 'reorder',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const ReorderScreen(),
+          redirect: (context, state) => '/track-orders',
         ),
         GoRoute(
           path: '/track-orders',
@@ -1342,7 +1327,7 @@ class AppRouter {
           path: '/my-rewards',
           name: 'my-rewards',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const MyRewardsScreen(),
+          builder: (context, state) => const MemberLoyaltyScreen(),
         ),
         GoRoute(
           path: '/help-center',
@@ -1373,10 +1358,7 @@ class AppRouter {
           path: '/subscription-payment/:tier',
           name: 'subscription-payment',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            final tier = state.pathParameters['tier'] ?? 'gold';
-            return SubscriptionPaymentScreen(tier: tier);
-          },
+          redirect: (context, state) => '/premium-membership',
         ),
         GoRoute(
           path: '/product/:productId',

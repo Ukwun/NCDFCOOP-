@@ -22,7 +22,7 @@ class User {
     required this.name,
     this.photoUrl,
     this.token,
-    this.roles = const [UserRole.wholesaleBuyer],
+    this.roles = const [],
     this.contexts = const {},
     this.membershipTier = 'free',
     this.membershipExpiryDate,
@@ -35,17 +35,12 @@ class User {
     final marketplaceRole = json['marketplaceRole']?.toString();
     final rawRoles = json['roles'] as List<dynamic>? ??
         (marketplaceRole == null ? null : <dynamic>[marketplaceRole]);
-    final rolesList = rawRoles
-            ?.map((r) => UserRole.values.firstWhere(
-                  (role) => role.name == r,
-                  orElse: () => UserRole.wholesaleBuyer,
-                ))
-            .where((role) => role.isSupported)
-            .toList() ??
-        [UserRole.wholesaleBuyer];
-
-    if (rolesList.isEmpty) {
-      rolesList.add(UserRole.wholesaleBuyer);
+    final rolesList = <UserRole>[];
+    for (final rawRole in rawRoles ?? const <dynamic>[]) {
+      final matches = UserRole.values.where((role) => role.name == rawRole);
+      if (matches.isNotEmpty && matches.first.isSupported) {
+        rolesList.add(matches.first);
+      }
     }
 
     final contextsMap = <UserRole, UserContext>{};

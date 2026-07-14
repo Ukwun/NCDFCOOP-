@@ -206,7 +206,7 @@ class AlgoliaSearchService {
 
       final sorted = categories.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
-      
+
       return sorted.take(limit).map((e) => e.key).toList();
     } catch (e, st) {
       AppLogger.logException(e, stackTrace: st);

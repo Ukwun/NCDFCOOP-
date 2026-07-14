@@ -20,8 +20,7 @@ class InventoryHealthScreen extends ConsumerStatefulWidget {
       _InventoryHealthScreenState();
 }
 
-class _InventoryHealthScreenState
-    extends ConsumerState<InventoryHealthScreen> {
+class _InventoryHealthScreenState extends ConsumerState<InventoryHealthScreen> {
   late StoreManagerAnalyticsService _analyticsService;
 
   @override
@@ -70,9 +69,7 @@ class _InventoryHealthScreenState
                             children: [
                               Text(
                                 'Overall Status',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium,
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -95,14 +92,11 @@ class _InventoryHealthScreenState
                             ),
                             child: Center(
                               child: Text(
-                                health?.healthStatus == 'Healthy'
-                                    ? '✓'
-                                    : '⚠',
+                                health?.healthStatus == 'Healthy' ? '✓' : '⚠',
                                 style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
-                                  color:
-                                      _getHealthColor(health?.healthStatus),
+                                  color: _getHealthColor(health?.healthStatus),
                                 ),
                               ),
                             ),
@@ -211,8 +205,8 @@ class _InventoryHealthScreenState
                       ),
                       const SizedBox(height: 12),
                       FutureBuilder<List<ProductPerformance>>(
-                        future: _analyticsService
-                            .getLowStockAlerts(widget.storeId),
+                        future:
+                            _analyticsService.getLowStockAlerts(widget.storeId),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {

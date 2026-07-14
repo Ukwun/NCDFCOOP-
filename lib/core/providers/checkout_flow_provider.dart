@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:coop_commerce/models/address.dart';
 
 // ==================== CHECKOUT FLOW MODELS ====================
@@ -213,7 +214,7 @@ final userPaymentMethodsProvider =
     return firestore
         .collection('users')
         .doc(userId)
-        .collection('payment_methods')
+        .collection('paymentMethods')
         .orderBy('isDefault', descending: true)
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -311,6 +312,47 @@ class OrderCreationResult {
   });
 }
 
+/// Creates an order through the trusted backend. Prices, stock, tax, delivery,
+/// ownership and role pricing are recalculated server-side.
+final secureCreateOrderProvider =
+    FutureProvider.family<OrderCreationResult, Map<String, dynamic>>(
+  (ref, params) async {
+    try {
+      final rawItems = (params['items'] as List?) ?? const [];
+      final items = rawItems.map((raw) {
+        final item = Map<String, dynamic>.from(raw as Map);
+        final product = item['product'];
+        final productMap = product is Map
+            ? Map<String, dynamic>.from(product)
+            : const <String, dynamic>{};
+        return {
+          'productId': item['productId'] ?? productMap['id'] ?? item['id'],
+          'quantity': item['quantity'] ?? 1,
+        };
+      }).toList();
+      final callable =
+          FirebaseFunctions.instance.httpsCallable('createMarketplaceOrder');
+      final result = await callable.call(<String, dynamic>{
+        'items': items,
+        'addressId': params['addressId'],
+        'paymentMethodId': params['paymentMethodId'],
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return OrderCreationResult(
+        success: true,
+        orderId: data['orderId'] as String?,
+      );
+    } on FirebaseFunctionsException catch (error) {
+      return OrderCreationResult(
+        success: false,
+        error: error.message ?? 'The order could not be created.',
+      );
+    } catch (error) {
+      return OrderCreationResult(success: false, error: error.toString());
+    }
+  },
+);
+
 /// Create order (future provider - not a stream)
 final createOrderProvider =
     FutureProvider.family<OrderCreationResult, Map<String, dynamic>>(
@@ -349,7 +391,7 @@ final createOrderProvider =
         final paymentDoc = await firestore
             .collection('users')
             .doc(userId)
-            .collection('payment_methods')
+            .collection('paymentMethods')
             .doc(paymentMethodId)
             .get();
         if (paymentDoc.exists) {

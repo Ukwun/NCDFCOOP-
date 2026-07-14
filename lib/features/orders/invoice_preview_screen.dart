@@ -13,7 +13,8 @@ class InvoicePreviewScreen extends ConsumerStatefulWidget {
   }) : super(key: key);
 
   @override
-  ConsumerState<InvoicePreviewScreen> createState() => _InvoicePreviewScreenState();
+  ConsumerState<InvoicePreviewScreen> createState() =>
+      _InvoicePreviewScreenState();
 }
 
 class _InvoicePreviewScreenState extends ConsumerState<InvoicePreviewScreen> {
@@ -57,7 +58,8 @@ class _InvoicePreviewScreenState extends ConsumerState<InvoicePreviewScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                  Icon(Icons.error_outline,
+                      size: 48, color: Colors.red.shade300),
                   const SizedBox(height: 16),
                   Text('Failed to load invoice'),
                 ],
@@ -118,7 +120,8 @@ class _InvoicePreviewScreenState extends ConsumerState<InvoicePreviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.blue.shade100,
                       borderRadius: BorderRadius.circular(20),
@@ -169,11 +172,14 @@ class _InvoicePreviewScreenState extends ConsumerState<InvoicePreviewScreen> {
                 ),
           ),
           const SizedBox(height: 4),
-          Text(invoice['billTo']['address'] ?? '', style: Theme.of(context).textTheme.bodyMedium),
+          Text(invoice['billTo']['address'] ?? '',
+              style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 4),
-          Text(invoice['billTo']['email'] ?? '', style: Theme.of(context).textTheme.bodyMedium),
+          Text(invoice['billTo']['email'] ?? '',
+              style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 4),
-          Text(invoice['billTo']['phone'] ?? '', style: Theme.of(context).textTheme.bodyMedium),
+          Text(invoice['billTo']['phone'] ?? '',
+              style: Theme.of(context).textTheme.bodyMedium),
 
           const SizedBox(height: 32),
 
@@ -189,34 +195,41 @@ class _InvoicePreviewScreenState extends ConsumerState<InvoicePreviewScreen> {
               width: 300,
               child: Column(
                 children: [
-                  _buildSummaryRow('Subtotal', invoice['summary']['subtotal'] ?? 0),
+                  _buildSummaryRow(
+                      'Subtotal', invoice['summary']['subtotal'] ?? 0),
                   if (invoice['summary'].containsKey('discount'))
-                    _buildSummaryRow('Discount', -(invoice['summary']['discount'] ?? 0)),
+                    _buildSummaryRow(
+                        'Discount', -(invoice['summary']['discount'] ?? 0)),
                   if (invoice['summary'].containsKey('wholesaleDiscount'))
-                    _buildSummaryRow('Wholesale Discount', -(invoice['summary']['wholesaleDiscount'] ?? 0)),
+                    _buildSummaryRow('Wholesale Discount',
+                        -(invoice['summary']['wholesaleDiscount'] ?? 0)),
                   _buildSummaryRow('Tax', invoice['summary']['tax'] ?? 0),
                   if (invoice['summary'].containsKey('shipping'))
-                    _buildSummaryRow('Shipping', invoice['summary']['shipping'] ?? 0),
+                    _buildSummaryRow(
+                        'Shipping', invoice['summary']['shipping'] ?? 0),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.only(top: 12),
                     decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(width: 2, color: Colors.black)),
+                      border: Border(
+                          top: BorderSide(width: 2, color: Colors.black)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'TOTAL',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         Text(
                           '₦${(invoice['summary']['total'] ?? 0).toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                       ],
                     ),
@@ -358,15 +371,17 @@ class _InvoicePreviewScreenState extends ConsumerState<InvoicePreviewScreen> {
                       children: [
                         Text(
                           item['description'] ?? '',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                         ),
                         Text(
                           'SKU: ${item['sku'] ?? ''}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey.shade600,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey.shade600,
+                                  ),
                         ),
                       ],
                     ),
@@ -431,7 +446,8 @@ class _InvoicePreviewScreenState extends ConsumerState<InvoicePreviewScreen> {
 
   void _downloadInvoice() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Download PDF functionality coming in v1.1')),
+      const SnackBar(
+          content: Text('Download PDF functionality coming in v1.1')),
     );
   }
 }

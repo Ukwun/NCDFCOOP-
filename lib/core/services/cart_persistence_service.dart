@@ -18,7 +18,8 @@ class CartPersistenceService {
         'items': items.map((item) => item.toJson()).toList(),
         'itemCount': items.fold(0, (sum, item) => sum + item.quantity),
         'subtotal': items.fold(0.0, (sum, item) => sum + item.totalPrice),
-        'totalMarketPrice': items.fold(0.0, (sum, item) => sum + item.totalMarketPrice),
+        'totalMarketPrice':
+            items.fold(0.0, (sum, item) => sum + item.totalMarketPrice),
         'totalSavings': items.fold(0.0, (sum, item) => sum + item.totalSavings),
         'lastUpdated': FieldValue.serverTimestamp(),
       };
@@ -39,10 +40,8 @@ class CartPersistenceService {
     try {
       debugPrint('📦 Loading cart from Firestore for user: $userId');
 
-      final doc = await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .get();
+      final doc =
+          await _firestore.collection(_cartsCollection).doc(userId).get();
 
       if (!doc.exists) {
         debugPrint('⚠️  No saved cart found, returning empty cart');
@@ -85,10 +84,7 @@ class CartPersistenceService {
     try {
       debugPrint('❌ Deleting cart for user: $userId');
 
-      await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .delete();
+      await _firestore.collection(_cartsCollection).doc(userId).delete();
 
       debugPrint('✅ Cart deleted');
     } catch (e) {
@@ -101,10 +97,8 @@ class CartPersistenceService {
     try {
       debugPrint('➕ Adding item to cart: ${item.productName}');
 
-      final doc = await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .get();
+      final doc =
+          await _firestore.collection(_cartsCollection).doc(userId).get();
 
       List<CartItem> items = [];
       if (doc.exists) {
@@ -115,7 +109,8 @@ class CartPersistenceService {
       }
 
       // Check if item already in cart
-      final existingIndex = items.indexWhere((i) => i.productId == item.productId);
+      final existingIndex =
+          items.indexWhere((i) => i.productId == item.productId);
       if (existingIndex >= 0) {
         // Update quantity
         items[existingIndex] = items[existingIndex].copyWith(
@@ -138,10 +133,8 @@ class CartPersistenceService {
     try {
       debugPrint('➖ Removing item from cart: $productId');
 
-      final doc = await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .get();
+      final doc =
+          await _firestore.collection(_cartsCollection).doc(userId).get();
 
       if (!doc.exists) return;
 
@@ -167,12 +160,11 @@ class CartPersistenceService {
     int newQuantity,
   ) async {
     try {
-      debugPrint('🔄 Updating quantity for product: $productId to $newQuantity');
+      debugPrint(
+          '🔄 Updating quantity for product: $productId to $newQuantity');
 
-      final doc = await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .get();
+      final doc =
+          await _firestore.collection(_cartsCollection).doc(userId).get();
 
       if (!doc.exists) return;
 
@@ -205,13 +197,13 @@ class CartPersistenceService {
         .doc(userId)
         .snapshots()
         .map((doc) {
-          if (!doc.exists) return [];
+      if (!doc.exists) return [];
 
-          final itemsList = doc.get('items') as List<dynamic>? ?? [];
-          return itemsList.map((itemJson) {
-            return CartItem.fromJson(itemJson as Map<String, dynamic>);
-          }).toList();
-        });
+      final itemsList = doc.get('items') as List<dynamic>? ?? [];
+      return itemsList.map((itemJson) {
+        return CartItem.fromJson(itemJson as Map<String, dynamic>);
+      }).toList();
+    });
   }
 
   /// Move cart to persisted storage (used when user logs in)
@@ -255,10 +247,8 @@ class CartPersistenceService {
   /// Get cart summary
   Future<Map<String, dynamic>> getCartSummary(String userId) async {
     try {
-      final doc = await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .get();
+      final doc =
+          await _firestore.collection(_cartsCollection).doc(userId).get();
 
       if (!doc.exists) {
         return {

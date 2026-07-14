@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 /// Admin Dashboard for Price Override Approvals
 /// Temporarily disabled for MVP - will be re-enabled in v1.1

@@ -191,7 +191,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '9:45',
+                '',
                 style: AppTextStyles.h4.copyWith(color: AppColors.surface),
               ),
               Row(

@@ -50,7 +50,7 @@ export declare const calculateDailyAnalytics: functions.CloudFunction<unknown>;
  * 3. Send notifications to customer and warehouse
  * 4. Log activity
  */
-export declare const fulfillOrder: functions.CloudFunction<functions.firestore.QueryDocumentSnapshot>;
+export declare const fulfillOrder: functions.CloudFunction<functions.Change<functions.firestore.QueryDocumentSnapshot>>;
 /**
  * When payment is confirmed, mark order as paid and ready to ship
  * Triggered: When order payment status changes to paid
@@ -74,6 +74,11 @@ export declare const logProductView: functions.HttpsFunction & functions.Runnabl
  * Creates a Flutterwave checkout using the server-authoritative order total.
  * The secret key is injected by Secret Manager and never sent to the app.
  */
+export declare const createMarketplaceOrder: functions.HttpsFunction & functions.Runnable<any>;
+/** Creates a Stripe-hosted checkout from a server-authoritative order. */
+export declare const initializeStripeCheckout: functions.HttpsFunction & functions.Runnable<any>;
+/** Stripe is the sole authority that can transition an order to paid. */
+export declare const stripeWebhook: functions.HttpsFunction;
 export declare const initializeFlutterwavePayment: functions.HttpsFunction & functions.Runnable<any>;
 /** Places a seller withdrawal request while reserving the requested balance. */
 export declare const requestSellerWithdrawal: functions.HttpsFunction & functions.Runnable<any>;

@@ -44,7 +44,7 @@ class _EmailVerificationScreenState
         // Navigate to home after 1 second
         await Future.delayed(const Duration(seconds: 1));
         if (mounted) {
-          context.go('/home');
+          context.go('/splash');
         }
       } else if (mounted) {
         _startVerificationCheck();
@@ -97,7 +97,7 @@ class _EmailVerificationScreenState
   }
 
   void _handleSkip() {
-    context.go('/home');
+    context.go('/splash');
   }
 
   @override

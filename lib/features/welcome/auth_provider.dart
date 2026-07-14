@@ -44,11 +44,11 @@ class AuthController extends AsyncNotifier<void> {
     // Check for persisted session on startup
     try {
       print('🔄 AuthController initializing...');
-      await _authService.initialize();
+      await _authService.initialize().timeout(const Duration(seconds: 12));
       print('✅ AuthController initialized successfully');
     } catch (e) {
       print('❌ AuthController initialization error: $e');
-      rethrow;
+      return;
     }
   }
 
@@ -59,14 +59,21 @@ class AuthController extends AsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final user = await _authService.login(
-        LoginRequest(email: email, password: password),
-        rememberMe: rememberMe,
-      );
+      final user = await _authService
+          .login(
+            LoginRequest(email: email, password: password),
+            rememberMe: rememberMe,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw TimeoutException(
+              'Sign in is taking too long. Check your connection and try again.',
+            ),
+          );
       // Save user to persistent secure storage
-      await UserPersistence.saveUser(user);
+      await UserPersistence.saveUser(user).timeout(const Duration(seconds: 5));
       // Log login activity
-      await ref.read(activityLoggerProvider.notifier).logLogin(email);
+      unawaited(ref.read(activityLoggerProvider.notifier).logLogin(email));
       // Update the global current user provider
       ref.read(global_auth.currentUserProvider.notifier).setUser(user);
       return;
@@ -106,22 +113,28 @@ class AuthController extends AsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      var user = await _authService.register(
-        RegisterRequest(
-          name: _fallbackNameFromEmail(email),
-          email: email,
-          password: password,
-          role: membershipType,
-        ),
-        rememberMe: rememberMe,
-      );
+      final normalizedRole =
+          membershipType == 'member' ? 'coopMember' : membershipType;
+      var user = await _authService
+          .register(
+            RegisterRequest(
+              name: _fallbackNameFromEmail(email),
+              email: email,
+              password: password,
+              role: normalizedRole,
+            ),
+            rememberMe: rememberMe,
+          )
+          .timeout(
+            const Duration(seconds: 25),
+            onTimeout: () => throw TimeoutException(
+              'Account creation is taking too long. Check your connection and try again.',
+            ),
+          );
       // Save user to persistent secure storage
-      await UserPersistence.saveUser(user);
-      // Log signup and membership purchase
-      await ref.read(activityLoggerProvider.notifier).logLogin(email);
-      await ref
-          .read(activityLoggerProvider.notifier)
-          .logMembershipPurchase(membershipType, 5000);
+      await UserPersistence.saveUser(user).timeout(const Duration(seconds: 5));
+      // Analytics must never block account creation.
+      unawaited(ref.read(activityLoggerProvider.notifier).logLogin(email));
       // Update the global current user provider
       ref.read(global_auth.currentUserProvider.notifier).setUser(user);
       return;
@@ -428,10 +441,17 @@ final authControllerProvider = AsyncNotifierProvider<AuthController, void>(
 /// Initialize persisted user on app startup
 final initializePersistedUserProvider = FutureProvider<void>((ref) async {
   try {
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
     final persistedUser = await UserPersistence.getUser();
-    if (persistedUser != null) {
+    if (firebaseUser != null &&
+        persistedUser != null &&
+        persistedUser.id == firebaseUser.uid) {
       print('🔄 Restored user from persistent storage: ${persistedUser.name}');
       ref.read(global_auth.currentUserProvider.notifier).setUser(persistedUser);
+    } else if (persistedUser != null) {
+      // Remove stale identities left by an older build or a previous logout.
+      await UserPersistence.clearUser();
+      ref.read(global_auth.currentUserProvider.notifier).clearUser();
     }
   } catch (e) {
     print('⚠️ Failed to restore persisted user: $e');
