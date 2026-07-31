@@ -87,6 +87,8 @@ export declare const stripeWebhook: functions.HttpsFunction;
 export declare const initializeFlutterwavePayment: functions.HttpsFunction & functions.Runnable<any>;
 /** Places a seller withdrawal request while reserving the requested balance. */
 export declare const requestSellerWithdrawal: functions.HttpsFunction & functions.Runnable<any>;
+/** Approves or rejects a seller withdrawal for the designated super admin. */
+export declare const reviewSellerWithdrawal: functions.HttpsFunction & functions.Runnable<any>;
 /** Redeems a member reward using a server-authoritative points transaction. */
 export declare const claimMemberReward: functions.HttpsFunction & functions.Runnable<any>;
 /** Deletes the authenticated account and its private marketplace records. */

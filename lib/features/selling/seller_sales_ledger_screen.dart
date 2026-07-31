@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
+import 'package:go_router/go_router.dart';
 
 class SellerSalesLedgerScreen extends ConsumerStatefulWidget {
   const SellerSalesLedgerScreen({super.key});
@@ -98,6 +99,11 @@ class _SellerSalesLedgerScreenState
         title: const Text('Sales Ledger'),
         backgroundColor: AppColors.surface,
         actions: [
+          IconButton(
+            onPressed: () => context.pushNamed('seller-withdraw'),
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            tooltip: 'Withdraw earnings',
+          ),
           IconButton(
             onPressed: () {
               setState(() {

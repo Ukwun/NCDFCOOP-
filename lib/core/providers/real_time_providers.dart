@@ -435,6 +435,11 @@ final messengerConversationMessagesProvider = StreamProvider.autoDispose
           senderName: data['senderName']?.toString(),
           senderAvatar: data['senderAvatar']?.toString(),
           text: data['text']?.toString() ?? '',
+          messageType: data['messageType']?.toString() ?? 'text',
+          attachmentUrl: data['attachmentUrl']?.toString(),
+          attachmentName: data['attachmentName']?.toString(),
+          attachmentContentType: data['attachmentContentType']?.toString(),
+          attachmentSize: (data['attachmentSize'] as num?)?.toInt(),
           createdAt:
               (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         );
@@ -897,6 +902,11 @@ class MessengerConversationMessage {
   final String? senderName;
   final String? senderAvatar;
   final String text;
+  final String messageType;
+  final String? attachmentUrl;
+  final String? attachmentName;
+  final String? attachmentContentType;
+  final int? attachmentSize;
   final DateTime createdAt;
 
   MessengerConversationMessage({
@@ -906,6 +916,11 @@ class MessengerConversationMessage {
     this.senderName,
     this.senderAvatar,
     required this.text,
+    this.messageType = 'text',
+    this.attachmentUrl,
+    this.attachmentName,
+    this.attachmentContentType,
+    this.attachmentSize,
     required this.createdAt,
   });
 }

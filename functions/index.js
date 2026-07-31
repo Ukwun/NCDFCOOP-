@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.releaseSellerEarningsOnDelivery = exports.deleteMyAccount = exports.claimMemberReward = exports.requestSellerWithdrawal = exports.initializeFlutterwavePayment = exports.stripeWebhook = exports.initializeStripeCheckout = exports.createMarketplaceOrder = exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = exports.provisionMarketplaceRole = void 0;
+exports.releaseSellerEarningsOnDelivery = exports.deleteMyAccount = exports.claimMemberReward = exports.reviewSellerWithdrawal = exports.requestSellerWithdrawal = exports.initializeFlutterwavePayment = exports.stripeWebhook = exports.initializeStripeCheckout = exports.createMarketplaceOrder = exports.logProductView = exports.getRecommendedProducts = exports.onOrderPaymentConfirmed = exports.fulfillOrder = exports.calculateDailyAnalytics = exports.autoTriggerReorders = exports.autoPromoteMemberTier = exports.calculateLoyaltyPoints = exports.provisionMarketplaceRole = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -47,6 +47,7 @@ const stripe_1 = __importDefault(require("stripe"));
 admin.initializeApp();
 const db = admin.firestore();
 const MARKETPLACE_ROLES = ['seller', 'coopMember', 'wholesaleBuyer'];
+const PRIMARY_SUPER_ADMIN_EMAIL = 'ukwun97@gmail.com';
 function requireTrustedApp(context) {
     if (!context.app) {
         throw new functions.https.HttpsError('failed-precondition', 'Requests must come from a verified CoopCommerce app.');
@@ -1974,7 +1975,6 @@ exports.initializeFlutterwavePayment = functions
 });
 /** Places a seller withdrawal request while reserving the requested balance. */
 exports.requestSellerWithdrawal = functions.https.onCall(async (data, context) => {
-    requireTrustedApp(context);
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Sign in to withdraw.');
     }
@@ -1987,16 +1987,27 @@ exports.requestSellerWithdrawal = functions.https.onCall(async (data, context) =
     if (!sellerSnapshot.exists) {
         throw new functions.https.HttpsError('permission-denied', 'A seller profile is required.');
     }
-    const payoutAccount = await db
-        .collection('seller_payout_accounts')
-        .doc(context.auth.uid)
-        .get();
-    if (!payoutAccount.exists) {
-        throw new functions.https.HttpsError('failed-precondition', 'Save a payout bank account before withdrawing.');
+    const bankName = String(data.bankName || '').trim();
+    const bankCode = String(data.bankCode || '').trim();
+    const accountNumber = String(data.accountNumber || '').replace(/\s/g, '');
+    const accountName = String(data.accountName || '').trim();
+    if (bankName.length < 2 || !/^\d{3,6}$/.test(bankCode) ||
+        !/^\d{10}$/.test(accountNumber) || accountName.length < 3) {
+        throw new functions.https.HttpsError('invalid-argument', 'Enter valid Nigerian bank and account details.');
     }
-    const bank = payoutAccount.data();
+    let assignedAdminId = '';
+    try {
+        assignedAdminId =
+            (await admin.auth().getUserByEmail(PRIMARY_SUPER_ADMIN_EMAIL)).uid;
+    }
+    catch (error) {
+        console.error('Primary super-admin account is unavailable:', error);
+        throw new functions.https.HttpsError('failed-precondition', 'Withdrawal review is temporarily unavailable.');
+    }
     const earningsRef = db.collection('seller_earnings').doc(context.auth.uid);
+    const payoutAccountRef = db.collection('seller_payout_accounts').doc(context.auth.uid);
     const withdrawalRef = db.collection('seller_withdrawals').doc();
+    const adminNotificationRef = db.collection('admin_notifications').doc();
     await db.runTransaction(async (transaction) => {
         const earningsSnapshot = await transaction.get(earningsRef);
         const available = Number(earningsSnapshot.data()?.availableBalance || 0);
@@ -2008,20 +2019,105 @@ exports.requestSellerWithdrawal = functions.https.onCall(async (data, context) =
             pendingWithdrawal: admin.firestore.FieldValue.increment(amount),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
+        transaction.set(payoutAccountRef, {
+            sellerId: context.auth.uid,
+            bankName,
+            bankCode,
+            accountNumber,
+            accountName,
+            country: 'NG',
+            currency: 'NGN',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
         transaction.set(withdrawalRef, {
             sellerId: context.auth.uid,
+            sellerName: String(sellerSnapshot.data()?.businessName || ''),
             amount,
             currency: 'NGN',
-            bankName: String(bank.bankName || ''),
-            bankCode: String(bank.bankCode || ''),
-            accountNumber: String(bank.accountNumber || ''),
-            accountName: String(bank.accountName || ''),
+            bankName,
+            bankCode,
+            accountNumber,
+            accountName,
             status: 'pending',
+            assignedAdminId,
+            assignedAdminEmail: PRIMARY_SUPER_ADMIN_EMAIL,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+        transaction.set(adminNotificationRef, {
+            userId: assignedAdminId,
+            recipientEmail: PRIMARY_SUPER_ADMIN_EMAIL,
+            type: 'seller_withdrawal_request',
+            title: 'Seller withdrawal request',
+            message: `${sellerSnapshot.data()?.businessName || 'A seller'} requested NGN ${amount.toFixed(2)}.`,
+            withdrawalId: withdrawalRef.id,
+            sellerId: context.auth.uid,
+            amount,
+            status: 'unread',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
     });
-    return { withdrawalId: withdrawalRef.id, status: 'pending' };
+    return {
+        withdrawalId: withdrawalRef.id,
+        status: 'pending',
+        assignedAdminEmail: PRIMARY_SUPER_ADMIN_EMAIL,
+    };
+});
+/** Approves or rejects a seller withdrawal for the designated super admin. */
+exports.reviewSellerWithdrawal = functions.https.onCall(async (data, context) => {
+    if (!context.auth ||
+        String(context.auth.token.email || '').toLowerCase() !==
+            PRIMARY_SUPER_ADMIN_EMAIL ||
+        context.auth.token.email_verified !== true) {
+        throw new functions.https.HttpsError('permission-denied', 'Only the verified super-admin account can review withdrawals.');
+    }
+    await enforceRateLimit(context.auth.uid, 'review_seller_withdrawal', 30, 300);
+    const withdrawalId = String(data.withdrawalId || '').trim();
+    const decision = String(data.decision || '').trim();
+    const note = String(data.note || '').trim().slice(0, 1000);
+    if (!withdrawalId || !['approved', 'rejected'].includes(decision)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Choose an approval decision.');
+    }
+    const withdrawalRef = db.collection('seller_withdrawals').doc(withdrawalId);
+    await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(withdrawalRef);
+        if (!snapshot.exists || snapshot.data()?.status !== 'pending') {
+            throw new functions.https.HttpsError('failed-precondition', 'This request has already been reviewed or no longer exists.');
+        }
+        const withdrawal = snapshot.data();
+        const amount = Number(withdrawal.amount || 0);
+        const sellerId = String(withdrawal.sellerId || '');
+        const earningsRef = db.collection('seller_earnings').doc(sellerId);
+        const earningsSnapshot = await transaction.get(earningsRef);
+        const pending = Number(earningsSnapshot.data()?.pendingWithdrawal || 0);
+        transaction.update(withdrawalRef, {
+            status: decision,
+            reviewNote: note,
+            reviewedBy: context.auth.uid,
+            reviewedByEmail: PRIMARY_SUPER_ADMIN_EMAIL,
+            reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        transaction.set(earningsRef, {
+            pendingWithdrawal: Math.max(0, pending - amount),
+            ...(decision === 'rejected'
+                ? { availableBalance: admin.firestore.FieldValue.increment(amount) }
+                : {}),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(db.collection('notifications').doc(), {
+            userId: sellerId,
+            type: 'seller_withdrawal_review',
+            title: `Withdrawal ${decision}`,
+            message: decision === 'approved'
+                ? `Your NGN ${amount.toFixed(2)} withdrawal was approved for payout.`
+                : `Your NGN ${amount.toFixed(2)} withdrawal was rejected.${note ? ` ${note}` : ''}`,
+            withdrawalId,
+            isRead: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+    return { withdrawalId, status: decision };
 });
 /** Redeems a member reward using a server-authoritative points transaction. */
 exports.claimMemberReward = functions.https.onCall(async (data, context) => {

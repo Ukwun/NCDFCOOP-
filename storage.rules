@@ -10,6 +10,31 @@ service firebase.storage {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    match /conversation_attachments/{conversationId}/{userId}/{fileName} {
+      function isConversationParticipant() {
+        return request.auth != null
+          && request.auth.uid == userId
+          && request.auth.uid in
+            firestore.get(/databases/(default)/documents/conversations/$(conversationId)).data.participantIds;
+      }
+
+      allow read: if request.auth != null
+        && request.auth.uid in
+          firestore.get(/databases/(default)/documents/conversations/$(conversationId)).data.participantIds;
+      allow create: if isConversationParticipant()
+        && request.resource.size <= 15 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('image/(jpeg|png|webp)') ||
+          request.resource.contentType == 'application/pdf' ||
+          request.resource.contentType == 'application/msword' ||
+          request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+          request.resource.contentType == 'application/vnd.ms-excel' ||
+          request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+      allow update: if false;
+      allow delete: if isConversationParticipant();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

@@ -236,6 +236,118 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     );
   }
 
+  Future<void> _sendProductInquiry(Product product) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || product.uploadedBy.isEmpty) return;
+    if (user.id == product.uploadedBy) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This product belongs to your store.')),
+      );
+      return;
+    }
+
+    final controller = TextEditingController(
+      text: 'Hello, I would like to know more about ${product.name}.',
+    );
+    final message = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Ask the seller'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 6,
+          maxLength: 1500,
+          decoration: const InputDecoration(
+            labelText: 'Your product inquiry',
+            hintText: 'Ask about availability, delivery, or specifications',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
+            },
+            icon: const Icon(Icons.send_outlined),
+            label: const Text('Send inquiry'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (message == null || message.isEmpty) return;
+
+    final firestore = FirebaseFirestore.instance;
+    final sellerSnapshot =
+        await firestore.collection('sellers').doc(product.uploadedBy).get();
+    final sellerName =
+        sellerSnapshot.data()?['businessName']?.toString().trim();
+    final participants = [user.id, product.uploadedBy]..sort();
+    final conversationId =
+        '${participants.join('_')}_${product.id}'.replaceAll('/', '_');
+    final conversationRef =
+        firestore.collection('conversations').doc(conversationId);
+    final messageRef = conversationRef.collection('messages').doc();
+    final now = Timestamp.now();
+    final batch = firestore.batch();
+
+    batch.set(
+      conversationRef,
+      {
+        'participantIds': participants,
+        'participants': participants,
+        'participantNames': {
+          user.id: user.name,
+          product.uploadedBy:
+              sellerName?.isNotEmpty == true ? sellerName : 'Seller',
+        },
+        'participantRoles': {
+          user.id: ref.read(currentRoleProvider).name,
+          product.uploadedBy: UserRole.seller.name,
+        },
+        'productId': product.id,
+        'productName': product.name,
+        'productImageUrl': product.imageUrl,
+        'conversationType': 'product_inquiry',
+        'lastMessageText': message,
+        'lastMessageAt': now,
+        'updatedAt': now,
+        'createdAt': now,
+        'lastMessageSenderId': user.id,
+        'unreadByUser': {user.id: 0, product.uploadedBy: 1},
+        'unreadCounts': {user.id: 0, product.uploadedBy: 1},
+      },
+      SetOptions(merge: true),
+    );
+    batch.set(messageRef, {
+      'id': messageRef.id,
+      'conversationId': conversationId,
+      'senderId': user.id,
+      'senderName': user.name,
+      'text': message,
+      'messageType': 'product_inquiry',
+      'productId': product.id,
+      'productName': product.name,
+      'createdAt': now,
+    });
+    await batch.commit();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Inquiry sent. The conversation is now in Messages.'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+    context.go('/messages');
+  }
+
   Widget _buildSimpleProductDetail(Map<String, dynamic> product) {
     final savings = (product['original'] as num) - (product['price'] as num);
 
@@ -1460,6 +1572,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       onPressed: () => _requestQuote(product),
                       icon: const Icon(Icons.request_quote_outlined),
                       label: const Text('Request quote from this seller'),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                if (activeRole == UserRole.coopMember &&
+                    product.uploadedBy.isNotEmpty) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => _sendProductInquiry(product),
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const Text('Ask seller about this product'),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),

@@ -4,6 +4,9 @@ import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ConversationThreadScreen extends ConsumerStatefulWidget {
   const ConversationThreadScreen({required this.conversation, super.key});
@@ -20,6 +23,7 @@ class _ConversationThreadScreenState
   final TextEditingController _composerController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -175,6 +179,19 @@ class _ConversationThreadScreenState
       ),
       child: Row(
         children: [
+          IconButton(
+            tooltip: 'Attach image or document',
+            onPressed: _isSending || _isUploading
+                ? null
+                : () => _pickAttachment(userId),
+            icon: _isUploading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.attach_file_rounded),
+          ),
           Expanded(
             child: TextField(
               controller: _composerController,
@@ -211,6 +228,100 @@ class _ConversationThreadScreenState
     );
   }
 
+  Future<void> _pickAttachment(String userId) async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const [
+        'jpg',
+        'jpeg',
+        'png',
+        'webp',
+        'pdf',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+      ],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      _showError('Unable to read this file.');
+      return;
+    }
+    if (bytes.length > 15 * 1024 * 1024) {
+      _showError('Attachments must be 15 MB or smaller.');
+      return;
+    }
+
+    setState(() => _isUploading = true);
+    try {
+      final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+      final objectName = '${DateTime.now().millisecondsSinceEpoch}_$safeName';
+      final storageRef = FirebaseStorage.instance.ref(
+        'conversation_attachments/${widget.conversation.id}/$userId/$objectName',
+      );
+      final contentType = _contentTypeFor(file.extension);
+      await storageRef.putData(
+        bytes,
+        SettableMetadata(
+          contentType: contentType,
+          customMetadata: {
+            'conversationId': widget.conversation.id,
+            'uploadedBy': userId,
+          },
+        ),
+      );
+      final url = await storageRef.getDownloadURL();
+      await _sendMessage(
+        userId,
+        attachment: {
+          'attachmentUrl': url,
+          'attachmentName': file.name,
+          'attachmentContentType': contentType,
+          'attachmentSize': bytes.length,
+          'attachmentPath': storageRef.fullPath,
+        },
+      );
+    } catch (error) {
+      _showError('Failed to upload attachment: $error');
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  String _contentTypeFor(String? extension) {
+    switch (extension?.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'xls':
+        return 'application/vnd.ms-excel';
+      case 'xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _markConversationRead() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
@@ -229,9 +340,12 @@ class _ConversationThreadScreenState
     } catch (_) {}
   }
 
-  Future<void> _sendMessage(String userId) async {
+  Future<void> _sendMessage(
+    String userId, {
+    Map<String, dynamic>? attachment,
+  }) async {
     final text = _composerController.text.trim();
-    if (text.isEmpty || _isSending) {
+    if (text.isEmpty && attachment == null || _isSending) {
       return;
     }
 
@@ -262,6 +376,13 @@ class _ConversationThreadScreenState
         'id': messageRef.id,
         'conversationId': widget.conversation.id,
         'text': text,
+        'messageType': attachment == null
+            ? 'text'
+            : (attachment['attachmentContentType'] as String)
+                    .startsWith('image/')
+                ? 'image'
+                : 'file',
+        ...?attachment,
         'senderId': user.id,
         'senderName': user.name,
         'senderAvatar': user.photoUrl,
@@ -269,7 +390,8 @@ class _ConversationThreadScreenState
       });
 
       final updates = <String, dynamic>{
-        'lastMessageText': text,
+        'lastMessageText':
+            text.isNotEmpty ? text : 'Sent ${attachment?['attachmentName']}',
         'lastMessageAt': now,
         'updatedAt': now,
         'lastMessageSenderId': user.id,
@@ -334,12 +456,51 @@ class _MessageBubble extends StatelessWidget {
           crossAxisAlignment:
               isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Text(
-              message.text,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isMine ? Colors.white : AppColors.text,
+            if (message.attachmentUrl != null) ...[
+              if (message.attachmentContentType?.startsWith('image/') ?? false)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    message.attachmentUrl!,
+                    width: 240,
+                    height: 180,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.broken_image_outlined),
+                  ),
+                )
+              else
+                InkWell(
+                  onTap: () => launchUrl(
+                    Uri.parse(message.attachmentUrl!),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.description_outlined),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          message.attachmentName ?? 'Document',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.open_in_new, size: 16),
+                    ],
+                  ),
+                ),
+              if (message.text.isNotEmpty) const SizedBox(height: 8),
+            ],
+            if (message.text.isNotEmpty)
+              Text(
+                message.text,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: isMine ? Colors.white : AppColors.text,
+                ),
               ),
-            ),
             const SizedBox(height: 4),
             Text(
               _formatTime(message.createdAt),

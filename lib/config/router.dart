@@ -73,6 +73,7 @@ import 'package:coop_commerce/features/institutional/institutional_budget_overvi
 // Admin feature imports
 import 'package:coop_commerce/features/admin/admin_control_tower_home_screen.dart';
 import 'package:coop_commerce/features/admin/admin_user_management_screen.dart';
+import 'package:coop_commerce/features/admin/seller_withdrawal_review_screen.dart';
 import 'package:coop_commerce/features/admin/admin_compliance_dashboard_screen.dart';
 import 'package:coop_commerce/features/admin/admin_audit_log_browser_screen.dart';
 import 'package:coop_commerce/features/admin/price_override_admin_dashboard.dart';
@@ -107,6 +108,7 @@ import 'package:coop_commerce/features/selling/start_selling_screen.dart';
 import 'package:coop_commerce/features/selling/seller_onboarding_quick_screen.dart';
 import 'package:coop_commerce/features/selling/seller_add_product_screen.dart';
 import 'package:coop_commerce/features/selling/seller_sales_ledger_screen.dart';
+import 'package:coop_commerce/features/selling/seller_withdrawal_screen.dart';
 import 'package:coop_commerce/features/selling/screens/seller_product_detail_screen.dart';
 // Phase 4: Search, Review, Inventory, and Logistics imports
 import 'package:coop_commerce/features/inventory/inventory_dashboard_screen.dart';
@@ -315,6 +317,10 @@ class AppRouter {
         final isAuthenticated = ref.watch(isAuthenticatedProvider);
         final authState = ref.watch(authStateProvider);
         final currentUser = ref.watch(global_auth.currentUserProvider);
+        final isPrimarySuperAdmin =
+            currentUser?.email.trim().toLowerCase() == 'ukwun97@gmail.com';
+        final isWithdrawalAdminRoute =
+            state.uri.path == '/admin/seller-withdrawals';
         final isOnSplash = state.uri.path == '/splash';
         const retiredRolePrefixes = <String>[
           '/admin',
@@ -379,20 +385,27 @@ class AppRouter {
         // If authenticated but hasn't completed role selection, send to role-selection
         if (currentUser != null &&
             !currentUser.roleSelectionCompleted &&
+            !isPrimarySuperAdmin &&
             !isOnPublicRoute) {
           return '/role-selection';
+        }
+
+        if (isPrimarySuperAdmin && state.uri.path == '/') {
+          return '/admin/seller-withdrawals';
         }
 
         // Check role-based permissions for protected routes
         if (currentUser != null && !isOnPublicRoute) {
           final currentPath = state.uri.path;
-          if (retiredRolePrefixes.any(currentPath.startsWith)) {
+          if (retiredRolePrefixes.any(currentPath.startsWith) &&
+              !(isPrimarySuperAdmin && isWithdrawalAdminRoute)) {
             return '/';
           }
           final userRolesSet = currentUser.roles.toSet();
 
           // Skip permission check for non-protected routes
-          if (!_userHasPermissionForRoute(currentPath, userRolesSet)) {
+          if (!(isPrimarySuperAdmin && isWithdrawalAdminRoute) &&
+              !_userHasPermissionForRoute(currentPath, userRolesSet)) {
             return '/';
           }
         }
@@ -1745,6 +1758,12 @@ class AppRouter {
 
         // ADMIN ROUTES - Requires admin, superAdmin
         GoRoute(
+          path: '/admin/seller-withdrawals',
+          name: 'admin-seller-withdrawals',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const SellerWithdrawalReviewScreen(),
+        ),
+        GoRoute(
           path: '/admin',
           name: 'admin-dashboard',
           parentNavigatorKey: _rootNavigatorKey,
@@ -1893,6 +1912,13 @@ class AppRouter {
           builder: (context, state) {
             return const SellerSalesLedgerScreen();
           },
+        ),
+        GoRoute(
+          path: '/seller/withdraw',
+          name: 'seller-withdraw',
+          redirect: (context, state) =>
+              _hasRole(context, UserRole.seller) ? null : '/home',
+          builder: (context, state) => const SellerWithdrawalScreen(),
         ),
         GoRoute(
           path: '/seller/products/:productId/edit',
