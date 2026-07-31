@@ -151,6 +151,7 @@ class SellerEarningsScreen extends ConsumerWidget {
     double available,
   ) async {
     final amount = TextEditingController();
+    final bankName = TextEditingController();
     final bankCode = TextEditingController();
     final accountNumber = TextEditingController();
     final accountName = TextEditingController();
@@ -173,6 +174,10 @@ class SellerEarningsScreen extends ConsumerWidget {
                     helperText:
                         'Available: NGN ${available.toStringAsFixed(2)}',
                   ),
+                ),
+                TextField(
+                  controller: bankName,
+                  decoration: const InputDecoration(labelText: 'Bank name'),
                 ),
                 TextField(
                   controller: bankCode,
@@ -208,7 +213,7 @@ class SellerEarningsScreen extends ConsumerWidget {
 
     final value = double.tryParse(amount.text.trim());
     final payoutError = validatePayoutDetails(
-      bankName: 'Bank',
+      bankName: bankName.text.trim(),
       bankCode: bankCode.text.trim(),
       accountNumber: accountNumber.text.trim(),
       accountName: accountName.text.trim(),
@@ -231,14 +236,28 @@ class SellerEarningsScreen extends ConsumerWidget {
       }
       return;
     }
-    await FirebaseFunctions.instance
-        .httpsCallable('requestSellerWithdrawal')
-        .call({
-      'amount': value,
-      'bankCode': bankCode.text.trim(),
-      'accountNumber': accountNumber.text.trim(),
-      'accountName': accountName.text.trim(),
-    });
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('requestSellerWithdrawal')
+          .call({
+        'amount': value,
+        'bankName': bankName.text.trim(),
+        'bankCode': bankCode.text.trim(),
+        'accountNumber': accountNumber.text.trim(),
+        'accountName': accountName.text.trim(),
+      });
+    } on FirebaseFunctionsException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error.message ?? 'The withdrawal could not be submitted.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
