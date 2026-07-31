@@ -8,6 +8,8 @@ import Stripe from 'stripe';
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
+const MARKETPLACE_ROLES = ['seller', 'coopMember', 'wholesaleBuyer'] as const;
+type MarketplaceRole = typeof MARKETPLACE_ROLES[number];
 
 function requireTrustedApp(context: functions.https.CallableContext): void {
   if (!context.app) {
@@ -46,6 +48,99 @@ async function enforceRateLimit(
     }, { merge: true });
   });
 }
+
+/**
+ * Provisions the user's single marketplace identity and its matching profile.
+ * Keeping this server-side prevents clients from fabricating role/profile data.
+ */
+export const provisionMarketplaceRole = functions.https.onCall(
+  async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Sign in before choosing a marketplace role.',
+      );
+    }
+
+    const role = String(data?.role || '') as MarketplaceRole;
+    if (!MARKETPLACE_ROLES.includes(role)) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Choose seller, member, or wholesale buyer.',
+      );
+    }
+
+    const uid = context.auth.uid;
+    await enforceRateLimit(uid, 'provision_marketplace_role', 5, 300);
+    const userRecord = await admin.auth().getUser(uid);
+    const displayName = String(userRecord.displayName || '').trim();
+    const email = String(userRecord.email || '').trim().toLowerCase();
+    const userRef = db.collection('users').doc(uid);
+
+    await db.runTransaction(async (transaction) => {
+      const userSnapshot = await transaction.get(userRef);
+      const currentRole = String(userSnapshot.data()?.marketplaceRole || '');
+      if (currentRole && currentRole !== role) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'Your marketplace identity is already set. Contact support to change it.',
+        );
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      transaction.set(userRef, {
+        id: uid,
+        email,
+        name: displayName || 'NCDFCOOP User',
+        marketplaceRole: role,
+        roleSelectionCompleted: true,
+        updatedAt: now,
+        ...(!userSnapshot.exists ? { createdAt: now } : {}),
+      }, { merge: true });
+
+      if (role === 'seller') {
+        transaction.set(db.collection('sellers').doc(uid), {
+          userId: uid,
+          email,
+          businessName: displayName ? `${displayName} Store` : 'My Store',
+          sellerType: 'individual',
+          sellingPath: 'member',
+          country: 'Nigeria',
+          category: '',
+          targetCustomer: 'individual',
+          isVerified: false,
+          sellerStatus: 'pending',
+          createdAt: now,
+          updatedAt: now,
+        }, { merge: true });
+      } else if (role === 'coopMember') {
+        transaction.set(db.collection('members').doc(uid), {
+          userId: uid,
+          email,
+          name: displayName,
+          tier: 'bronze',
+          loyaltyPoints: 0,
+          totalSpent: 0,
+          membershipStatus: 'active',
+          joiningDate: now,
+          updatedAt: now,
+        }, { merge: true });
+      } else {
+        transaction.set(db.collection('wholesale_buyers').doc(uid), {
+          userId: uid,
+          email,
+          name: displayName,
+          businessName: '',
+          verificationStatus: 'pending',
+          createdAt: now,
+          updatedAt: now,
+        }, { merge: true });
+      }
+    });
+
+    return { role, roleSelectionCompleted: true };
+  },
+);
 
 // Express app for payment endpoints
 const app = express();
@@ -1787,7 +1882,36 @@ export const createMarketplaceOrder = functions.https.onCall(async (data, contex
       'Checkout configuration is not active.',
     );
   }
-  const role = String(userSnapshot.data()?.marketplaceRole || 'coopMember');
+  if (!userSnapshot.exists) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Complete your account setup before checking out.',
+    );
+  }
+  const role = String(userSnapshot.data()?.marketplaceRole || '');
+  if (!MARKETPLACE_ROLES.includes(role as MarketplaceRole)) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Choose your marketplace role before checking out.',
+    );
+  }
+  if (role === 'seller') {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Seller accounts cannot place buyer orders.',
+    );
+  }
+  if (role === 'wholesaleBuyer') {
+    const wholesaleSnapshot =
+      await db.collection('wholesale_buyers').doc(uid).get();
+    if (!wholesaleSnapshot.exists ||
+        wholesaleSnapshot.data()?.verificationStatus !== 'approved') {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Wholesale ordering becomes available after business verification.',
+      );
+    }
+  }
   const config = configSnapshot.data()!;
   const taxRate = Number(config.taxRate);
   const deliveryFee = Number(config.deliveryFee);

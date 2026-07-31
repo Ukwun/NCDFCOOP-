@@ -25,7 +25,8 @@ service cloud.firestore {
     // by trusted server code only. Clients may edit ordinary profile fields.
     function hasPrivilegedUserFields(data) {
       return data.keys().hasAny([
-        'role', 'roles', 'permissions', 'admin', 'isAdmin',
+        'role', 'roles', 'marketplaceRole', 'roleSelectionCompleted',
+        'permissions', 'admin', 'isAdmin',
         'membershipStatus', 'membershipTier', 'sellerStatus',
         'verificationStatus', 'creditLimit', 'creditUsed',
         'institutionId', 'franchiseId', 'warehouseId', 'storeId'
@@ -34,7 +35,8 @@ service cloud.firestore {
 
     function changesPrivilegedUserFields() {
       return request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'role', 'roles', 'permissions', 'admin', 'isAdmin',
+        'role', 'roles', 'marketplaceRole', 'roleSelectionCompleted',
+        'permissions', 'admin', 'isAdmin',
         'membershipStatus', 'membershipTier', 'sellerStatus',
         'verificationStatus', 'creditLimit', 'creditUsed',
         'institutionId', 'franchiseId', 'warehouseId', 'storeId'
@@ -59,15 +61,9 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isOwner(userId);
       allow create: if isAuthenticated() && isOwner(userId)
                     && !hasPrivilegedUserFields(request.resource.data)
-                    && (
-                      !request.resource.data.keys().hasAny(['marketplaceRole']) ||
-                      request.resource.data.marketplaceRole in
-                        ['seller', 'coopMember', 'wholesaleBuyer']
-                    );
+                    && !request.resource.data.keys().hasAny(['marketplaceRole']);
       allow update: if isAuthenticated() && isOwner(userId)
-                    && !changesPrivilegedUserFields()
-                    && request.resource.data.marketplaceRole in
-                       ['seller', 'coopMember', 'wholesaleBuyer'];
+                    && !changesPrivilegedUserFields();
       allow delete: if isAuthenticated() && isOwner(userId);
       allow create, update, delete: if isAdmin();
       
@@ -368,7 +364,7 @@ service cloud.firestore {
     // ==================== MEMBERS COLLECTION ====================
     match /members/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      allow create: if isAuthenticated() && isOwner(userId);
+      allow create: if false;
       allow update: if isAuthenticated() &&
         ((isOwner(userId) && !changesMemberLedgerFields()) || isAdmin());
       allow delete: if false;
@@ -414,8 +410,7 @@ service cloud.firestore {
     // ==================== SELLERS COLLECTION ====================
     match /sellers/{sellerId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-                       request.auth.uid == request.resource.data.userId;
+      allow create: if false;
       allow update: if isAuthenticated() &&
                        request.auth.uid == resource.data.userId;
       allow delete: if false;
@@ -465,8 +460,10 @@ service cloud.firestore {
     // ==================== WHOLESALE BUYERS COLLECTION ====================
     match /wholesale_buyers/{userId} {
       allow read: if isAuthenticated() && isOwner(userId);
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+      allow create: if false;
+      allow update: if isAuthenticated() && isOwner(userId) &&
+                       !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['userId', 'verificationStatus', 'createdAt']);
     }
 
     // ==================== INSTITUTIONAL BUYERS COLLECTION ====================

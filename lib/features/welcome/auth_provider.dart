@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api/auth_service.dart';
@@ -270,9 +271,6 @@ class AuthController extends AsyncNotifier<void> {
     }
 
     await _persistRoleSelection(
-      userId: currentUser.id,
-      email: currentUser.email,
-      name: currentUser.name,
       role: selectedRole,
     ).timeout(const Duration(seconds: 12));
 
@@ -301,76 +299,11 @@ class AuthController extends AsyncNotifier<void> {
   }
 
   Future<void> _persistRoleSelection({
-    required String userId,
-    required String email,
-    required String name,
     required UserRole role,
   }) async {
-    final firestore = FirebaseFirestore.instance;
-    final batch = firestore.batch();
-    final now = FieldValue.serverTimestamp();
-
-    batch.set(
-      firestore.collection('users').doc(userId),
-      {
-        'marketplaceRole': role.name,
-        'roleSelectionCompleted': true,
-        'updatedAt': now,
-      },
-      SetOptions(merge: true),
-    );
-
-    if (role == UserRole.seller) {
-      batch.set(
-        firestore.collection('sellers').doc(userId),
-        {
-          'userId': userId,
-          'email': email,
-          'businessName':
-              name.trim().isEmpty ? 'My Store' : '${name.trim()} Store',
-          'sellerType': 'individual',
-          'sellingPath': 'member',
-          'country': 'Nigeria',
-          'category': '',
-          'targetCustomer': 'individual',
-          'isVerified': false,
-          'createdAt': now,
-          'updatedAt': now,
-        },
-        SetOptions(merge: true),
-      );
-    } else if (role == UserRole.coopMember) {
-      batch.set(
-        firestore.collection('members').doc(userId),
-        {
-          'userId': userId,
-          'email': email,
-          'name': name,
-          'tier': 'bronze',
-          'loyaltyPoints': 0,
-          'totalSpent': 0.0,
-          'joiningDate': now,
-          'membershipStatus': 'active',
-        },
-        SetOptions(merge: true),
-      );
-    } else if (role == UserRole.wholesaleBuyer) {
-      batch.set(
-        firestore.collection('wholesale_buyers').doc(userId),
-        {
-          'userId': userId,
-          'email': email,
-          'name': name,
-          'businessName': '',
-          'verificationStatus': 'pending',
-          'createdAt': now,
-          'updatedAt': now,
-        },
-        SetOptions(merge: true),
-      );
-    }
-
-    await batch.commit();
+    final callable =
+        FirebaseFunctions.instance.httpsCallable('provisionMarketplaceRole');
+    await callable.call<void>({'role': role.name});
   }
 
   /// Create member profile in Firestore when user selects Member role

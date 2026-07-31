@@ -1,5 +1,10 @@
 import * as functions from 'firebase-functions';
 /**
+ * Provisions the user's single marketplace identity and its matching profile.
+ * Keeping this server-side prevents clients from fabricating role/profile data.
+ */
+export declare const provisionMarketplaceRole: functions.HttpsFunction & functions.Runnable<any>;
+/**
  * Calculate loyalty points on order completion
  * Triggered when an order status changes to 'delivered'
  *
