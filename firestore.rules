@@ -97,6 +97,8 @@ service cloud.firestore {
       // platform-owned catalogue records without moderation fields remain readable.
       allow read: if !resource.data.keys().hasAny(['status']) ||
                      resource.data.is_active == true ||
+                     resource.data.isActive == true ||
+                     resource.data.status == 'live' ||
                      (isAuthenticated() && request.auth.uid == resource.data.uploadedBy) ||
                      isAdmin();
       

@@ -683,6 +683,24 @@ bool _companyProductVisibleForRole(Map<String, dynamic> data, String role) {
   return retailVisible;
 }
 
+Product _companyMarketplaceProduct(
+  String id,
+  Map<String, dynamic> data,
+) {
+  final type = (data['type'] ?? '').toString().toLowerCase();
+  return Product.fromFirestore({
+    ...data,
+    'id': id,
+    'categoryId': data['categoryId'] ?? data['category'] ?? 'marketplace',
+    'imageUrl': data['imageUrl'] ?? data['thumbnail'] ?? data['image_url'],
+    'minimumOrderQuantity':
+        data['minimumOrderQuantity'] ?? data['minOrderQuantity'] ?? 1,
+    'visibleToRetail': data['visibleToRetail'] ?? type != 'wholesale',
+    'visibleToWholesale':
+        data['visibleToWholesale'] ?? type == 'wholesale' || type == 'both',
+  });
+}
+
 Product _sellerMarketplaceProduct(
   String id,
   Map<String, dynamic> data,
@@ -733,10 +751,7 @@ final roleAwareFeaturedProductsProvider =
     for (final doc in companySnapshot.docs) {
       final data = doc.data();
       if (_companyProductVisibleForRole(data, role)) {
-        merged[doc.id] = Product.fromFirestore({
-          ...data,
-          'id': doc.id,
-        });
+        merged[doc.id] = _companyMarketplaceProduct(doc.id, data);
       }
     }
 
@@ -777,9 +792,13 @@ final roleAwareProductsProvider =
     final firestore = FirebaseFirestore.instance;
     final role = userRole.toLowerCase();
 
-    final companyStream = firestore
+    final appCompanyStream = firestore
         .collection('products')
         .where('is_active', isEqualTo: true)
+        .snapshots();
+    final webCompanyStream = firestore
+        .collection('products')
+        .where('isActive', isEqualTo: true)
         .snapshots();
 
     final sellerStream = (role.contains('member') ||
@@ -792,19 +811,22 @@ final roleAwareProductsProvider =
         : const Stream.empty();
 
     final controller = StreamController<List<Product>>();
-    QuerySnapshot<Map<String, dynamic>>? latestCompany;
+    QuerySnapshot<Map<String, dynamic>>? latestAppCompany;
+    QuerySnapshot<Map<String, dynamic>>? latestWebCompany;
     QuerySnapshot<Map<String, dynamic>>? latestSeller;
 
     void emitMerged() {
       final merged = <String, Product>{};
 
-      for (final doc in latestCompany?.docs ?? const []) {
+      final companyDocuments =
+          <String, QueryDocumentSnapshot<Map<String, dynamic>>>{
+        for (final doc in latestAppCompany?.docs ?? const []) doc.id: doc,
+        for (final doc in latestWebCompany?.docs ?? const []) doc.id: doc,
+      };
+      for (final doc in companyDocuments.values) {
         final data = doc.data();
         if (_companyProductVisibleForRole(data, role)) {
-          merged[doc.id] = Product.fromFirestore({
-            ...data,
-            'id': doc.id,
-          });
+          merged[doc.id] = _companyMarketplaceProduct(doc.id, data);
         }
       }
 
@@ -818,9 +840,16 @@ final roleAwareProductsProvider =
       controller.add(merged.values.toList());
     }
 
-    final companySub = companyStream.listen(
+    final appCompanySub = appCompanyStream.listen(
       (snapshot) {
-        latestCompany = snapshot;
+        latestAppCompany = snapshot;
+        emitMerged();
+      },
+      onError: controller.addError,
+    );
+    final webCompanySub = webCompanyStream.listen(
+      (snapshot) {
+        latestWebCompany = snapshot;
         emitMerged();
       },
       onError: controller.addError,
@@ -835,7 +864,8 @@ final roleAwareProductsProvider =
     );
 
     controller.onCancel = () async {
-      await companySub.cancel();
+      await appCompanySub.cancel();
+      await webCompanySub.cancel();
       await sellerSub.cancel();
     };
 

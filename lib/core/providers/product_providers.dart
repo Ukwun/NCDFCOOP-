@@ -253,15 +253,36 @@ Future<List<Product>> _fetchApprovedSellerProducts() async {
 Future<List<Product>> _fetchSeededCatalogProducts() async {
   try {
     final firestore = FirebaseFirestore.instance;
-    final snapshot = await firestore.collection('products').limit(300).get();
+    final snapshots = await Future.wait([
+      firestore
+          .collection('products')
+          .where('is_active', isEqualTo: true)
+          .limit(300)
+          .get(),
+      firestore
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .limit(300)
+          .get(),
+    ]);
+    final documents = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{
+      for (final snapshot in snapshots)
+        for (final doc in snapshot.docs) doc.id: doc,
+    };
 
-    return snapshot.docs.map((doc) {
+    return documents.values.map((doc) {
       final data = Map<String, dynamic>.from(doc.data());
       data['id'] = data['id'] ?? doc.id;
+      data['categoryId'] = data['categoryId'] ?? data['category'];
+      data['imageUrl'] = data['imageUrl'] ?? data['thumbnail'];
+      data['minimumOrderQuantity'] =
+          data['minimumOrderQuantity'] ?? data['minOrderQuantity'] ?? 1;
 
       // Seeded documents sometimes omit role visibility flags.
-      data['visibleToRetail'] = data['visibleToRetail'] ?? true;
-      data['visibleToWholesale'] = data['visibleToWholesale'] ?? true;
+      final type = (data['type'] ?? '').toString().toLowerCase();
+      data['visibleToRetail'] = data['visibleToRetail'] ?? type != 'wholesale';
+      data['visibleToWholesale'] =
+          data['visibleToWholesale'] ?? type == 'wholesale' || type == 'both';
       data['visibleToInstitutions'] = data['visibleToInstitutions'] ?? true;
 
       return Product.fromFirestore(data);

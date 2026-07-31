@@ -1160,15 +1160,23 @@ class _WholesaleProductCard extends StatelessWidget {
                         ),
                       ),
                       _QtyButton(icon: Icons.add, onTap: onIncrement),
-                      const Spacer(),
-                      OutlinedButton(
-                        onPressed: onRequestQuote,
-                        child: const Text('Quote'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: onRequestQuote,
+                          child: const Text('Quote'),
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: product.stock > 0 ? onAddToCart : null,
-                        child: const Text('Add'),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: product.stock > 0 ? onAddToCart : null,
+                          child: const Text('Add to cart'),
+                        ),
                       ),
                     ],
                   ),
