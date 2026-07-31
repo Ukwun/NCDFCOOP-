@@ -102,7 +102,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'NCDF COOP',
+                        'CoopX',
                         style: AppTextStyles.h2.copyWith(
                           color: AppColors.primary,
                           fontSize: 28,

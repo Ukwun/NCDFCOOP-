@@ -16,7 +16,7 @@ function requireTrustedApp(context: functions.https.CallableContext): void {
   if (!context.app) {
     throw new functions.https.HttpsError(
       'failed-precondition',
-      'Requests must come from a verified CoopCommerce app.',
+      'Requests must come from a verified CoopX app.',
     );
   }
 }
@@ -92,7 +92,7 @@ export const provisionMarketplaceRole = functions.https.onCall(
       transaction.set(userRef, {
         id: uid,
         email,
-        name: displayName || 'NCDFCOOP User',
+        name: displayName || 'CoopX User',
         marketplaceRole: role,
         roleSelectionCompleted: true,
         updatedAt: now,
@@ -140,6 +140,139 @@ export const provisionMarketplaceRole = functions.https.onCall(
     });
 
     return { role, roleSelectionCompleted: true };
+  },
+);
+
+function requireMarketplaceAdmin(context: functions.https.CallableContext): void {
+  const email = String(context.auth?.token.email || '').toLowerCase();
+  const privileged = context.auth?.token.admin === true ||
+    context.auth?.token.role === 'admin' ||
+    context.auth?.token.role === 'superAdmin' ||
+    (email === PRIMARY_SUPER_ADMIN_EMAIL &&
+      context.auth?.token.email_verified === true);
+  if (!context.auth || !privileged) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Only an authorized administrator can review seller products.',
+    );
+  }
+}
+
+/** Returns real pending seller products to the moderation dashboard. */
+export const listPendingSellerProducts = functions.https.onCall(
+  async (_data, context) => {
+    requireMarketplaceAdmin(context);
+    const snapshot = await db.collection('seller_products')
+      .where('status', '==', 'pending')
+      .limit(100)
+      .get();
+    return {
+      products: snapshot.docs.map((document) => {
+        const value = document.data();
+        return {
+          id: document.id,
+          productName: value.productName || value.name || 'Product',
+          description: value.description || '',
+          category: value.category || value.categoryId || '',
+          imageUrl: value.imageUrl || value.image_url || '',
+          retailPrice: Number(value.retailPrice ?? value.price ?? 0),
+          wholesalePrice: Number(value.wholesalePrice ?? value.price ?? 0),
+          quantity: Number(value.quantity ?? value.stock ?? 0),
+          sellerId: value.sellerUserId || value.sellerId || '',
+          createdAtMillis: value.createdAt?.toMillis?.() || 0,
+        };
+      }).sort((a, b) => b.createdAtMillis - a.createdAtMillis),
+    };
+  },
+);
+
+/** Real operational counts for the super-admin control tower. */
+export const getAdminDashboardMetrics = functions.https.onCall(
+  async (_data, context) => {
+    requireMarketplaceAdmin(context);
+    let totalUsers = 0;
+    let pageToken: string | undefined;
+    do {
+      const page = await admin.auth().listUsers(1000, pageToken);
+      totalUsers += page.users.length;
+      pageToken = page.pageToken;
+    } while (pageToken);
+    const [pendingProducts, pendingWithdrawals, orders, activeProducts] =
+      await Promise.all([
+        db.collection('seller_products').where('status', '==', 'pending').count().get(),
+        db.collection('seller_withdrawals').where('status', '==', 'pending').count().get(),
+        db.collection('orders').count().get(),
+        db.collection('products').where('is_active', '==', true).count().get(),
+      ]);
+    return {
+      totalUsers,
+      pendingProducts: pendingProducts.data().count,
+      pendingWithdrawals: pendingWithdrawals.data().count,
+      totalOrders: orders.data().count,
+      activeProducts: activeProducts.data().count,
+    };
+  },
+);
+
+/** Atomically approves or rejects a pending seller product. */
+export const reviewSellerProduct = functions.https.onCall(
+  async (data, context) => {
+    requireMarketplaceAdmin(context);
+    await enforceRateLimit(context.auth!.uid, 'review_seller_product', 60, 300);
+    const productId = String(data?.productId || '').trim();
+    const decision = String(data?.decision || '').trim();
+    const note = String(data?.note || '').trim().slice(0, 1000);
+    if (!productId || !['approved', 'rejected'].includes(decision)) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Choose a valid product and moderation decision.',
+      );
+    }
+    if (decision === 'rejected' && note.length < 3) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Explain why this product is being rejected.',
+      );
+    }
+    const sellerRef = db.collection('seller_products').doc(productId);
+    const marketplaceRef = db.collection('products').doc(productId);
+    const sellerSnapshot = await sellerRef.get();
+    if (!sellerSnapshot.exists || sellerSnapshot.data()?.status !== 'pending') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'This product is no longer pending review.',
+      );
+    }
+    const moderationSnapshot = await db.collection('product_moderation')
+      .where('productId', '==', productId)
+      .limit(1)
+      .get();
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    const batch = db.batch();
+    batch.update(sellerRef, {
+      status: decision,
+      rejectionReason: decision === 'rejected' ? note : null,
+      approvedAt: decision === 'approved' ? now : null,
+      rejectedAt: decision === 'rejected' ? now : null,
+      reviewedBy: context.auth!.uid,
+      reviewedAt: now,
+    });
+    batch.set(marketplaceRef, {
+      status: decision,
+      is_active: decision === 'approved',
+      rejectionReason: decision === 'rejected' ? note : null,
+      updated_at: now,
+    }, { merge: true });
+    if (!moderationSnapshot.empty) {
+      batch.set(moderationSnapshot.docs[0].ref, {
+        status: decision,
+        reviewNotes: note,
+        reviewedBy: context.auth!.uid,
+        reviewedAt: now,
+      }, { merge: true });
+    }
+    await batch.commit();
+    return { productId, status: decision };
   },
 );
 
@@ -2158,7 +2291,7 @@ export const initializeStripeCheckout = functions
           currency,
           unit_amount: amount,
           product_data: {
-            name: `CoopCommerce order ${orderId}`,
+            name: `CoopX order ${orderId}`,
             description: `${Array.isArray(order.items) ? order.items.length : 0} marketplace item(s)`,
           },
         },
@@ -2354,12 +2487,12 @@ export const initializeFlutterwavePayment = functions
         payment_options: paymentType === 'bank_transfer' ? 'account' : 'card,banktransfer,ussd',
         customer: {
           email: context.auth.token.email || order.customerEmail,
-          name: order.customerName || 'NCDFCOOP customer',
+          name: order.customerName || 'CoopX customer',
           phonenumber: order.customerPhone || '',
         },
         meta: { orderId, buyerId: context.auth.uid, paymentId: paymentRef.id },
         customizations: {
-          title: 'NCDFCOOP Marketplace',
+          title: 'CoopX Marketplace',
           description: `Payment for order ${orderId}`,
         },
       },
@@ -2740,8 +2873,8 @@ export const notifySellerOnProductApproval = functions.firestore
         to: [user.email],
         message: {
           subject: `${productName} has been approved`,
-          text: `${productName} has been approved and is now live in the CoopCommerce marketplace.`,
-          html: `<p><strong>${productName}</strong> has been approved and is now live in the CoopCommerce marketplace.</p>`,
+          text: `${productName} has been approved and is now live in the CoopX marketplace.`,
+          html: `<p><strong>${productName}</strong> has been approved and is now live in the CoopX marketplace.</p>`,
         },
         userId: sellerId,
         productId: context.params.productId,

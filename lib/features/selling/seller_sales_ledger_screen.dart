@@ -34,9 +34,18 @@ class _SellerSalesLedgerScreenState
       final merged = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
 
       Future<void> collect(Query<Map<String, dynamic>> query) async {
-        final snapshot = await query.limit(100).get();
-        for (final doc in snapshot.docs) {
-          merged[doc.id] = doc;
+        try {
+          final snapshot = await query.limit(100).get();
+          for (final doc in snapshot.docs) {
+            merged[doc.id] = doc;
+          }
+        } on FirebaseException catch (error) {
+          // Older orders do not contain every seller identity field. A query
+          // unsupported by an old schema must not blank the complete ledger.
+          if (error.code != 'permission-denied' &&
+              error.code != 'failed-precondition') {
+            rethrow;
+          }
         }
       }
 
@@ -44,34 +53,22 @@ class _SellerSalesLedgerScreenState
           FirebaseFirestore.instance.collection('orders');
 
       await collect(
-        collection
-            .where('sellerUserId', isEqualTo: user.id)
-            .orderBy('createdAt', descending: true),
+        collection.where('sellerUserId', isEqualTo: user.id),
       );
       await collect(
-        collection
-            .where('sellerId', isEqualTo: user.id)
-            .orderBy('createdAt', descending: true),
+        collection.where('sellerId', isEqualTo: user.id),
       );
       await collect(
-        collection
-            .where('sellerProfileId', isEqualTo: user.id)
-            .orderBy('createdAt', descending: true),
+        collection.where('sellerProfileId', isEqualTo: user.id),
       );
       await collect(
-        collection
-            .where('sellerUserIds', arrayContains: user.id)
-            .orderBy('createdAt', descending: true),
+        collection.where('sellerUserIds', arrayContains: user.id),
       );
       await collect(
-        collection
-            .where('sellerIds', arrayContains: user.id)
-            .orderBy('createdAt', descending: true),
+        collection.where('sellerIds', arrayContains: user.id),
       );
       await collect(
-        collection
-            .where('sellerProfileIds', arrayContains: user.id)
-            .orderBy('createdAt', descending: true),
+        collection.where('sellerProfileIds', arrayContains: user.id),
       );
 
       final docs = merged.values.toList()

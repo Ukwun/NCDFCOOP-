@@ -40,7 +40,7 @@ class AppHeaderUtility extends ConsumerWidget {
     UserRole role,
   ) {
     final displayName = user.name.toString().trim().isEmpty
-        ? 'Coop Commerce User'
+        ? 'CoopX User'
         : user.name.toString().trim();
     final avatarText = displayName.characters.first.toUpperCase();
 

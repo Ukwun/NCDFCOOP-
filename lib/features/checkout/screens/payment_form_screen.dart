@@ -168,7 +168,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
       final enteredName = cardNameController.text.trim();
       final enteredPhone = phoneNumberController.text.trim();
       final customerName = (widget.cartData?['customerName'] as String?) ??
-          (enteredName.isNotEmpty ? enteredName : 'Coop Commerce Customer');
+          (enteredName.isNotEmpty ? enteredName : 'CoopX Customer');
       final customerPhone = (widget.cartData?['phoneNumber'] as String?) ??
           (enteredPhone.isNotEmpty ? enteredPhone : '+2340000000000');
       final customerId =

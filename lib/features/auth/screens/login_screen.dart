@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              name: user.displayName ?? 'Coop Commerce User',
+              name: user.displayName ?? 'CoopX User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),
@@ -160,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              name: user.displayName ?? 'Coop Commerce User',
+              name: user.displayName ?? 'CoopX User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),
@@ -211,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              name: user.displayName ?? 'Coop Commerce User',
+              name: user.displayName ?? 'CoopX User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),
@@ -262,7 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
             user: User(
               id: user.uid,
               email: user.email ?? '',
-              name: user.displayName ?? 'Coop Commerce User',
+              name: user.displayName ?? 'CoopX User',
               photoUrl: user.photoURL,
             ),
             token: await user.getIdToken(),

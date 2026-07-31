@@ -82,7 +82,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final message = rawMessage?.toLowerCase() ?? '';
     if (message.contains('invalid-email') ||
         message.contains('user-not-found')) {
-      return 'If that email is registered with CoopCommerce, we will send a reset link shortly.';
+      return 'If that email is registered with CoopX, we will send a reset link shortly.';
     }
     if (message.contains('too-many-requests')) {
       return 'We are receiving a lot of reset requests right now. Please wait a moment and try again.';
@@ -375,7 +375,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 number: '1',
                 title: 'Check Your Email',
                 description:
-                    'Open the email from CoopCommerce and click the reset link.',
+                    'Open the email from CoopX and click the reset link.',
               ),
 
               const SizedBox(height: 20),

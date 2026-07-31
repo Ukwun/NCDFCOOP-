@@ -118,7 +118,7 @@ class SellerOnboardingLandingScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Why NCDF COOP',
+                    'Why CoopX',
                     style: AppTextStyles.h2.copyWith(
                       color: AppColors.text,
                       fontWeight: FontWeight.bold,
@@ -165,8 +165,8 @@ class SellerOnboardingLandingScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.05),
-                      border:
-                          Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.2)),
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                     child: Column(
@@ -179,7 +179,8 @@ class SellerOnboardingLandingScreen extends StatelessWidget {
                               height: 48,
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.md),
                               ),
                               child: Icon(
                                 Icons.shield_verified,
@@ -201,8 +202,8 @@ class SellerOnboardingLandingScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'NCDF COOP is not just a marketplace—it\'s a curated, 
-trusted, cooperative trade platform. Every product is reviewed before going live to ensure quality and build buyer confidence.',
+                          'CoopX is not just a marketplace—it\'s a curated, '
+                          'trusted cooperative trade platform. Every product is reviewed before going live to ensure quality and build buyer confidence.',
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textLight,
                             height: 1.6,

@@ -232,7 +232,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     );
 
     return MaterialApp.router(
-      title: 'Coop Commerce',
+      title: 'CoopX',
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,

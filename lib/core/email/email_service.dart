@@ -158,7 +158,7 @@ class MockEmailService implements EmailService {
     <body>
       <div class="container">
         <div class="header">
-          <h1>NCDF COOP</h1>
+          <h1>CoopX</h1>
           <h2>Invoice #$invoiceNumber</h2>
         </div>
         
@@ -177,7 +177,7 @@ class MockEmailService implements EmailService {
         </div>
         
         <div class="footer">
-          <p>&copy; 2026 NCDF Coop Commerce. All rights reserved.</p>
+          <p>&copy; 2026 CoopX. All rights reserved.</p>
           <p>This is an automated message. Please do not reply to this email.</p>
         </div>
       </div>

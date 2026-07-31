@@ -16,7 +16,7 @@ class _AppTourScreenState extends State<AppTourScreen> {
 
   final List<TourSlide> slides = [
     TourSlide(
-      title: 'Welcome to Coop Commerce',
+      title: 'Welcome to CoopX',
       description:
           'Join a cooperative marketplace where members own, decide, and benefit together.',
       icon: '🎉',

@@ -132,7 +132,7 @@ class AuthService {
       'name': firebaseUser.displayName ??
           existing?['name'] ??
           fallbackName ??
-          'NCDFCOOP User',
+          'CoopX User',
       'photoUrl': firebaseUser.photoURL ?? existing?['photoUrl'],
       'token': idToken,
       if (existing?['marketplaceRole'] != null)

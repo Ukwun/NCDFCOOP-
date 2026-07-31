@@ -17,7 +17,6 @@ class SellerOffersScreen extends ConsumerWidget {
     final products = FirebaseFirestore.instance
         .collection('seller_products')
         .where('sellerUserId', isEqualTo: user.id)
-        .where('status', isEqualTo: 'approved')
         .snapshots();
     final offers = FirebaseFirestore.instance
         .collection('product_offers')
@@ -28,13 +27,53 @@ class SellerOffersScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('My Offers & Deals')),
       floatingActionButton: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: products,
-        builder: (context, snapshot) => FloatingActionButton.extended(
-          onPressed: snapshot.hasData && snapshot.data!.docs.isNotEmpty
-              ? () => _showOfferForm(context, snapshot.data!.docs)
-              : null,
-          icon: const Icon(Icons.local_offer_outlined),
-          label: const Text('Create offer'),
-        ),
+        builder: (context, snapshot) {
+          final approved = snapshot.data?.docs
+                  .where((doc) => doc.data()['status'] == 'approved')
+                  .toList() ??
+              const [];
+          return FloatingActionButton.extended(
+            onPressed: () {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Loading your products…')),
+                );
+                return;
+              }
+              if (snapshot.hasError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Your products could not be loaded. Please try again.',
+                    ),
+                  ),
+                );
+                return;
+              }
+              if (approved.isEmpty) {
+                showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('No approved product yet'),
+                    content: const Text(
+                      'Offers can only be created for products approved by the CoopX administrator. Your submitted products remain visible on your dashboard while they are reviewed.',
+                    ),
+                    actions: [
+                      FilledButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('Understood'),
+                      ),
+                    ],
+                  ),
+                );
+                return;
+              }
+              _showOfferForm(context, approved);
+            },
+            icon: const Icon(Icons.local_offer_outlined),
+            label: const Text('Create offer'),
+          );
+        },
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: offers,

@@ -540,7 +540,9 @@ service cloud.firestore {
     }
 
     match /product_offers/{productId} {
-      allow read: if resource.data.active == true;
+      allow read: if resource.data.active == true ||
+                     (isAuthenticated() && request.auth.uid == resource.data.sellerId) ||
+                     (isAuthenticated() && isAdmin());
       allow write: if false;
     }
 

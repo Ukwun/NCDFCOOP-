@@ -447,7 +447,7 @@ class ProfileScreen extends ConsumerWidget {
       {
         'icon': Icons.storefront_outlined,
         'label': 'Start Selling Now',
-        'subtitle': 'Become a seller on NCDFCOOP',
+        'subtitle': 'Become a seller on CoopX',
         'route': 'start-selling',
       },
       {

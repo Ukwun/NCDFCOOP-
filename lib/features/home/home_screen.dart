@@ -279,7 +279,7 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Coop Commerce',
+                    'CoopX',
                     style: AppTextStyles.h3.copyWith(color: AppColors.primary),
                   ),
                   Text(

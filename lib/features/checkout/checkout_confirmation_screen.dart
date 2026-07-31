@@ -748,7 +748,7 @@ class CheckoutConfirmationScreen extends ConsumerWidget {
         email: email,
         phoneNumber: phone,
         fullName: fullName,
-        description: 'Order #$orderId - Coop Commerce',
+        description: 'Order #$orderId - CoopX',
       );
     } else if (paymentMethod == 'bank_transfer') {
       return PaymentResult(

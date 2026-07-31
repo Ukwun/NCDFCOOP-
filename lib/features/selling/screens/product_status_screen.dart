@@ -180,7 +180,7 @@ class ProductStatusScreen extends StatelessWidget {
         statusLabel = '🟡 Pending Approval';
         statusIcon = Icons.hourglass_empty;
         statusMessage =
-            'Your product is being reviewed by NCDF COOP team. This ensures quality and trust for buyers.';
+            'Your product is being reviewed by the CoopX team. This ensures quality and trust for buyers.';
         break;
       case ProductApprovalStatus.approved:
         statusColor = Colors.green;
@@ -326,7 +326,7 @@ class ProductStatusScreen extends StatelessWidget {
           icon: Icons.people_outline,
           title: 'Builds buyer trust',
           description:
-              'Buyers have confidence that every product on NCDF COOP is verified.',
+              'Buyers have confidence that every product on CoopX is verified.',
         ),
         const SizedBox(height: 12),
         _buildTrustItem(

@@ -119,7 +119,7 @@ class WalletCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'CoopCommerce Member',
+                      'CoopX Member',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white,

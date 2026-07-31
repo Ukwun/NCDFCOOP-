@@ -232,7 +232,7 @@ class _StartSellingScreenState extends ConsumerState<StartSellingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Why Sell on NCDFCOOP?',
+          'Why Sell on CoopX?',
           style: AppTextStyles.h3.copyWith(
             color: AppColors.text,
             fontWeight: FontWeight.bold,
@@ -436,7 +436,7 @@ class _StartSellingScreenState extends ConsumerState<StartSellingScreen> {
         _buildRequirementItem(
           number: '1',
           title: 'Active Account',
-          description: 'You need a verified NCDFCOOP account',
+          description: 'You need a verified CoopX account',
         ),
         const SizedBox(height: 12),
         _buildRequirementItem(

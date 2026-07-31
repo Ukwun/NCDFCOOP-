@@ -75,6 +75,7 @@ import 'package:coop_commerce/features/admin/admin_control_tower_home_screen.dar
 import 'package:coop_commerce/features/admin/admin_user_management_screen.dart';
 import 'package:coop_commerce/features/admin/seller_withdrawal_review_screen.dart';
 import 'package:coop_commerce/features/admin/admin_compliance_dashboard_screen.dart';
+import 'package:coop_commerce/features/admin/admin_product_moderation_screen.dart';
 import 'package:coop_commerce/features/admin/admin_audit_log_browser_screen.dart';
 import 'package:coop_commerce/features/admin/price_override_admin_dashboard.dart';
 // Warehouse feature imports
@@ -1806,7 +1807,7 @@ class AppRouter {
             return null;
           },
           builder: (context, state) {
-            return const PriceOverrideAdminDashboard();
+            return const AdminProductModerationScreen();
           },
         ),
         GoRoute(

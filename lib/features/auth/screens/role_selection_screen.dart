@@ -194,7 +194,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'How would you like to use CoopCommerce? Each option gives you a personalized experience.',
+                    'How would you like to use CoopX? Each option gives you a personalized experience.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,

@@ -37,7 +37,7 @@ class AuthController extends AsyncNotifier<void> {
 
   String _fallbackNameFromEmail(String email) {
     final localPart = email.split('@').first.trim();
-    return localPart.isEmpty ? 'Coop Commerce User' : localPart;
+    return localPart.isEmpty ? 'CoopX User' : localPart;
   }
 
   @override

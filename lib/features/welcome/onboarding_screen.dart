@@ -74,7 +74,7 @@ class OnboardingScreen extends StatelessWidget {
                                 ),
                               ),
                               TextSpan(
-                                text: 'NCDFCOOP',
+                                text: 'CoopX',
                                 style: TextStyle(
                                   color: Color(0xFFF3951A),
                                   fontSize: 32,

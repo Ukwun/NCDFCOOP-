@@ -249,13 +249,11 @@ class SellerService {
         }
       }
 
-      await collectByField('sellerId', userId);
+      // Every normalized upload stores sellerUserId. Querying by a separate
+      // profile id cannot satisfy the owner rule and causes Firestore to deny
+      // the entire dashboard request, hiding even valid pending products.
       await collectByField('sellerUserId', userId);
-
-      if (sellerProfileId != null && sellerProfileId.isNotEmpty) {
-        await collectByField('sellerId', sellerProfileId);
-        await collectByField('sellerProfileId', sellerProfileId);
-      }
+      await collectByField('sellerId', userId);
 
       final products = merged.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));

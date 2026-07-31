@@ -77,7 +77,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     Text('Reset your password', style: AppTextStyles.h2),
                     const SizedBox(height: 12),
                     const Text(
-                      'Enter the email attached to your NCDFCOOP account. We will send a single-use secure recovery link.',
+                      'Enter the email attached to your CoopX account. We will send a single-use secure recovery link.',
                     ),
                     const SizedBox(height: 28),
                     TextFormField(

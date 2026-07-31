@@ -212,11 +212,6 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
         ),
       ),
       actions: [
-        IconButton(
-          onPressed: widget.onAddNewProduct,
-          icon: const Icon(Icons.add_circle_outline),
-          tooltip: 'Upload product',
-        ),
         if (widget.onSalesLedgerTap != null)
           IconButton(
             onPressed: widget.onSalesLedgerTap,
@@ -228,18 +223,6 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
             onPressed: widget.onOffersTap,
             tooltip: 'Offers & Deals',
             icon: const Icon(Icons.local_offer_outlined),
-          ),
-        if (widget.onRefreshTap != null)
-          IconButton(
-            onPressed: widget.onRefreshTap,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-          ),
-        if (widget.onProfileTap != null)
-          IconButton(
-            onPressed: widget.onProfileTap,
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Profile',
           ),
         const SizedBox(width: 8),
       ],
@@ -1204,19 +1187,6 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
               color: AppColors.textLight,
             ),
             textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: widget.onAddNewProduct,
-            icon: const Icon(Icons.add),
-            label: const Text('Add New Product'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-            ),
           ),
         ],
       ),

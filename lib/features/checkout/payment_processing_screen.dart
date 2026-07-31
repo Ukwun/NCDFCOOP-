@@ -196,7 +196,7 @@ class _PaymentProcessingScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Coop Commerce Ltd',
+            'CoopX Ltd',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),

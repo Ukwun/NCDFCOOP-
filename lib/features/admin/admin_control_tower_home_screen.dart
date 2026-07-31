@@ -1,39 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 
 /// Provider for admin dashboard metrics
 final adminMetricsProvider = FutureProvider<AdminMetrics>((ref) async {
-  // TODO: Integrate with actual admin service
-  await Future.delayed(const Duration(milliseconds: 500));
-  return AdminMetrics(
-    totalUsers: 2543,
-    activeUsers: 1847,
-    priceOverridesPending: 12,
-    complianceIssues: 3,
-    auditLogsThisMonth: 5832,
-    averageResponseTime: 'Excellent',
-  );
+  final result = await FirebaseFunctions.instance
+      .httpsCallable('getAdminDashboardMetrics')
+      .call<Map<String, dynamic>>();
+  return AdminMetrics.fromMap(result.data);
 });
 
 /// Data model for admin metrics
 class AdminMetrics {
   final int totalUsers;
-  final int activeUsers;
-  final int priceOverridesPending;
-  final int complianceIssues;
-  final int auditLogsThisMonth;
-  final String averageResponseTime;
+  final int pendingProducts;
+  final int pendingWithdrawals;
+  final int totalOrders;
+  final int activeProducts;
 
   AdminMetrics({
     required this.totalUsers,
-    required this.activeUsers,
-    required this.priceOverridesPending,
-    required this.complianceIssues,
-    required this.auditLogsThisMonth,
-    required this.averageResponseTime,
+    required this.pendingProducts,
+    required this.pendingWithdrawals,
+    required this.totalOrders,
+    required this.activeProducts,
   });
+
+  factory AdminMetrics.fromMap(Map<String, dynamic> value) => AdminMetrics(
+        totalUsers: (value['totalUsers'] as num?)?.toInt() ?? 0,
+        pendingProducts: (value['pendingProducts'] as num?)?.toInt() ?? 0,
+        pendingWithdrawals: (value['pendingWithdrawals'] as num?)?.toInt() ?? 0,
+        totalOrders: (value['totalOrders'] as num?)?.toInt() ?? 0,
+        activeProducts: (value['activeProducts'] as num?)?.toInt() ?? 0,
+      );
 }
 
 /// Admin Control Tower Home Screen
@@ -87,8 +88,15 @@ class AdminControlTowerHomeScreen extends ConsumerWidget {
               _buildQuickActionsSection(context),
               const SizedBox(height: 32),
 
-              // System Health
-              _buildSystemHealthSection(context),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.verified_user_outlined),
+                  title: const Text('Live administration data'),
+                  subtitle: const Text(
+                    'These counts come directly from Firebase Authentication and Firestore.',
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -117,28 +125,28 @@ class AdminControlTowerHomeScreen extends ConsumerWidget {
             _KPICard(
               title: 'Total Users',
               value: metrics.totalUsers.toString(),
-              subtitle: '${metrics.activeUsers} active',
+              subtitle: 'Firebase accounts',
               color: AppColors.primary,
               icon: Icons.people,
             ),
             _KPICard(
               title: 'Pending Approvals',
-              value: metrics.priceOverridesPending.toString(),
-              subtitle: 'Price overrides',
+              value: metrics.pendingProducts.toString(),
+              subtitle: 'Seller products',
               color: Colors.orange,
               icon: Icons.pending_actions,
             ),
             _KPICard(
-              title: 'Compliance Issues',
-              value: metrics.complianceIssues.toString(),
-              subtitle: 'Require attention',
+              title: 'Withdrawals',
+              value: metrics.pendingWithdrawals.toString(),
+              subtitle: 'Pending review',
               color: Colors.red,
               icon: Icons.warning,
             ),
             _KPICard(
-              title: 'Audit Logs',
-              value: metrics.auditLogsThisMonth.toString(),
-              subtitle: 'This month',
+              title: 'Orders / Products',
+              value: '${metrics.totalOrders} / ${metrics.activeProducts}',
+              subtitle: 'Orders / active SKUs',
               color: AppColors.accent,
               icon: Icons.history,
             ),

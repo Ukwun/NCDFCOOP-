@@ -1,6 +1,6 @@
 class AppConstants {
   // App Information
-  static const String appName = 'Coop Commerce';
+  static const String appName = 'CoopX';
   static const String appVersion = '1.0.0';
   static const String appBuild = '1';
 

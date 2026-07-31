@@ -4,6 +4,12 @@ import * as functions from 'firebase-functions';
  * Keeping this server-side prevents clients from fabricating role/profile data.
  */
 export declare const provisionMarketplaceRole: functions.HttpsFunction & functions.Runnable<any>;
+/** Returns real pending seller products to the moderation dashboard. */
+export declare const listPendingSellerProducts: functions.HttpsFunction & functions.Runnable<any>;
+/** Real operational counts for the super-admin control tower. */
+export declare const getAdminDashboardMetrics: functions.HttpsFunction & functions.Runnable<any>;
+/** Atomically approves or rejects a pending seller product. */
+export declare const reviewSellerProduct: functions.HttpsFunction & functions.Runnable<any>;
 /** Creates or replaces a seller-funded offer for one approved product. */
 export declare const upsertSellerProductOffer: functions.HttpsFunction & functions.Runnable<any>;
 export declare const deactivateSellerProductOffer: functions.HttpsFunction & functions.Runnable<any>;

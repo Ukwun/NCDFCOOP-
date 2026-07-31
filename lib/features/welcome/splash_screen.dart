@@ -30,11 +30,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       vsync: this,
     );
 
-    // Create fade animation
+    // A single coordinated timeline keeps startup smooth on low-end devices.
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Start animation
     _controller.forward();
@@ -123,63 +123,142 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ),
             ),
 
-            // Centered Content
+            Positioned(
+              top: -90,
+              right: -80,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accent.withValues(alpha: .12),
+                ),
+              ),
+            ),
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      image: const DecorationImage(
-                        image: AssetImage("assets/images/NCDF_logo1.png"),
-                        fit: BoxFit.contain,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(0, 18 * (1 - _controller.value)),
+                  child: Transform.scale(
+                    scale: .78 +
+                        (.22 * Curves.elasticOut.transform(_controller.value)),
+                    child: child,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 126,
+                      height: 126,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          RotationTransition(
+                            turns: Tween<double>(begin: -.12, end: 1)
+                                .animate(_controller),
+                            child: Container(
+                              width: 116,
+                              height: 116,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.accent.withValues(alpha: .7),
+                                  width: 2,
+                                ),
+                              ),
+                              alignment: Alignment.topCenter,
+                              child: Container(
+                                width: 13,
+                                height: 13,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF98D32A),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 82,
+                            height: 82,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      AppColors.accent.withValues(alpha: .35),
+                                  blurRadius: 28,
+                                  spreadRadius: 3,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: ShaderMask(
+                                shaderCallback: (bounds) =>
+                                    const LinearGradient(
+                                  colors: [
+                                    Color(0xFF4D7F18),
+                                    Color(0xFFF3951A),
+                                  ],
+                                ).createShader(bounds),
+                                child: const Text(
+                                  'X',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 44,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      borderRadius: BorderRadius.circular(30),
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // "Welcome to" Text
-                  const Text(
-                    'Welcome to',
-                    style: TextStyle(
-                      color: Color(0xFFFAFAFA),
-                      fontSize: 20,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
+                    // "Welcome to" Text
+                    const Text(
+                      'Welcome to',
+                      style: TextStyle(
+                        color: Color(0xFFFAFAFA),
+                        fontSize: 20,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-                  // "NCDF COOP" Text
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: 'NCDF ',
-                          style: TextStyle(
-                            color: Color(0xFF98D32A), // Lime Green from Figma
-                            fontSize: 36,
-                            fontFamily: 'Libre Baskerville',
-                            fontWeight: FontWeight.w700,
-                          ),
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFF98D32A), Color(0xFFF3951A)],
+                      ).createShader(bounds),
+                      child: const Text(
+                        'CoopX',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 44,
+                          fontFamily: 'Libre Baskerville',
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
                         ),
-                        TextSpan(
-                          text: 'COOP',
-                          style: TextStyle(
-                            color: AppColors.accent, // Matches 0xFFF3951A
-                            fontSize: 36,
-                            fontFamily: 'Libre Baskerville',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    Text(
+                      'One marketplace. Every role connected.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .78),
+                        fontSize: 13,
+                        letterSpacing: .5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

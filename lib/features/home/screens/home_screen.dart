@@ -18,19 +18,22 @@ class _HomeScreenState extends State<HomeScreen> {
   // Mock data
   final List<Map<String, String>> carouselItems = [
     {
-      'title': '🎉 Welcome to CoopCommerce!',
+      'title': '🎉 Welcome to CoopX!',
       'subtitle': 'Get 5% discount on all your purchases',
-      'image': 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&h=300&fit=crop',
+      'image':
+          'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&h=300&fit=crop',
     },
     {
       'title': '📦 Free Shipping',
       'subtitle': 'On orders over ₦5,000',
-      'image': 'https://images.unsplash.com/photo-1578992413033-01988f351e8b?w=500&h=300&fit=crop',
+      'image':
+          'https://images.unsplash.com/photo-1578992413033-01988f351e8b?w=500&h=300&fit=crop',
     },
     {
       'title': '💎 Member Benefits',
       'subtitle': 'Exclusive deals and priority support',
-      'image': 'https://images.unsplash.com/photo-1552259256-1e6336d0c71d?w=500&h=300&fit=crop',
+      'image':
+          'https://images.unsplash.com/photo-1552259256-1e6336d0c71d?w=500&h=300&fit=crop',
     },
   ];
 
@@ -40,7 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'name': 'Premium Basmati Rice',
       'price': 6800,
       'regularPrice': 8500,
-      'image': 'https://images.unsplash.com/photo-1638551112442-20fcf9f96f64?w=150&h=150&fit=crop',
+      'image':
+          'https://images.unsplash.com/photo-1638551112442-20fcf9f96f64?w=150&h=150&fit=crop',
       'rating': 5,
       'discount': 20,
     },
@@ -49,7 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'name': 'Organic Sugar',
       'price': 2500,
       'regularPrice': 3500,
-      'image': 'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=150&h=150&fit=crop',
+      'image':
+          'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=150&h=150&fit=crop',
       'rating': 4,
       'discount': 28,
     },
@@ -58,7 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'name': 'Ground Pepper',
       'price': 8200,
       'regularPrice': 9500,
-      'image': 'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=150&h=150&fit=crop',
+      'image':
+          'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=150&h=150&fit=crop',
       'rating': 4,
       'discount': 13,
     },
@@ -67,7 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'name': 'Cooking Oil',
       'price': 3800,
       'regularPrice': 4500,
-      'image': 'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=150&h=150&fit=crop',
+      'image':
+          'https://images.unsplash.com/photo-1599599810694-b6be7d4a7c67?w=150&h=150&fit=crop',
       'rating': 5,
       'discount': 15,
     },
@@ -283,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                );
+                ),
               );
             },
           ),
@@ -501,16 +508,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () =>
-                                  _addToCart(product),
+                              onPressed: () => _addToCart(product),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 4,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
                               ),
                               child: const Text(
@@ -566,8 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        '${category['name']} category'),
+                      content: Text('${category['name']} category'),
                       duration: const Duration(seconds: 1),
                     ),
                   );
@@ -759,8 +763,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.shopping_bag,
-                        color: Colors.grey),
+                    child: const Icon(Icons.shopping_bag, color: Colors.grey),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -817,5 +820,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
-
 }

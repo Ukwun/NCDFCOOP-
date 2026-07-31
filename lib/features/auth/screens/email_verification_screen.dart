@@ -158,7 +158,7 @@ class _EmailVerificationScreenState
                 // Description
                 Text(
                   _emailVerified
-                      ? 'Your email has been verified. You can now enjoy all features of CoopCommerce!'
+                      ? 'Your email has been verified. You can now enjoy all features of CoopX!'
                       : 'We\'ve sent a verification link to:\n${widget.email}',
                   style: TextStyle(
                     fontSize: 14,
@@ -244,8 +244,7 @@ class _EmailVerificationScreenState
                   _buildStep(
                     number: '1',
                     title: 'Check Your Email',
-                    description:
-                        'Open the email from CoopCommerce in your inbox.',
+                    description: 'Open the email from CoopX in your inbox.',
                   ),
 
                   const SizedBox(height: 16),

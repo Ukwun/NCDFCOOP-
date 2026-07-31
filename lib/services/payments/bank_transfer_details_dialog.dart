@@ -29,7 +29,7 @@ class _BankTransferDetailsDialogState extends State<BankTransferDetailsDialog> {
 
   // TODO: Replace with actual bank details from Flutterwave
   final String bankName = 'Flutterwave Bank';
-  final String accountName = 'CoopCommerce Store';
+  final String accountName = 'CoopX Store';
   final String accountNumber = '0123456789'; // Replace with actual account
   final String bankCode = '999111'; // Replace with actual bank code
 

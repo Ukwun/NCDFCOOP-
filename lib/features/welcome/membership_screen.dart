@@ -100,7 +100,7 @@ class Membership1 extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'NCDFCOOP',
+              'CoopX',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: const Color(0xFF1A4E00),
@@ -467,7 +467,7 @@ class Membership1 extends ConsumerWidget {
               spacing: 12,
               children: [
                 Text(
-                  'Welcome to NCDFCOOP Fairmarket!',
+                  'Welcome to CoopX!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: const Color(0xFF0A0A0A),

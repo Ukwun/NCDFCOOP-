@@ -424,7 +424,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Your product will be reviewed by NCDF COOP before it goes live. '
+                  'Your product will be reviewed by CoopX before it goes live. '
                   'This ensures quality and builds buyer trust.',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: Colors.amber[700],

@@ -174,16 +174,8 @@ class SellerHomeScreen extends ConsumerWidget {
               businessName: sellerProfile.businessName,
               sellerId: user.id,
               products: products,
-              onProfileTap: () => context.pushNamed('my-ncdfcoop'),
               onSalesLedgerTap: () => context.pushNamed('seller-sales-ledger'),
               onOffersTap: () => context.pushNamed('seller-offers'),
-              onRefreshTap: () {
-                ref.invalidate(
-                  sellerProductsForSellerProvider(
-                    (userId: user.id, sellerProfileId: sellerProfile.id),
-                  ),
-                );
-              },
               onAddNewProduct: () async {
                 final added = await context.pushNamed<bool>(
                   'seller-add-product',
