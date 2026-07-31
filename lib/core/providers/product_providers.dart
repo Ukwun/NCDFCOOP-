@@ -371,22 +371,25 @@ final productsByFiltersProvider =
       baseProducts = result.products;
     }
 
+    final seededProducts = await _fetchSeededCatalogProducts();
     final sellerProducts = await _fetchApprovedSellerProducts();
-    final merged = _mergeProducts(baseProducts, sellerProducts);
+    final merged = _mergeProducts(
+      _mergeProducts(baseProducts, seededProducts),
+      sellerProducts,
+    );
     if (merged.isEmpty) {
       return _applyProductFilters(_getMockProducts(), filters);
     }
     return _applyProductFilters(merged, filters);
   } catch (e) {
     final cached = await cache.getCachedProducts();
-    if (cached.isNotEmpty) {
-      final cachedProducts = cached.map(Product.fromJson).toList();
-      return _applyProductFilters(cachedProducts, filters);
-    }
-
-    // Return merged mock + seller fallback when service fails
+    final cachedProducts = cached.map(Product.fromJson).toList();
+    final seededProducts = await _fetchSeededCatalogProducts();
     final sellerProducts = await _fetchApprovedSellerProducts();
-    final merged = _mergeProducts(_getMockProducts(), sellerProducts);
+    final merged = _mergeProducts(
+      _mergeProducts(cachedProducts, seededProducts),
+      sellerProducts,
+    );
     return _applyProductFilters(merged, filters);
   }
 });

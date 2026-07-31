@@ -158,19 +158,64 @@ class AuthService {
   }
 
   Future<User> _registerWithFirebase(RegisterRequest request) async {
-    final credential = await firebase_auth.FirebaseAuth.instance
-        .createUserWithEmailAndPassword(
-          email: request.email.trim(),
-          password: request.password,
-        )
-        .timeout(const Duration(seconds: 20));
-    await credential.user!
-        .updateDisplayName(request.name)
-        .timeout(const Duration(seconds: 5));
-    return _firebaseUserToAppUser(
-      credential.user!,
-      fallbackName: request.name,
-    );
+    firebase_auth.User? createdUser;
+    try {
+      final credential = await firebase_auth.FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: request.email.trim().toLowerCase(),
+            password: request.password,
+          )
+          .timeout(const Duration(seconds: 25));
+      createdUser = credential.user!;
+      await createdUser
+          .updateDisplayName(request.name)
+          .timeout(const Duration(seconds: 8));
+      return await _firebaseUserToAppUser(
+        createdUser,
+        fallbackName: request.name,
+      );
+    } on firebase_auth.FirebaseAuthException catch (error) {
+      throw StateError(_friendlyRegistrationError(error));
+    } catch (error) {
+      // Do not leave an unusable, half-created Auth account when profile
+      // provisioning fails. That otherwise turns the next attempt into an
+      // incorrect "email already in use" failure.
+      if (createdUser != null) {
+        try {
+          await createdUser.delete();
+        } catch (_) {}
+      }
+      if (error is TimeoutException) {
+        throw StateError(
+          'Account creation timed out. Check your internet connection and try again.',
+        );
+      }
+      if (error is FirebaseException) {
+        throw StateError(
+          'Your account could not be completed. Please check your connection and try again.',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  String _friendlyRegistrationError(
+    firebase_auth.FirebaseAuthException error,
+  ) {
+    return switch (error.code) {
+      'email-already-in-use' =>
+        'An account already exists for this email. Sign in instead, or reset your password.',
+      'invalid-email' => 'Enter a valid email address.',
+      'weak-password' =>
+        'Choose a stronger password with at least 8 characters.',
+      'operation-not-allowed' =>
+        'Email registration is temporarily unavailable. Please contact support.',
+      'network-request-failed' =>
+        'Firebase could not be reached. Check your internet connection and try again.',
+      'too-many-requests' =>
+        'Too many attempts were made. Wait a moment and try again.',
+      _ => 'Account creation failed. Please try again.',
+    };
   }
 
   // Stream controller for real-time auth state

@@ -683,6 +683,40 @@ bool _companyProductVisibleForRole(Map<String, dynamic> data, String role) {
   return retailVisible;
 }
 
+Product _sellerMarketplaceProduct(
+  String id,
+  Map<String, dynamic> data,
+) {
+  final audience = (data['audience'] ?? 'both').toString();
+  return Product.fromFirestore({
+    ...data,
+    'id': id,
+    'name': data['productName'] ?? data['name'] ?? 'Seller Product',
+    'retailPrice': data['retailPrice'] ?? data['price'] ?? 0,
+    'wholesalePrice':
+        data['wholesalePrice'] ?? data['price'] ?? data['retailPrice'] ?? 0,
+    'contractPrice':
+        data['wholesalePrice'] ?? data['price'] ?? data['retailPrice'] ?? 0,
+    'categoryId': data['category'] ?? data['categoryId'] ?? 'seller',
+    'imageUrl': data['imageUrl'] ?? data['image_url'],
+    'stock': data['quantity'] ?? data['stock'] ?? 0,
+    'minimumOrderQuantity': data['moq'] ?? data['minimumOrderQuantity'] ?? 1,
+    'visibleToRetail': audience != 'wholesale',
+    'visibleToWholesale': audience != 'retail',
+    'visibleToInstitutions': false,
+    'uploadedBy': data['sellerUserId'] ?? data['sellerId'] ?? '',
+    'franchiseId': 'seller_marketplace',
+  });
+}
+
+bool _sellerProductVisibleForRole(Product product, String role) {
+  if (role.contains('wholesale')) return product.visibleToWholesale;
+  if (role.contains('member') || role.contains('cooperative')) {
+    return product.visibleToRetail;
+  }
+  return false;
+}
+
 final roleAwareFeaturedProductsProvider =
     FutureProvider.family<List<Product>, String>((ref, userRole) async {
   try {
@@ -719,25 +753,10 @@ final roleAwareFeaturedProductsProvider =
           .get();
 
       for (final doc in sellerSnapshot.docs) {
-        final data = doc.data();
-        merged[doc.id] = Product(
-          id: doc.id,
-          name: (data['productName'] ?? 'Seller Product') as String,
-          description: (data['description'] ?? '') as String,
-          retailPrice: ((data['price'] ?? 0) as num).toDouble(),
-          wholesalePrice: ((data['price'] ?? 0) as num).toDouble(),
-          contractPrice: ((data['price'] ?? 0) as num).toDouble(),
-          categoryId: (data['category'] ?? 'seller') as String,
-          imageUrl: data['imageUrl'] as String?,
-          stock: ((data['quantity'] ?? 0) as num).toInt(),
-          minimumOrderQuantity: ((data['moq'] ?? 1) as num).toInt(),
-          visibleToRetail: false,
-          visibleToWholesale: true,
-          visibleToInstitutions: false,
-          uploadedBy:
-              (data['sellerUserId'] ?? data['sellerId'] ?? '') as String,
-          franchiseId: 'seller_marketplace',
-        );
+        final product = _sellerMarketplaceProduct(doc.id, doc.data());
+        if (_sellerProductVisibleForRole(product, role)) {
+          merged[doc.id] = product;
+        }
       }
     }
 
@@ -790,25 +809,10 @@ final roleAwareProductsProvider =
       }
 
       for (final doc in latestSeller?.docs ?? const []) {
-        final data = doc.data();
-        merged[doc.id] = Product(
-          id: doc.id,
-          name: (data['productName'] ?? 'Seller Product') as String,
-          description: (data['description'] ?? '') as String,
-          retailPrice: ((data['price'] ?? 0) as num).toDouble(),
-          wholesalePrice: ((data['price'] ?? 0) as num).toDouble(),
-          contractPrice: ((data['price'] ?? 0) as num).toDouble(),
-          categoryId: (data['category'] ?? 'seller') as String,
-          imageUrl: data['imageUrl'] as String?,
-          stock: ((data['quantity'] ?? 0) as num).toInt(),
-          minimumOrderQuantity: ((data['moq'] ?? 1) as num).toInt(),
-          visibleToRetail: false,
-          visibleToWholesale: true,
-          visibleToInstitutions: false,
-          uploadedBy:
-              (data['sellerUserId'] ?? data['sellerId'] ?? '') as String,
-          franchiseId: 'seller_marketplace',
-        );
+        final product = _sellerMarketplaceProduct(doc.id, doc.data());
+        if (_sellerProductVisibleForRole(product, role)) {
+          merged[doc.id] = product;
+        }
       }
 
       controller.add(merged.values.toList());

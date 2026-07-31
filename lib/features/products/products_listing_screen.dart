@@ -114,9 +114,11 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
 
   bool _canCurrentRoleSeeProduct(Product product, UserRole role) {
     if (_isSellerMarketplaceProduct(product)) {
-      return role == UserRole.coopMember ||
-          role == UserRole.premiumMember ||
-          role == UserRole.wholesaleBuyer;
+      if (role == UserRole.wholesaleBuyer) return product.visibleToWholesale;
+      if (role == UserRole.coopMember || role == UserRole.premiumMember) {
+        return product.visibleToRetail;
+      }
+      return false;
     }
 
     switch (role) {
@@ -145,6 +147,7 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
                 : product.retailPrice);
       case UserRole.coopMember:
       case UserRole.premiumMember:
+        return product.retailPrice;
       case UserRole.wholesaleBuyer:
         return product.wholesalePrice > 0
             ? product.wholesalePrice

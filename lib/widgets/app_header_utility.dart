@@ -16,7 +16,9 @@ import 'package:coop_commerce/providers/user_activity_providers.dart';
 /// Infrastructure layer showing shared utilities + role-aware utilities
 /// Sits at the top of the app, persistent across all screens
 class AppHeaderUtility extends ConsumerWidget {
-  const AppHeaderUtility({super.key});
+  const AppHeaderUtility({super.key, this.showSearch = false});
+
+  final bool showSearch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -127,7 +129,10 @@ class AppHeaderUtility extends ConsumerWidget {
                     Flexible(child: _buildRoleIndicator(context, role)),
                   ],
                   const SizedBox(width: AppSpacing.sm),
-                  _HeaderQuickActions(maxWidth: constraints.maxWidth),
+                  _HeaderQuickActions(
+                    maxWidth: constraints.maxWidth,
+                    showSearch: showSearch,
+                  ),
                 ],
               );
             },
@@ -673,9 +678,13 @@ class AppHeaderUtility extends ConsumerWidget {
 }
 
 class _HeaderQuickActions extends ConsumerStatefulWidget {
-  const _HeaderQuickActions({required this.maxWidth});
+  const _HeaderQuickActions({
+    required this.maxWidth,
+    required this.showSearch,
+  });
 
   final double maxWidth;
+  final bool showSearch;
 
   @override
   ConsumerState<_HeaderQuickActions> createState() =>
@@ -831,7 +840,7 @@ class _HeaderQuickActionsState extends ConsumerState<_HeaderQuickActions> {
           ),
         );
       },
-      child: _isSearching
+      child: widget.showSearch && _isSearching
           ? SizedBox(
               key: const ValueKey('header-expanded-search'),
               width: searchWidth,
@@ -1036,11 +1045,12 @@ class _HeaderQuickActionsState extends ConsumerState<_HeaderQuickActions> {
               key: const ValueKey('header-action-icons'),
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  onPressed: _openSearch,
-                  icon: const Icon(Icons.search_outlined),
-                  tooltip: 'Search',
-                ),
+                if (widget.showSearch)
+                  IconButton(
+                    onPressed: _openSearch,
+                    icon: const Icon(Icons.search_outlined),
+                    tooltip: 'Search products',
+                  ),
                 IconButton(
                   onPressed: () {
                     ref.read(activityLoggerProvider.notifier).logButtonTap(

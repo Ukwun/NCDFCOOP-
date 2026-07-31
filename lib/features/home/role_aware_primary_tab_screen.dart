@@ -57,7 +57,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 0:
         return const RoleAwareHomeScreen();
       case 1:
-        return const ProductsListingScreen(title: 'Categories');
+        return const ProductsListingScreen(title: 'Member Marketplace');
       case 2:
         return const MessagesScreen();
       case 3:
@@ -91,7 +91,7 @@ class RoleAwarePrimaryTabScreen extends ConsumerWidget {
       case 0:
         return const WholesaleBuyerHomeScreen();
       case 1:
-        return const ProductsListingScreen(title: 'Categories');
+        return const ProductsListingScreen(title: 'Wholesale Marketplace');
       case 2:
         return const MessagesScreen();
       case 3:

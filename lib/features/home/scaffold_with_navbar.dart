@@ -31,7 +31,9 @@ class ScaffoldWithNavBar extends ConsumerWidget {
       role,
       messengerBadgeCount: messengerUnreadCount,
     );
-    final showFullUtilityHeader = !_isWholesale(role);
+    final isMarketplaceTab = navigationShell.currentIndex == 1 &&
+        (_isMember(role) || _isWholesale(role));
+    final showFullUtilityHeader = !_isWholesale(role) || isMarketplaceTab;
     const compactHeaderTitle = 'Wholesale Marketplace';
 
     return Scaffold(
@@ -39,7 +41,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
         children: [
           // Keep wholesale screens focused by using a compact, low-noise top bar.
           if (showFullUtilityHeader)
-            const AppHeaderUtility()
+            AppHeaderUtility(showSearch: isMarketplaceTab)
           else
             _CompactUtilityHeader(
               title: compactHeaderTitle,
@@ -90,7 +92,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
         NavigationDestination(
           icon: Icon(Icons.person_outline),
           selectedIcon: Icon(Icons.person, color: AppColors.primary),
-          label: 'My CoopX',
+          label: 'Account',
         ),
       ];
     }
@@ -121,7 +123,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
         NavigationDestination(
           icon: Icon(Icons.person_outline),
           selectedIcon: Icon(Icons.person, color: AppColors.primary),
-          label: 'My CoopX',
+          label: 'Account',
         ),
       ];
     }
@@ -159,7 +161,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
         NavigationDestination(
           icon: Icon(Icons.person_outline),
           selectedIcon: Icon(Icons.person, color: AppColors.primary),
-          label: 'My CoopX',
+          label: 'Account',
         ),
       ];
     }
@@ -188,7 +190,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
       NavigationDestination(
         icon: Icon(Icons.person_outline),
         selectedIcon: Icon(Icons.person, color: AppColors.primary),
-        label: 'My NCDFCOOP',
+        label: 'Account',
       ),
     ];
   }

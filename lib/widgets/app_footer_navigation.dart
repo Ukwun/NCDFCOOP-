@@ -78,7 +78,7 @@ class AppFooterNavigation extends StatelessWidget {
                 index: 4,
                 icon: Icons.person_outline,
                 activeIcon: Icons.person,
-                label: 'My NCDFCOOP',
+                label: 'Account',
               ),
             ],
           ),
