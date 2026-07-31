@@ -111,7 +111,7 @@ service cloud.firestore {
         (resource.data.uploadedBy == request.auth.uid &&
          request.resource.data.uploadedBy == request.auth.uid &&
          !request.resource.data.diff(resource.data).affectedKeys()
-           .hasAny(['uploadedBy', 'sellerId', 'sellerProfileId', 'status', 'is_active', 'created_at']))
+           .hasAny(['uploadedBy', 'sellerId', 'sellerProfileId', 'status', 'is_active', 'created_at', 'activeOffer']))
       );
       allow delete: if isAuthenticated() && isAdmin();
       
@@ -204,7 +204,7 @@ service cloud.firestore {
                        !request.resource.data.diff(resource.data).affectedKeys()
                          .hasAny(['sellerId', 'sellerUserId', 'sellerProfileId',
                                   'status', 'approvedAt', 'rejectedAt',
-                                  'rejectionReason', 'createdAt']);
+                                  'rejectionReason', 'createdAt', 'activeOffer']);
       allow update: if isAuthenticated() && isAdmin();
       allow delete: if isAuthenticated() &&
                        (request.auth.uid == resource.data.sellerId ||
@@ -434,7 +434,7 @@ service cloud.firestore {
                        !request.resource.data.diff(resource.data).affectedKeys()
                          .hasAny(['sellerId', 'sellerUserId', 'sellerProfileId',
                                   'status', 'approvedAt', 'rejectedAt',
-                                  'rejectionReason', 'createdAt']);
+                                  'rejectionReason', 'createdAt', 'activeOffer']);
       allow update: if isAuthenticated() && isAdmin();
       allow delete: if isAuthenticated() &&
                        (request.auth.uid == resource.data.sellerId ||
@@ -537,6 +537,11 @@ service cloud.firestore {
                        !request.resource.data.diff(resource.data).affectedKeys()
                          .hasAny(['buyerId', 'sellerId', 'productId', 'quantity', 'createdAt']);
       allow delete: if false;
+    }
+
+    match /product_offers/{productId} {
+      allow read: if resource.data.active == true;
+      allow write: if false;
     }
 
     match /seller_earnings/{sellerId} {

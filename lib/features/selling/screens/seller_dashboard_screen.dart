@@ -16,6 +16,7 @@ class SellerDashboardScreen extends StatefulWidget {
   final ValueChanged<SellerProduct> onProductTap;
   final VoidCallback? onProfileTap;
   final VoidCallback? onSalesLedgerTap;
+  final VoidCallback? onOffersTap;
   final VoidCallback? onRefreshTap;
 
   const SellerDashboardScreen({
@@ -27,6 +28,7 @@ class SellerDashboardScreen extends StatefulWidget {
     required this.onProductTap,
     this.onProfileTap,
     this.onSalesLedgerTap,
+    this.onOffersTap,
     this.onRefreshTap,
   });
 
@@ -220,6 +222,12 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
             onPressed: widget.onSalesLedgerTap,
             icon: const Icon(Icons.receipt_long_outlined),
             tooltip: 'Sales ledger',
+          ),
+        if (widget.onOffersTap != null)
+          IconButton(
+            onPressed: widget.onOffersTap,
+            tooltip: 'Offers & Deals',
+            icon: const Icon(Icons.local_offer_outlined),
           ),
         if (widget.onRefreshTap != null)
           IconButton(
@@ -578,18 +586,30 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Product image placeholder
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: Icon(
-                    Icons.image_not_supported_outlined,
-                    color: AppColors.textLight,
-                  ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  child: product.imageUrl.trim().isEmpty
+                      ? Container(
+                          width: 80,
+                          height: 80,
+                          color: AppColors.background,
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: AppColors.textLight,
+                          ),
+                        )
+                      : Image.network(
+                          product.imageUrl,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 80,
+                            height: 80,
+                            color: AppColors.background,
+                            child: const Icon(Icons.broken_image_outlined),
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

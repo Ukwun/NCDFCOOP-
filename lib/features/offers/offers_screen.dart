@@ -1,207 +1,184 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:coop_commerce/core/auth/role.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../theme/app_theme.dart';
-import '../../providers/auth_provider.dart';
+import 'package:go_router/go_router.dart';
 
-/// OFFERS & DEALS SCREEN
-/// Shows member exclusive offers, flash deals, and promotions
-class OffersScreen extends ConsumerWidget {
+class OffersScreen extends ConsumerStatefulWidget {
   const OffersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
+  ConsumerState<OffersScreen> createState() => _OffersScreenState();
+}
+
+class _OffersScreenState extends ConsumerState<OffersScreen> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final role = ref.watch(currentRoleProvider);
+    final allowedAudience =
+        role == UserRole.wholesaleBuyer ? 'wholesale' : 'members';
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          '🎁 Offers & Deals',
-          style: AppTextStyles.h3.copyWith(color: AppColors.text),
-        ),
+        title: const Text('Offers & Deals'),
+        backgroundColor: AppColors.surface,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search deals...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-
-            // Flash Deals Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '⚡ Flash Deals (Today Only)',
-                    style: AppTextStyles.h4.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildOfferCard(
-                    title: 'Fresh Vegetables Bundle',
-                    discount: '-30%',
-                    description: 'Save ₦2,500 on fresh farm produce',
-                    expiresIn: 'Ends in 3 hours',
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildOfferCard(
-                    title: 'Premium Grains Package',
-                    discount: '-25%',
-                    description: 'Bulk buy at wholesale rates',
-                    expiresIn: 'Ends in 5 hours',
-                    color: Colors.orange,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Member Exclusive Offers
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '⭐ Member Exclusive',
-                    style: AppTextStyles.h4.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildOfferCard(
-                    title: 'Double Points Weekend',
-                    discount: '2x Points',
-                    description: 'Earn 2 points for every ₦1 spent',
-                    expiresIn: 'This weekend',
-                    color: Colors.purple,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildOfferCard(
-                    title: 'Free Shipping for Orders ₦5000+',
-                    discount: 'Free',
-                    description: 'No minimum order during member week',
-                    expiresIn: 'Until Friday',
-                    color: Colors.blue,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Tier-Based Offers
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '🏅 Your Tier Benefits',
-                    style: AppTextStyles.h4.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildOfferCard(
-                    title: 'Birthday Month Special',
-                    discount: '-15%',
-                    description:
-                        'Get 15% off on everything in your birth month',
-                    expiresIn: 'Valid year-round',
-                    color: Colors.pink,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 80), // Bottom nav padding
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOfferCard({
-    required String title,
-    required String discount,
-    required String description,
-    required String expiresIn,
-    required Color color,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(12),
-        color: color.withValues(alpha: 0.05),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
+      body: Column(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              onChanged: (value) =>
+                  setState(() => _query = value.trim().toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'Search live deals',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.muted,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  expiresIn,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: Colors.red,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  discount,
-                  style: AppTextStyles.h4.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('product_offers')
+                  .where('active', isEqualTo: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Unable to load deals: ${snapshot.error}'),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final now = DateTime.now();
+                final offers = snapshot.data!.docs.where((doc) {
+                  final data = doc.data();
+                  final startsAt = (data['startsAt'] as Timestamp?)?.toDate();
+                  final endsAt = (data['endsAt'] as Timestamp?)?.toDate();
+                  final audience = data['audience']?.toString() ?? 'both';
+                  final searchable =
+                      '${data['title']} ${data['productName']}'.toLowerCase();
+                  return (startsAt == null || !startsAt.isAfter(now)) &&
+                      endsAt != null &&
+                      endsAt.isAfter(now) &&
+                      (audience == 'both' || audience == allowedAudience) &&
+                      (_query.isEmpty || searchable.contains(_query));
+                }).toList()
+                  ..sort((a, b) {
+                    final aEnd = a.data()['endsAt'] as Timestamp?;
+                    final bEnd = b.data()['endsAt'] as Timestamp?;
+                    return (aEnd?.millisecondsSinceEpoch ?? 0)
+                        .compareTo(bEnd?.millisecondsSinceEpoch ?? 0);
+                  });
+                if (offers.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'There are no active offers for your account right now.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                  itemCount: offers.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final data = offers[index].data();
+                    final image = data['productImageUrl']?.toString() ?? '';
+                    final endsAt = (data['endsAt'] as Timestamp).toDate();
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => context.pushNamed(
+                        'product-detail',
+                        pathParameters: {
+                          'productId': data['productId'].toString(),
+                        },
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: .25),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: image.isEmpty
+                                  ? Container(
+                                      width: 82,
+                                      height: 82,
+                                      color: AppColors.background,
+                                      child: const Icon(Icons.local_offer),
+                                    )
+                                  : Image.network(
+                                      image,
+                                      width: 82,
+                                      height: 82,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    data['title']?.toString() ?? 'Deal',
+                                    style: AppTextStyles.h4,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(data['productName']?.toString() ?? ''),
+                                  const SizedBox(height: 7),
+                                  Text(
+                                    'Ends ${endsAt.day}/${endsAt.month}/${endsAt.year}',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${(data['discountPercent'] as num).toStringAsFixed(0)}%\nOFF',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],

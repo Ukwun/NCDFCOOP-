@@ -175,17 +175,14 @@ final productInventoryStatusProvider =
         .collection('products')
         .doc(productId)
         .snapshots()
-        .map((snapshot) {
+        .asyncMap((snapshot) async {
       if (!snapshot.exists) {
-        return ProductInventoryStatusData(
-          productId: productId,
-          stock: 0,
-          status: 'out_of_stock',
-        );
+        snapshot =
+            await firestore.collection('seller_products').doc(productId).get();
       }
 
       final data = snapshot.data() as Map<String, dynamic>;
-      final stock = data['stock'] ?? 0;
+      final stock = ((data['stock'] ?? data['quantity'] ?? 0) as num).toInt();
 
       String status = 'in_stock';
       if (stock == 0) {

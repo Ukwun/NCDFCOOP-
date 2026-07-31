@@ -109,6 +109,7 @@ import 'package:coop_commerce/features/selling/seller_onboarding_quick_screen.da
 import 'package:coop_commerce/features/selling/seller_add_product_screen.dart';
 import 'package:coop_commerce/features/selling/seller_sales_ledger_screen.dart';
 import 'package:coop_commerce/features/selling/seller_withdrawal_screen.dart';
+import 'package:coop_commerce/features/selling/seller_offers_screen.dart';
 import 'package:coop_commerce/features/selling/screens/seller_product_detail_screen.dart';
 // Phase 4: Search, Review, Inventory, and Logistics imports
 import 'package:coop_commerce/features/inventory/inventory_dashboard_screen.dart';
@@ -1912,6 +1913,13 @@ class AppRouter {
           builder: (context, state) {
             return const SellerSalesLedgerScreen();
           },
+        ),
+        GoRoute(
+          path: '/seller/offers',
+          name: 'seller-offers',
+          redirect: (context, state) =>
+              _hasRole(context, UserRole.seller) ? null : '/home',
+          builder: (context, state) => const SellerOffersScreen(),
         ),
         GoRoute(
           path: '/seller/withdraw',

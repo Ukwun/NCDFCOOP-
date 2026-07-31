@@ -176,6 +176,7 @@ class SellerHomeScreen extends ConsumerWidget {
               products: products,
               onProfileTap: () => context.pushNamed('my-ncdfcoop'),
               onSalesLedgerTap: () => context.pushNamed('seller-sales-ledger'),
+              onOffersTap: () => context.pushNamed('seller-offers'),
               onRefreshTap: () {
                 ref.invalidate(
                   sellerProductsForSellerProvider(

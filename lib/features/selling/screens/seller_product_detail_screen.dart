@@ -244,6 +244,7 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,
+                style: const TextStyle(color: Color(0xFF172033)),
                 enabled: widget.editable,
                 minLines: 3,
                 maxLines: 5,
@@ -294,6 +295,7 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
   }) {
     return TextFormField(
       controller: controller,
+      style: const TextStyle(color: Color(0xFF172033)),
       enabled: enabled,
       keyboardType: keyboardType,
       validator: validator,
@@ -301,6 +303,8 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
         labelText: label,
         border: const OutlineInputBorder(),
         filled: !enabled,
+        fillColor: const Color(0xFFF7F9FC),
+        labelStyle: const TextStyle(color: Color(0xFF405169)),
       ),
     );
   }

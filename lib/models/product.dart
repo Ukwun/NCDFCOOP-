@@ -96,12 +96,50 @@ class Product {
             ? (json['images'] as List).first
             : null);
 
+    final rawRetail =
+        (json['retailPrice'] ?? json['marketPrice'] ?? json['price'] ?? 0)
+            .toDouble();
+    final rawWholesale =
+        (json['wholesalePrice'] ?? json['wholesale_price'] ?? rawRetail)
+            .toDouble();
+    final offer = json['activeOffer'];
+    var retailPrice = rawRetail;
+    var wholesalePrice = rawWholesale;
+    if (offer is Map && offer['active'] == true) {
+      final startsAt = offer['startsAt'];
+      final endsAt = offer['endsAt'];
+      DateTime readDate(dynamic value, DateTime fallback) {
+        if (value == null) return fallback;
+        if (value is DateTime) return value;
+        if (value is String) return DateTime.tryParse(value) ?? fallback;
+        try {
+          return value.toDate() as DateTime;
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      final starts = readDate(startsAt, DateTime.fromMillisecondsSinceEpoch(0));
+      final ends = readDate(endsAt, DateTime.fromMillisecondsSinceEpoch(0));
+      final now = DateTime.now();
+      final discount = (offer['discountPercent'] as num?)?.toDouble() ?? 0;
+      final audience = offer['audience']?.toString() ?? 'both';
+      if (!starts.isAfter(now) && ends.isAfter(now) && discount > 0) {
+        if (audience == 'both' || audience == 'members') {
+          retailPrice = rawRetail * (1 - discount / 100);
+        }
+        if (audience == 'both' || audience == 'wholesale') {
+          wholesalePrice = rawWholesale * (1 - discount / 100);
+        }
+      }
+    }
+
     return Product(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       description: json['description'] ?? '',
-      retailPrice: (json['retailPrice'] ?? json['marketPrice'] ?? 0).toDouble(),
-      wholesalePrice: (json['wholesalePrice'] ?? 0).toDouble(),
+      retailPrice: retailPrice,
+      wholesalePrice: wholesalePrice,
       contractPrice: (json['contractPrice'] ?? 0).toDouble(),
       categoryId: json['categoryId'] ?? '',
       imageUrl: _normalizeImageField(imageCandidate),

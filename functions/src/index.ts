@@ -143,6 +143,101 @@ export const provisionMarketplaceRole = functions.https.onCall(
   },
 );
 
+/** Creates or replaces a seller-funded offer for one approved product. */
+export const upsertSellerProductOffer = functions.https.onCall(
+  async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Sign in as a seller.');
+    }
+    await enforceRateLimit(context.auth.uid, 'seller_product_offer', 20, 300);
+    const productId = String(data.productId || '').trim();
+    const title = String(data.title || '').trim().slice(0, 100);
+    const discountPercent = Number(data.discountPercent);
+    const audience = String(data.audience || 'both');
+    const startsAtMillis = Number(data.startsAtMillis);
+    const endsAtMillis = Number(data.endsAtMillis);
+    if (!productId || title.length < 3 ||
+        !Number.isFinite(discountPercent) || discountPercent < 1 ||
+        discountPercent > 80 ||
+        !['members', 'wholesale', 'both'].includes(audience) ||
+        !Number.isFinite(startsAtMillis) || !Number.isFinite(endsAtMillis) ||
+        endsAtMillis <= startsAtMillis || endsAtMillis <= Date.now()) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Enter a valid offer, discount, audience, and date range.',
+      );
+    }
+
+    const sellerProductRef = db.collection('seller_products').doc(productId);
+    const marketplaceProductRef = db.collection('products').doc(productId);
+    const offerRef = db.collection('product_offers').doc(productId);
+    await db.runTransaction(async (transaction) => {
+      const productSnapshot = await transaction.get(sellerProductRef);
+      if (!productSnapshot.exists) {
+        throw new functions.https.HttpsError('not-found', 'Product not found.');
+      }
+      const product = productSnapshot.data()!;
+      const ownerId = String(product.sellerUserId || product.sellerId || '');
+      if (ownerId !== context.auth!.uid || product.status !== 'approved') {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Only the owner can create an offer for an approved product.',
+        );
+      }
+      const startsAt = admin.firestore.Timestamp.fromMillis(startsAtMillis);
+      const endsAt = admin.firestore.Timestamp.fromMillis(endsAtMillis);
+      const offer = {
+        offerId: productId,
+        productId,
+        productName: String(product.productName || ''),
+        productImageUrl: String(product.imageUrl || ''),
+        sellerId: context.auth!.uid,
+        title,
+        discountPercent,
+        audience,
+        startsAt,
+        endsAt,
+        active: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      transaction.set(offerRef, {
+        ...offer,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      transaction.set(sellerProductRef, { activeOffer: offer }, { merge: true });
+      transaction.set(marketplaceProductRef, { activeOffer: offer }, { merge: true });
+    });
+    return { offerId: offerRef.id, active: true };
+  },
+);
+
+export const deactivateSellerProductOffer = functions.https.onCall(
+  async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Sign in as a seller.');
+    }
+    const productId = String(data.productId || '').trim();
+    const productRef = db.collection('seller_products').doc(productId);
+    const snapshot = await productRef.get();
+    const product = snapshot.data();
+    if (!snapshot.exists ||
+        String(product?.sellerUserId || product?.sellerId || '') !== context.auth.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Product access denied.');
+    }
+    const inactive = {
+      ...(product?.activeOffer || {}),
+      active: false,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    const batch = db.batch();
+    batch.set(db.collection('product_offers').doc(productId), inactive, { merge: true });
+    batch.set(productRef, { activeOffer: inactive }, { merge: true });
+    batch.set(db.collection('products').doc(productId), { activeOffer: inactive }, { merge: true });
+    await batch.commit();
+    return { offerId: productId, active: false };
+  },
+);
+
 // Express app for payment endpoints
 const app = express();
 app.use(cors({ origin: true }));
@@ -1942,11 +2037,24 @@ export const createMarketplaceOrder = functions.https.onCall(async (data, contex
     if (!Number.isFinite(stock) || stock < quantity) {
       throw new functions.https.HttpsError('failed-precondition', `${product.name || 'A product'} has insufficient stock.`);
     }
-    const priceValue = role === 'wholesaleBuyer'
-      ? (product.wholesale_price ?? product.wholesalePrice ?? product.price)
+    const basePriceValue = role === 'wholesaleBuyer'
+      ? (product.wholesale_price ?? product.wholesalePrice ?? product.price ?? product.retailPrice)
       : role === 'coopMember'
-        ? (product.member_price ?? product.memberPrice ?? product.price)
-        : product.price;
+        ? (product.member_price ?? product.memberPrice ?? product.retailPrice ?? product.price)
+        : (product.price ?? product.retailPrice);
+    const activeOffer = product.activeOffer;
+    const now = Date.now();
+    const offerStarts = activeOffer?.startsAt?.toMillis?.() || 0;
+    const offerEnds = activeOffer?.endsAt?.toMillis?.() || 0;
+    const offerAudience = String(activeOffer?.audience || 'both');
+    const roleEligible = offerAudience === 'both' ||
+      (role === 'coopMember' && offerAudience === 'members') ||
+      (role === 'wholesaleBuyer' && offerAudience === 'wholesale');
+    const discount = activeOffer?.active === true && roleEligible &&
+      offerStarts <= now && offerEnds > now
+      ? Number(activeOffer.discountPercent || 0)
+      : 0;
+    const priceValue = Number(basePriceValue) * (1 - discount / 100);
     const unitPrice = Number(priceValue);
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
       throw new functions.https.HttpsError('failed-precondition', 'A product price is invalid.');
@@ -2596,6 +2704,51 @@ export const releaseSellerEarningsOnDelivery = functions.firestore
         });
       });
     }
+    return null;
+  });
+
+/** Queues an email and an in-app notification when moderation approves a product. */
+export const notifySellerOnProductApproval = functions.firestore
+  .document('seller_products/{productId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (before.status === 'approved' || after.status !== 'approved') return null;
+
+    const sellerId = String(after.sellerUserId || after.sellerId || '');
+    if (!sellerId) return null;
+    const productName = String(after.productName || after.name || 'Your product');
+    const user = await admin.auth().getUser(sellerId);
+    const notificationId = `product-approved-${context.params.productId}`;
+    const batch = db.batch();
+    batch.set(
+      db.collection('notifications').doc(sellerId).collection('items').doc(notificationId),
+      {
+        title: 'Product approved',
+        message: `${productName} has been approved and is now live in the marketplace.`,
+        type: 'product_approved',
+        productId: context.params.productId,
+        isRead: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+    if (user.email) {
+      // Compatible with Firebase's Trigger Email extension. The deterministic
+      // document ID prevents duplicate approval emails on function retries.
+      batch.set(db.collection('mail').doc(notificationId), {
+        to: [user.email],
+        message: {
+          subject: `${productName} has been approved`,
+          text: `${productName} has been approved and is now live in the CoopCommerce marketplace.`,
+          html: `<p><strong>${productName}</strong> has been approved and is now live in the CoopCommerce marketplace.</p>`,
+        },
+        userId: sellerId,
+        productId: context.params.productId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    await batch.commit();
     return null;
   });
 

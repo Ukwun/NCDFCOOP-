@@ -212,29 +212,26 @@ Product _sellerDocToProduct(
   String id,
   Map<String, dynamic> data,
 ) {
-  final sellerPrice = ((data['price'] ?? 0) as num).toDouble();
-  final retailPrice = ((data['retailPrice'] ?? sellerPrice) as num).toDouble();
-  final wholesalePrice =
-      ((data['wholesalePrice'] ?? sellerPrice) as num).toDouble();
-  final audience = (data['audience'] ?? 'both').toString();
-
-  return Product(
-    id: id,
-    name: (data['productName'] ?? 'Seller Product') as String,
-    description: (data['description'] ?? '') as String,
-    retailPrice: retailPrice,
-    wholesalePrice: wholesalePrice,
-    contractPrice: wholesalePrice,
-    categoryId: (data['category'] ?? 'seller') as String,
-    imageUrl: data['imageUrl'] as String?,
-    stock: ((data['quantity'] ?? 0) as num).toInt(),
-    minimumOrderQuantity: ((data['moq'] ?? 1) as num).toInt(),
-    visibleToRetail: audience != 'wholesale',
-    visibleToWholesale: audience != 'retail',
-    visibleToInstitutions: false,
-    franchiseId: 'seller_marketplace',
-    uploadedBy: (data['sellerUserId'] ?? data['sellerId'] ?? '') as String,
-  );
+  final normalized = <String, dynamic>{
+    ...data,
+    'id': id,
+    'name': data['productName'] ?? data['name'] ?? 'Seller Product',
+    'retailPrice': data['retailPrice'] ?? data['price'] ?? 0,
+    'wholesalePrice':
+        data['wholesalePrice'] ?? data['price'] ?? data['retailPrice'] ?? 0,
+    'contractPrice':
+        data['wholesalePrice'] ?? data['price'] ?? data['retailPrice'] ?? 0,
+    'categoryId': data['category'] ?? data['categoryId'] ?? 'seller',
+    'imageUrl': data['imageUrl'] ?? data['image_url'],
+    'stock': data['quantity'] ?? data['stock'] ?? 0,
+    'minimumOrderQuantity': data['moq'] ?? data['minimumOrderQuantity'] ?? 1,
+    'visibleToRetail': (data['audience'] ?? 'both') != 'wholesale',
+    'visibleToWholesale': (data['audience'] ?? 'both') != 'retail',
+    'visibleToInstitutions': false,
+    'franchiseId': 'seller_marketplace',
+    'uploadedBy': data['sellerUserId'] ?? data['sellerId'] ?? '',
+  };
+  return Product.fromFirestore(normalized);
 }
 
 Future<List<Product>> _fetchApprovedSellerProducts() async {

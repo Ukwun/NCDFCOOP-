@@ -154,7 +154,11 @@ class SellerProduct {
       ),
       quantity: data['quantity'] ?? 0,
       moq: data['moq'] ?? 1,
-      imageUrl: data['imageUrl'] ?? '',
+      imageUrl: data['imageUrl'] ??
+          data['image_url'] ??
+          ((data['images'] is List && (data['images'] as List).isNotEmpty)
+              ? (data['images'] as List).first.toString()
+              : ''),
       description: data['description'] ?? '',
       status: ProductApprovalStatus.values.firstWhere(
         (e) => e.name == (data['status'] ?? 'pending'),
@@ -183,6 +187,8 @@ class SellerProduct {
       'quantity': quantity,
       'moq': moq,
       'imageUrl': imageUrl,
+      'image_url': imageUrl,
+      'images': [imageUrl],
       'description': description,
       'status': status.name,
       'rejectionReason': rejectionReason,
@@ -201,10 +207,14 @@ class SellerProduct {
       'name': productName,
       'description': description,
       'retailPrice': retailPriceValue,
+      'price': retailPriceValue,
+      'memberPrice': retailPriceValue,
       'wholesalePrice': wholesalePriceValue,
       'contractPrice': wholesalePriceValue,
       'categoryId': category,
       'imageUrl': imageUrl,
+      'image_url': imageUrl,
+      'images': [imageUrl],
       'stock': quantity,
       'minimumOrderQuantity': moq,
       'rating': 0.0,

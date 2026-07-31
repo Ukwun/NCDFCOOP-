@@ -35,6 +35,23 @@ class _SellerAddProductScreenState
   String _imageUrl = '';
   bool _isUploadingImage = false;
   bool _isSaving = false;
+  static const _fieldTextStyle = TextStyle(color: Color(0xFF172033));
+  static const _categories = <String, String>{
+    'agriculture': 'Agriculture',
+    'beverages': 'Beverages',
+    'dairy': 'Dairy',
+    'electronics': 'Electronics',
+    'grains': 'Grains',
+    'groceries': 'Groceries',
+    'household': 'Household',
+    'meat': 'Meat & Poultry',
+    'personal-care': 'Personal Care',
+    'retail': 'Retail',
+    'manufacturing': 'Manufacturing',
+    'services': 'Services',
+    'vegetables': 'Vegetables',
+    'other': 'Other',
+  };
 
   @override
   void dispose() {
@@ -105,8 +122,11 @@ class _SellerAddProductScreenState
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
+                  style: _fieldTextStyle,
                   decoration: const InputDecoration(
                     labelText: 'Product Name',
+                    filled: true,
+                    fillColor: Color(0xFFF7F9FC),
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -119,20 +139,25 @@ class _SellerAddProductScreenState
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _category,
-                  decoration: const InputDecoration(
+                  dropdownColor: Colors.white,
+                  style: _fieldTextStyle,
+                  decoration: InputDecoration(
                     labelText: 'Category',
-                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: const Color(0xFFF7F9FC),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      tooltip: 'Search categories',
+                      onPressed: _searchCategories,
+                      icon: const Icon(Icons.search),
+                    ),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'agriculture', child: Text('Agriculture')),
-                    DropdownMenuItem(value: 'retail', child: Text('Retail')),
-                    DropdownMenuItem(
-                        value: 'manufacturing', child: Text('Manufacturing')),
-                    DropdownMenuItem(
-                        value: 'services', child: Text('Services')),
-                    DropdownMenuItem(value: 'other', child: Text('Other')),
-                  ],
+                  items: _categories.entries
+                      .map((entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          ))
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _category = value);
@@ -142,9 +167,13 @@ class _SellerAddProductScreenState
                 const SizedBox(height: 12),
                 DropdownButtonFormField<ProductAudience>(
                   value: _audience,
+                  dropdownColor: Colors.white,
+                  style: _fieldTextStyle,
                   decoration: const InputDecoration(
                     labelText: 'Who can buy this product?',
                     prefixIcon: Icon(Icons.groups_2_outlined),
+                    filled: true,
+                    fillColor: Color(0xFFF7F9FC),
                     border: OutlineInputBorder(),
                   ),
                   items: ProductAudience.values
@@ -162,10 +191,13 @@ class _SellerAddProductScreenState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _priceController,
+                  style: _fieldTextStyle,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
                     labelText: 'Retail price (NGN)',
+                    filled: true,
+                    fillColor: Color(0xFFF7F9FC),
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -183,11 +215,14 @@ class _SellerAddProductScreenState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _wholesalePriceController,
+                  style: _fieldTextStyle,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
                     labelText: 'Wholesale unit price (NGN)',
                     helperText: 'The price applied when MOQ is met',
+                    filled: true,
+                    fillColor: Color(0xFFF7F9FC),
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -213,9 +248,12 @@ class _SellerAddProductScreenState
                     Expanded(
                       child: TextFormField(
                         controller: _quantityController,
+                        style: _fieldTextStyle,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: 'Quantity',
+                          filled: true,
+                          fillColor: Color(0xFFF7F9FC),
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
@@ -231,9 +269,12 @@ class _SellerAddProductScreenState
                     Expanded(
                       child: TextFormField(
                         controller: _moqController,
+                        style: _fieldTextStyle,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: 'MOQ',
+                          filled: true,
+                          fillColor: Color(0xFFF7F9FC),
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
@@ -250,10 +291,13 @@ class _SellerAddProductScreenState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _descriptionController,
+                  style: _fieldTextStyle,
                   minLines: 3,
                   maxLines: 5,
                   decoration: const InputDecoration(
                     labelText: 'Description',
+                    filled: true,
+                    fillColor: Color(0xFFF7F9FC),
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -315,6 +359,57 @@ class _SellerAddProductScreenState
         );
       },
     );
+  }
+
+  Future<void> _searchCategories() async {
+    var query = '';
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          final matches = _categories.entries
+              .where((entry) =>
+                  entry.value.toLowerCase().contains(query.toLowerCase()))
+              .toList();
+          return AlertDialog(
+            title: const Text('Search product categories'),
+            content: SizedBox(
+              width: 420,
+              height: 420,
+              child: Column(
+                children: [
+                  TextField(
+                    autofocus: true,
+                    style: _fieldTextStyle,
+                    onChanged: (value) => setState(() => query = value),
+                    decoration: const InputDecoration(
+                      hintText: 'Type a category name',
+                      prefixIcon: Icon(Icons.search),
+                      filled: true,
+                      fillColor: Color(0xFFF7F9FC),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: matches.length,
+                      itemBuilder: (context, index) => ListTile(
+                        title: Text(matches[index].value),
+                        onTap: () =>
+                            Navigator.pop(dialogContext, matches[index].key),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() => _category = selected);
+    }
   }
 
   Future<void> _pickAndUploadImage() async {
@@ -419,12 +514,30 @@ class _SellerAddProductScreenState
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Product uploaded and submitted for review.'),
-          backgroundColor: Colors.green,
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(
+            Icons.verified_outlined,
+            color: AppColors.success,
+            size: 42,
+          ),
+          title: const Text('Product submitted'),
+          content: const Text(
+            'Your product was uploaded successfully and is currently under verification. You will be notified when the review is complete.',
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Back to dashboard'),
+            ),
+          ],
         ),
       );
+      if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;

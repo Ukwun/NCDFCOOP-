@@ -4,6 +4,9 @@ import * as functions from 'firebase-functions';
  * Keeping this server-side prevents clients from fabricating role/profile data.
  */
 export declare const provisionMarketplaceRole: functions.HttpsFunction & functions.Runnable<any>;
+/** Creates or replaces a seller-funded offer for one approved product. */
+export declare const upsertSellerProductOffer: functions.HttpsFunction & functions.Runnable<any>;
+export declare const deactivateSellerProductOffer: functions.HttpsFunction & functions.Runnable<any>;
 /**
  * Calculate loyalty points on order completion
  * Triggered when an order status changes to 'delivered'
@@ -95,5 +98,7 @@ export declare const claimMemberReward: functions.HttpsFunction & functions.Runn
 export declare const deleteMyAccount: functions.HttpsFunction & functions.Runnable<any>;
 /** Releases pending seller funds only after a paid order is delivered. */
 export declare const releaseSellerEarningsOnDelivery: functions.CloudFunction<functions.Change<functions.firestore.QueryDocumentSnapshot>>;
+/** Queues an email and an in-app notification when moderation approves a product. */
+export declare const notifySellerOnProductApproval: functions.CloudFunction<functions.Change<functions.firestore.QueryDocumentSnapshot>>;
 export {};
 //# sourceMappingURL=index.d.ts.map
