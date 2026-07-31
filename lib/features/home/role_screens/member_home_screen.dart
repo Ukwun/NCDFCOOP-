@@ -35,40 +35,40 @@ class MemberHomeScreen extends ConsumerWidget {
 
               if (displayData == null) {
                 final isSignedIn = user != null;
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 100),
-                      Icon(isSignedIn ? Icons.badge_outlined : Icons.person_off,
-                          size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      Text(
-                        isSignedIn
-                            ? 'Member profile not ready'
-                            : 'Not Logged In',
-                        style: AppTextStyles.h2,
-                        textAlign: TextAlign.center,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: .1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.orange.withValues(alpha: .35),
+                          ),
+                        ),
+                        child: Text(
+                          isSignedIn
+                              ? 'Your member benefits profile is still syncing. You can continue shopping and contacting sellers now.'
+                              : 'Sign in to purchase products and contact sellers.',
+                          style: AppTextStyles.bodyMedium,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        isSignedIn
-                            ? 'We could not find your member record. Retry after your account setup is complete.'
-                            : 'Please log in to view member benefits.',
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () => isSignedIn
-                            ? ref.invalidate(memberDataProvider(user.id))
-                            : context.go('/signin'),
-                        icon: Icon(isSignedIn ? Icons.refresh : Icons.login),
-                        label: Text(isSignedIn ? 'Retry' : 'Log In'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    _buildRecentlyBrowsedProductsSection(
+                      context,
+                      featuredAsync,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildRoleRelationshipIntelligence(
+                      context,
+                      featuredAsync,
+                    ),
+                    const SizedBox(height: 80),
+                  ],
                 );
               }
 
@@ -239,8 +239,8 @@ class MemberHomeScreen extends ConsumerWidget {
     return _buildHorizontalProductSection(
       context: context,
       featuredAsync: featuredAsync,
-      title: 'Recently Browsed Products',
-      emptyMessage: 'No recently browsed products yet',
+      title: 'Live Member Marketplace',
+      emptyMessage: 'No live retail products are available yet',
       maxItems: 6,
       showActionButton: false,
     );

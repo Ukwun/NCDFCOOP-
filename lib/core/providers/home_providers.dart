@@ -743,14 +743,26 @@ final roleAwareFeaturedProductsProvider =
     final firestore = FirebaseFirestore.instance;
     final role = userRole.toLowerCase();
 
-    final companySnapshot = await firestore
-        .collection('products')
-        .where('is_active', isEqualTo: true)
-        .limit(60)
-        .get();
+    final companySnapshots = await Future.wait([
+      firestore
+          .collection('products')
+          .where('is_active', isEqualTo: true)
+          .limit(60)
+          .get(),
+      firestore
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .limit(60)
+          .get(),
+    ]);
+    final companyDocuments =
+        <String, QueryDocumentSnapshot<Map<String, dynamic>>>{
+      for (final snapshot in companySnapshots)
+        for (final doc in snapshot.docs) doc.id: doc,
+    };
 
     final merged = <String, Product>{};
-    for (final doc in companySnapshot.docs) {
+    for (final doc in companyDocuments.values) {
       final data = doc.data();
       if (_companyProductVisibleForRole(data, role)) {
         merged[doc.id] = _companyMarketplaceProduct(doc.id, data);
@@ -780,7 +792,7 @@ final roleAwareFeaturedProductsProvider =
     final products = merged.values.toList()
       ..sort((a, b) => b.stock.compareTo(a.stock));
 
-    return products.take(6).toList();
+    return products.take(18).toList();
   } catch (e) {
     print('⚠️ Error in roleAwareFeaturedProductsProvider: $e');
     rethrow;

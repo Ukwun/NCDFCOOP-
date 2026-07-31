@@ -284,10 +284,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     if (message == null || message.isEmpty) return;
 
     final firestore = FirebaseFirestore.instance;
-    final sellerSnapshot =
-        await firestore.collection('sellers').doc(product.uploadedBy).get();
-    final sellerName =
-        sellerSnapshot.data()?['businessName']?.toString().trim();
+    String? sellerName;
+    try {
+      final sellerSnapshot =
+          await firestore.collection('sellers').doc(product.uploadedBy).get();
+      sellerName = sellerSnapshot.data()?['businessName']?.toString().trim();
+    } on FirebaseException {
+      // The seller remains addressable by its authenticated UID even when the
+      // buyer is not permitted to read the private seller profile document.
+    }
     final participants = [user.id, product.uploadedBy]..sort();
     final conversationId =
         '${participants.join('_')}_${product.id}'.replaceAll('/', '_');
@@ -336,7 +341,19 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       'productName': product.name,
       'createdAt': now,
     });
-    await batch.commit();
+    try {
+      await batch.commit();
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message ?? 'The inquiry could not be sent. Please retry.',
+          ),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
