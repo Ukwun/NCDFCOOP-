@@ -109,8 +109,21 @@ class AuthService {
   }) async {
     final profileRef =
         FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid);
-    final snapshot = await profileRef.get();
-    final existing = snapshot.data();
+    Map<String, dynamic>? existing;
+    var profileExists = false;
+    try {
+      final snapshot = await profileRef.get();
+      existing = snapshot.data();
+      profileExists = snapshot.exists;
+    } on FirebaseException catch (error) {
+      // Authentication is authoritative. App Check, an offline Firestore
+      // client, or a transient rules propagation delay must not invalidate a
+      // credential Firebase Auth has already created. The trusted role
+      // provisioning function creates/merges this profile in the next step.
+      debugPrint(
+        'Deferred Firestore profile read (${error.code}): ${error.message}',
+      );
+    }
     final idToken = await firebaseUser.getIdToken();
     final profile = <String, dynamic>{
       ...?existing,
@@ -126,17 +139,23 @@ class AuthService {
         'marketplaceRole': existing!['marketplaceRole'],
     };
 
-    if (!snapshot.exists) {
-      await profileRef.set({
-        'id': profile['id'],
-        'email': profile['email'],
-        'name': profile['name'],
-        'photoUrl': profile['photoUrl'],
-        'roleSelectionCompleted': false,
-        'onboardingCompleted': false,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    if (!profileExists) {
+      try {
+        await profileRef.set({
+          'id': profile['id'],
+          'email': profile['email'],
+          'name': profile['name'],
+          'photoUrl': profile['photoUrl'],
+          'roleSelectionCompleted': false,
+          'onboardingCompleted': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } on FirebaseException catch (error) {
+        debugPrint(
+          'Deferred Firestore profile creation (${error.code}): ${error.message}',
+        );
+      }
     }
 
     final user = User.fromJson(profile).copyWith(token: idToken);
