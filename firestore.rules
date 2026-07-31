@@ -509,7 +509,7 @@ service cloud.firestore {
                       request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds);
       allow create: if isAuthenticated() &&
                        request.auth.uid == request.resource.data.senderId &&
-                       request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds &&
+                       request.auth.uid in getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds &&
                        request.resource.data.text is string &&
                        request.resource.data.text.size() <= 5000 &&
                        (

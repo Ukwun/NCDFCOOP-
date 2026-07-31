@@ -277,6 +277,8 @@ Future<List<Product>> _fetchSeededCatalogProducts() async {
       data['imageUrl'] = data['imageUrl'] ?? data['thumbnail'];
       data['minimumOrderQuantity'] =
           data['minimumOrderQuantity'] ?? data['minOrderQuantity'] ?? 1;
+      data['uploadedBy'] =
+          data['uploadedBy'] ?? data['sellerUserId'] ?? data['sellerId'] ?? '';
 
       // Seeded documents sometimes omit role visibility flags.
       final type = (data['type'] ?? '').toString().toLowerCase();

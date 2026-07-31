@@ -63,12 +63,15 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
 
-    // If category is passed, set it in the filter
-    if (widget.category?.isNotEmpty == true) {
-      Future.microtask(() {
+    Future.microtask(() {
+      if (widget.category?.isNotEmpty == true) {
         ref.read(productFiltersProvider.notifier).setCategory(widget.category);
-      });
-    }
+      } else {
+        // A marketplace entry is a fresh catalog view. Do not retain a search,
+        // category, or price filter from an earlier route.
+        ref.read(productFiltersProvider.notifier).reset();
+      }
+    });
   }
 
   @override

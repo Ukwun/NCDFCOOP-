@@ -10,7 +10,7 @@ import 'package:coop_commerce/providers/user_activity_providers.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'
-    show FirebaseFirestore, Timestamp, SetOptions;
+    show FirebaseException, FirebaseFirestore, Timestamp, SetOptions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -909,7 +909,11 @@ class _WholesaleBuyerHomeScreenState
                         {
                           'participantIds': participants,
                           'participants': participants,
-                          'participantNames': {user.id: user.name},
+                          'participantNames': {
+                            user.id: user.name,
+                            product.uploadedBy: 'Seller • ${product.name}',
+                          },
+                          'conversationType': 'quote_request',
                           'productId': product.id,
                           'productName': product.name,
                           'lastMessageText': text,
@@ -928,15 +932,29 @@ class _WholesaleBuyerHomeScreenState
                       'quoteId': quote.id,
                       'createdAt': now,
                     });
-                    await batch.commit();
-                    if (!context.mounted) return;
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Quote request sent to the seller.'),
-                      ),
-                    );
-                    this.context.pushNamed('messages');
+                    try {
+                      await batch.commit();
+                      if (!context.mounted) return;
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Quote sent. The seller can now reply in Messenger.',
+                          ),
+                        ),
+                      );
+                      this.context.pushNamed('messages');
+                    } on FirebaseException catch (error) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            error.message ??
+                                'The quote could not be sent. Please retry.',
+                          ),
+                        ),
+                      );
+                    }
                   },
                   child: const Text('Submit Quote Request'),
                 ),
@@ -1168,7 +1186,7 @@ class _WholesaleProductCard extends StatelessWidget {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: onRequestQuote,
-                          child: const Text('Quote'),
+                          child: const Text('Add Quote'),
                         ),
                       ),
                       const SizedBox(width: 8),

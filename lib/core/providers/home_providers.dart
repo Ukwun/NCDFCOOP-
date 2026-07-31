@@ -698,6 +698,8 @@ Product _companyMarketplaceProduct(
     'visibleToRetail': data['visibleToRetail'] ?? type != 'wholesale',
     'visibleToWholesale':
         data['visibleToWholesale'] ?? type == 'wholesale' || type == 'both',
+    'uploadedBy':
+        data['uploadedBy'] ?? data['sellerUserId'] ?? data['sellerId'] ?? '',
   });
 }
 
