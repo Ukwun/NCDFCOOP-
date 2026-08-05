@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Colors - Modern Indigo
-  static const Color primary = Color(0xFF4F46E5);
-  static const Color primaryLight = Color(0xFF6366F1);
-  static const Color primaryDark = Color(0xFF4338CA);
-  static const Color primaryContainer = Color(0xFFF0F0FF);
+  // Primary Colors - CoopX agricultural emerald
+  static const Color primary = Color(0xFF006B4F);
+  static const Color primaryLight = Color(0xFF0A9B70);
+  static const Color primaryDark = Color(0xFF004C39);
+  static const Color primaryContainer = Color(0xFFE4F6EF);
 
   // Secondary Colors - Emerald Green
   static const Color secondary = Color(0xFF10B981);
@@ -26,11 +26,11 @@ class AppColors {
   static const Color tertiaryContainer = Color(0xFFFEF3C7);
 
   // Background & Surface
-  static const Color background = Color(0xFFFAFAFA);
+  static const Color background = Color(0xFFF5F8F6);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFF5F5F5);
-  static const Color outline = Color(0xFFE0E0E0);
-  static const Color outlineVariant = Color(0xFFD0D0D0);
+  static const Color surfaceVariant = Color(0xFFEDF3EF);
+  static const Color outline = Color(0xFFD8E3DD);
+  static const Color outlineVariant = Color(0xFFC8D7CF);
 
   // Text Colors
   static const Color text = Color(0xFF1F2937);
@@ -65,10 +65,10 @@ class AppColors {
   static const Color infoContainer = Color(0xFFDBEAFE);
 
   // Border & Divider
-  static const Color border = Color(0xFFE0E0E0);
-  static const Color borderLight = Color(0xFFF0F0F0);
-  static const Color borderDark = Color(0xFFBDBDBD);
-  static const Color divider = Color(0xFFE5E7EB);
+  static const Color border = Color(0xFFDCE7E1);
+  static const Color borderLight = Color(0xFFECF2EF);
+  static const Color borderDark = Color(0xFFABC0B5);
+  static const Color divider = Color(0xFFE1EAE5);
 
   // Disabled
   static const Color disabled = Color(0xFFD1D5DB);

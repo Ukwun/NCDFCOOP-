@@ -8,6 +8,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../core/providers/home_providers.dart';
 import '../../../core/intelligence/role_commerce_intelligence.dart';
 import '../../../providers/savings_provider.dart';
+import '../../../core/widgets/dashboard_motion.dart';
 
 /// MEMBER HOME SCREEN
 /// Co-operative members with loyalty benefits
@@ -75,43 +76,56 @@ class MemberHomeScreen extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary,
-                            AppColors.primary.withValues(alpha: 0.84),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back, ${user?.name.split(' ').first ?? 'member'}',
-                            style: AppTextStyles.h3.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${displayData.tier.toUpperCase()} member • ${displayData.rewardsPoints} points • ${displayData.ordersCount} orders',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: Colors.white.withValues(alpha: 0.92),
-                            ),
-                          ),
-                        ],
+                  DashboardReveal(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: _buildMemberHero(
+                        context,
+                        user?.name ?? 'Member',
+                        displayData.tier,
+                        displayData.rewardsPoints,
+                        displayData.ordersCount,
                       ),
                     ),
                   ),
+                  if (false)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primary.withValues(alpha: 0.84),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome back, ${user?.name.split(' ').first ?? 'member'}',
+                              style: AppTextStyles.h3.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${displayData.tier.toUpperCase()} member • ${displayData.rewardsPoints} points • ${displayData.ordersCount} orders',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: Colors.white.withValues(alpha: 0.92),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   _buildMembershipTierBanner(
                     context,
@@ -238,6 +252,140 @@ class MemberHomeScreen extends ConsumerWidget {
   }
 
   // Helper Methods (continued from build method)
+
+  Widget _buildMemberHero(
+    BuildContext context,
+    String name,
+    String tier,
+    int points,
+    int orders,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF502B08), Color(0xFFA26214), Color(0xFFE1A42E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x38A26214),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -28,
+            top: -38,
+            child: Icon(
+              Icons.diversity_3_rounded,
+              size: 145,
+              color: Colors.white.withValues(alpha: .08),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .14),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.workspace_premium_outlined,
+                            size: 15, color: Color(0xFFFFE5A3)),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${tier.toUpperCase()} MEMBER',
+                          style: const TextStyle(
+                            color: Color(0xFFFFE5A3),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.auto_awesome_rounded,
+                      color: Color(0xFFFFE5A3)),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Good to see you, ${name.split(' ').first}',
+                style: AppTextStyles.h2.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.55,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                'Member prices, trusted sellers and cooperative rewards—all connected to your account.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Colors.white.withValues(alpha: .82),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  _memberMetric('$points', 'Points'),
+                  const SizedBox(width: 9),
+                  _memberMetric('$orders', 'Orders'),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () => context.pushNamed('products'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF6E3E09),
+                    ),
+                    icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                    label: const Text('Shop'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _memberMetric(String value, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .13),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w800)),
+          Text(label,
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: .72), fontSize: 10)),
+        ],
+      ),
+    );
+  }
 
   Widget _buildMembershipTierBanner(
     BuildContext context,

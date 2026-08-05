@@ -166,10 +166,12 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: AppColors.surface,
-        elevation: 0,
+        elevation: 1,
+        shadowColor: const Color(0x1F075A43),
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: const BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: AppColors.primary.withValues(alpha: .08)),
         ),
       ),
     );

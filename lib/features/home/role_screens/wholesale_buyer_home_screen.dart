@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'
     show FirebaseException, FirebaseFirestore, Timestamp, SetOptions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:coop_commerce/core/widgets/dashboard_motion.dart';
 
 class WholesaleBuyerHomeScreen extends ConsumerStatefulWidget {
   const WholesaleBuyerHomeScreen({super.key});
@@ -71,56 +72,24 @@ class _WholesaleBuyerHomeScreenState
                   24 + MediaQuery.paddingOf(context).bottom,
                 ),
                 children: [
-                  _buildTopModeTabs(context),
-                  const SizedBox(height: 12),
                   if (currentUser != null)
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.account_balance_wallet_outlined,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Welcome back, ${currentUser.name.split(' ').first}',
-                                  style: AppTextStyles.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Your wholesale orders, quotes and savings stay live in real time.',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                    DashboardReveal(
+                      child: _buildWholesaleHero(
+                        context,
+                        currentUser.name,
+                        products,
                       ),
                     ),
                   if (currentUser != null) const SizedBox(height: 12),
-                  _buildLiveSummaryStrip(cartState, ordersAsync),
+                  DashboardReveal(
+                    delay: const Duration(milliseconds: 80),
+                    child: _buildTopModeTabs(context),
+                  ),
+                  const SizedBox(height: 12),
+                  DashboardReveal(
+                    delay: const Duration(milliseconds: 130),
+                    child: _buildLiveSummaryStrip(cartState, ordersAsync),
+                  ),
                   const SizedBox(height: 12),
                   _buildRoleRelationshipIntelligence(
                     products,
@@ -151,6 +120,132 @@ class _WholesaleBuyerHomeScreenState
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWholesaleHero(
+    BuildContext context,
+    String name,
+    List<Product> products,
+  ) {
+    final available = products.where((product) => product.stock > 0).length;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF102F4F), Color(0xFF096B68), Color(0xFF17A36B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x35102F4F),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -34,
+            top: -46,
+            child: Icon(
+              Icons.inventory_2_rounded,
+              size: 150,
+              color: Colors.white.withValues(alpha: .07),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .13),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.business_center_outlined,
+                            size: 15, color: Color(0xFFBDF8E1)),
+                        SizedBox(width: 6),
+                        Text(
+                          'WHOLESALE BUYER',
+                          style: TextStyle(
+                            color: Color(0xFFBDF8E1),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.bolt_rounded,
+                      color: Color(0xFFFFD45C), size: 22),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Build bigger, ${name.split(' ').first}',
+                style: AppTextStyles.h2.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.55,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                '$available bulk products are ready for quotes, purchasing and seller conversations.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Colors.white.withValues(alpha: .8),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => context.pushNamed('products'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFD45C),
+                        foregroundColor: const Color(0xFF102F35),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      icon: const Icon(Icons.storefront_outlined),
+                      label: const Text('Explore marketplace'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Material(
+                    color: Colors.white.withValues(alpha: .14),
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      onTap: () => context.pushNamed('messages'),
+                      borderRadius: BorderRadius.circular(14),
+                      child: const SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Icon(Icons.forum_outlined, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

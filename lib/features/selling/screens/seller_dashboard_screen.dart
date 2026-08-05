@@ -5,6 +5,7 @@ import 'package:coop_commerce/core/intelligence/role_commerce_intelligence.dart'
 import 'package:coop_commerce/core/services/order_fulfillment_service.dart';
 import '../../../theme/app_theme.dart';
 import '../../../core/models/seller_models.dart';
+import '../../../core/widgets/dashboard_motion.dart';
 
 /// SCREEN 5 - SELLER DASHBOARD
 /// Simple dashboard showing All products, Pending, and Approved
@@ -65,135 +66,214 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header section
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.storefront_outlined,
-                            color: AppColors.primary),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Welcome back. Your buyers are watching live stock, orders and fulfilment updates.',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.text,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'My Store',
-                    style: AppTextStyles.h2.copyWith(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.businessName,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Upload products and keep your store live',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Add inventory, pricing and images in a few taps.',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textLight,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        FilledButton.icon(
-                          onPressed: widget.onAddNewProduct,
-                          icon: const Icon(Icons.cloud_upload_outlined),
-                          label: const Text('Upload Product'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            DashboardReveal(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: _buildSellerHero(snapshot),
               ),
             ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildFilterTabs(),
+            const SizedBox(height: 18),
+            DashboardReveal(
+              delay: const Duration(milliseconds: 90),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildStatsSection(),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            DashboardReveal(
+              delay: const Duration(milliseconds: 150),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildFilterTabs(),
+              ),
+            ),
+            const SizedBox(height: 14),
             if (_filteredProducts.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _buildEmptyState(),
               )
             else
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _buildProductsList(),
               ),
             const SizedBox(height: 24),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _buildIncomingOrdersPanel(),
             ),
             const SizedBox(height: 24),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _buildBulkEnquiriesPanel(),
             ),
             const SizedBox(height: 24),
-
-            // Stats section
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildStatsSection(),
-            ),
-            const SizedBox(height: 32),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _buildRelationshipPanel(snapshot),
             ),
             const SizedBox(height: 32),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSellerHero(RoleRelationshipSnapshot snapshot) {
+    final approved = widget.products
+        .where((product) => product.status == ProductApprovalStatus.approved)
+        .length;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF063F31), Color(0xFF087A55), Color(0xFF35A966)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x4004543D),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -28,
+            top: -38,
+            child: Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: .08),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .14),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: const Icon(Icons.storefront_rounded,
+                        color: Colors.white),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'SELLER CONTROL CENTRE',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: const Color(0xFFBDF4D1),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.05,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .14),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$approved live',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                widget.businessName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.h2.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.6,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                snapshot.narrative,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Colors.white.withValues(alpha: .78),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: widget.onAddNewProduct,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFF4C84A),
+                        foregroundColor: const Color(0xFF123127),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Add product'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _heroAction(
+                    icon: Icons.local_offer_outlined,
+                    tooltip: 'Offers & deals',
+                    onTap: widget.onOffersTap,
+                  ),
+                  const SizedBox(width: 8),
+                  _heroAction(
+                    icon: Icons.receipt_long_outlined,
+                    tooltip: 'Sales ledger',
+                    onTap: widget.onSalesLedgerTap,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroAction({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white.withValues(alpha: .14),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Icon(icon, color: Colors.white),
+          ),
         ),
       ),
     );
@@ -289,24 +369,37 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
     required String value,
     required Color color,
   }) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: .13), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: color.withValues(alpha: .18)),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: .10),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Icon(icon, color: color, size: 16),
+            child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(height: 8),
           Text(
@@ -554,109 +647,121 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
         break;
     }
 
-    return GestureDetector(
-      onTap: () => widget.onProductTap(product),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: product.imageUrl.trim().isEmpty
-                      ? Container(
-                          width: 80,
-                          height: 80,
-                          color: AppColors.background,
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: AppColors.textLight,
-                          ),
-                        )
-                      : Image.network(
-                          product.imageUrl,
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => widget.onProductTap(product),
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x12004C39),
+                blurRadius: 14,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: product.imageUrl.trim().isEmpty
+                        ? Container(
                             width: 80,
                             height: 80,
                             color: AppColors.background,
-                            child: const Icon(Icons.broken_image_outlined),
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: AppColors.textLight,
+                            ),
+                          )
+                        : Image.network(
+                            product.imageUrl,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 80,
+                              height: 80,
+                              color: AppColors.background,
+                              child: const Icon(Icons.broken_image_outlined),
+                            ),
                           ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.productName,
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: AppColors.text,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.productName,
-                        style: AppTextStyles.labelLarge.copyWith(
-                          color: AppColors.text,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₦${product.price.toStringAsFixed(2)}',
-                        style: AppTextStyles.h4.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          statusLabel,
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: statusColor,
+                        const SizedBox(height: 4),
+                        Text(
+                          '₦${product.price.toStringAsFixed(2)}',
+                          style: AppTextStyles.h4.copyWith(
+                            color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            statusLabel,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.local_shipping_outlined,
-                  size: 14,
-                  color: AppColors.textLight,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Qty: ${product.quantity} | MOQ: ${product.moq}',
-                  style: AppTextStyles.bodySmall.copyWith(
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.local_shipping_outlined,
+                    size: 14,
                     color: AppColors.textLight,
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 4),
+                  Text(
+                    'Qty: ${product.quantity} | MOQ: ${product.moq}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textLight,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
