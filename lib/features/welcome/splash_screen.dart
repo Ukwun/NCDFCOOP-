@@ -150,8 +150,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SizedBox(
-                      width: 126,
-                      height: 126,
+                      width: 152,
+                      height: 152,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -159,8 +159,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             turns: Tween<double>(begin: -.12, end: 1)
                                 .animate(_controller),
                             child: Container(
-                              width: 116,
-                              height: 116,
+                              width: 142,
+                              height: 142,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
@@ -180,9 +180,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             ),
                           ),
                           Container(
-                            width: 82,
-                            height: 82,
-                            padding: const EdgeInsets.all(10),
+                            width: 112,
+                            height: 112,
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
@@ -195,24 +195,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 ),
                               ],
                             ),
-                            child: Center(
-                              child: ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    const LinearGradient(
-                                  colors: [
-                                    Color(0xFF4D7F18),
-                                    Color(0xFFF3951A),
-                                  ],
-                                ).createShader(bounds),
-                                child: const Text(
-                                  'X',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 44,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1,
-                                  ),
-                                ),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/images/coopx_launcher_source.png',
+                                fit: BoxFit.cover,
                               ),
                             ),
                           ),
@@ -220,32 +206,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // "Welcome to" Text
-                    const Text(
-                      'Welcome to',
-                      style: TextStyle(
-                        color: Color(0xFFFAFAFA),
-                        fontSize: 20,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
+                    Container(
+                      width: MediaQuery.sizeOf(context)
+                          .width
+                          .clamp(260, 340)
+                          .toDouble(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [Color(0xFF98D32A), Color(0xFFF3951A)],
-                      ).createShader(bounds),
-                      child: const Text(
-                        'CoopX',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 44,
-                          fontFamily: 'Libre Baskerville',
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .96),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: .18),
+                            blurRadius: 22,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/images/coopx_brand_logo.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 10),

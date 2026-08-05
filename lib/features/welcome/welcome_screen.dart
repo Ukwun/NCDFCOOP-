@@ -90,31 +90,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   opacity: _fadeAnimation,
                   child: Column(
                     children: [
-                      Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage('assets/images/NCDF_logo1.png'),
+                      Semantics(
+                        label: 'CoopX, powering the agri value chain',
+                        image: true,
+                        child: SizedBox(
+                          width: size.width.clamp(270, 390).toDouble(),
+                          child: Image.asset(
+                            'assets/images/coopx_brand_logo.png',
                             fit: BoxFit.contain,
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'CoopX',
-                        style: AppTextStyles.h2.copyWith(
-                          color: AppColors.primary,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Cooperative Commerce',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.muted,
-                          fontSize: 14,
                         ),
                       ),
                     ],

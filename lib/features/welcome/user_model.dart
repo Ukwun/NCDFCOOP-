@@ -32,14 +32,20 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    final marketplaceRole = json['marketplaceRole']?.toString();
-    final rawRoles = json['roles'] as List<dynamic>? ??
-        (marketplaceRole == null ? null : <dynamic>[marketplaceRole]);
+    final rawRoles = <dynamic>[
+      if (json['roles'] is Iterable) ...(json['roles'] as Iterable),
+      json['marketplaceRole'],
+      json['selectedRole'],
+      json['role'],
+      json['userRole'],
+      json['userType'],
+      json['accountType'],
+    ].where((value) => value != null);
     final rolesList = <UserRole>[];
-    for (final rawRole in rawRoles ?? const <dynamic>[]) {
-      final matches = UserRole.values.where((role) => role.name == rawRole);
-      if (matches.isNotEmpty && matches.first.isSupported) {
-        rolesList.add(matches.first);
+    for (final rawRole in rawRoles) {
+      final role = _parseMarketplaceRole(rawRole);
+      if (role != null && !rolesList.contains(role)) {
+        rolesList.add(role);
       }
     }
 
@@ -70,9 +76,30 @@ class User {
           ? DateTime.parse(json['membershipExpiryDate'])
           : null,
       franchiseId: json['franchiseId'],
-      roleSelectionCompleted: json['roleSelectionCompleted'] ?? false,
+      // A valid role is authoritative even when an older website profile did
+      // not write the newer completion flag.
+      roleSelectionCompleted:
+          json['roleSelectionCompleted'] == true || rolesList.isNotEmpty,
       onboardingCompleted: json['onboardingCompleted'] ?? false,
     );
+  }
+
+  static UserRole? _parseMarketplaceRole(dynamic value) {
+    final normalized = value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return switch (normalized) {
+      'seller' || 'vendor' || 'merchant' => UserRole.seller,
+      'member' ||
+      'coopmember' ||
+      'cooperativemember' ||
+      'buyer' =>
+        UserRole.coopMember,
+      'wholesale' || 'wholesalebuyer' || 'bulkbuyer' => UserRole.wholesaleBuyer,
+      _ => null,
+    };
   }
 
   Map<String, dynamic> toJson() => {

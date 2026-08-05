@@ -8,8 +8,6 @@ import 'package:coop_commerce/features/home/scaffold_with_navbar.dart';
 import 'package:coop_commerce/features/welcome/welcome_screen.dart';
 import 'package:coop_commerce/features/welcome/splash_screen.dart';
 import 'package:coop_commerce/features/welcome/onboarding_screen.dart';
-import 'package:coop_commerce/features/welcome/onboarding_screen_2.dart';
-import 'package:coop_commerce/features/welcome/onboarding_screen_3.dart';
 import 'package:coop_commerce/features/welcome/feature_discovery_screen.dart';
 import 'package:coop_commerce/features/welcome/login_form_screen.dart';
 import 'package:coop_commerce/features/welcome/sign_up_screen.dart';
@@ -452,28 +450,14 @@ class AppRouter {
         GoRoute(
           path: '/onboarding2',
           name: 'onboarding2',
-          pageBuilder: (context, state) => CustomTransitionPage(
-            key: state.pageKey,
-            child: const OnboardingScreen2(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
+          redirect: (context, state) => '/onboarding',
         ),
 
         // Onboarding 3 Route
         GoRoute(
           path: '/onboarding3',
           name: 'onboarding3',
-          pageBuilder: (context, state) => CustomTransitionPage(
-            key: state.pageKey,
-            child: const OnboardingScreen3(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
+          redirect: (context, state) => '/onboarding',
         ),
 
         // Feature Discovery Route

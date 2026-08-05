@@ -113,6 +113,13 @@ class MemberHomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  _buildMembershipTierBanner(
+                    context,
+                    displayData.tier,
+                    displayData.rewardsPoints,
+                  ),
+
+                  const SizedBox(height: 18),
                   _buildRecentlyBrowsedProductsSection(context, featuredAsync),
 
                   const SizedBox(height: 16),
@@ -231,6 +238,96 @@ class MemberHomeScreen extends ConsumerWidget {
   }
 
   // Helper Methods (continued from build method)
+
+  Widget _buildMembershipTierBanner(
+    BuildContext context,
+    String currentTier,
+    int points,
+  ) {
+    final tier = currentTier.trim().isEmpty ? 'Bronze' : currentTier;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF073F34), Color(0xFF008A67), Color(0xFFF2B441)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33006448),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.pushNamed('premium-membership'),
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Icon(
+                    Icons.workspace_premium_rounded,
+                    color: Color(0xFFFFD65A),
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${tier.toUpperCase()} MEMBER',
+                        style: const TextStyle(
+                          color: Color(0xFFFFE39A),
+                          fontSize: 11,
+                          letterSpacing: 1.1,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      const Text(
+                        'Unlock more member savings',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$points points · Compare Bronze, Silver, Gold & Platinum',
+                        maxLines: 2,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.82),
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildRecentlyBrowsedProductsSection(
     BuildContext context,
