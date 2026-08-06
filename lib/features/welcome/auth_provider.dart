@@ -107,6 +107,7 @@ class AuthController extends AsyncNotifier<void> {
   }
 
   Future<void> signUpWithMembership(
+    String fullName,
     String email,
     String password, {
     required String membershipType,
@@ -119,7 +120,9 @@ class AuthController extends AsyncNotifier<void> {
       var user = await _authService
           .register(
             RegisterRequest(
-              name: _fallbackNameFromEmail(email),
+              name: fullName.trim().isEmpty
+                  ? _fallbackNameFromEmail(email)
+                  : fullName.trim(),
               email: email,
               password: password,
               role: normalizedRole,

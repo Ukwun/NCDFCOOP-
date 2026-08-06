@@ -115,6 +115,45 @@ class AuthService {
       final snapshot = await profileRef.get();
       existing = snapshot.data();
       profileExists = snapshot.exists;
+
+      // The website historically stored role-specific records separately.
+      // Hydrate those records into the canonical mobile identity so a website
+      // seller/member/buyer is never asked to choose an account type again.
+      final roleSnapshots = await Future.wait([
+        FirebaseFirestore.instance
+            .collection('sellers')
+            .doc(firebaseUser.uid)
+            .get(),
+        FirebaseFirestore.instance
+            .collection('members')
+            .doc(firebaseUser.uid)
+            .get(),
+        FirebaseFirestore.instance
+            .collection('wholesale_buyers')
+            .doc(firebaseUser.uid)
+            .get(),
+      ]);
+      final inferredRoles = <String>[
+        if (roleSnapshots[0].exists) 'seller',
+        if (roleSnapshots[1].exists) 'coopMember',
+        if (roleSnapshots[2].exists) 'wholesaleBuyer',
+      ];
+      if (inferredRoles.isNotEmpty) {
+        final websiteRoles = existing?['roles'] is Iterable
+            ? (existing!['roles'] as Iterable)
+                .map((role) => role.toString())
+                .toList()
+            : <String>[];
+        final mergedRoles =
+            <String>{...websiteRoles, ...inferredRoles}.toList();
+        existing = <String, dynamic>{
+          ...?existing,
+          'roles': mergedRoles,
+          'marketplaceRole':
+              existing?['marketplaceRole'] ?? inferredRoles.first,
+          'roleSelectionCompleted': true,
+        };
+      }
     } on FirebaseException catch (error) {
       // Authentication is authoritative. App Check, an offline Firestore
       // client, or a transient rules propagation delay must not invalidate a
@@ -170,7 +209,7 @@ class AuthService {
   Future<User> _loginWithFirebase(LoginRequest request) async {
     final credential =
         await firebase_auth.FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: request.email.trim(),
+      email: request.email.trim().toLowerCase(),
       password: request.password,
     );
     return _firebaseUserToAppUser(credential.user!);

@@ -18,6 +18,11 @@ import 'package:coop_commerce/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Bound decoded images on entry-level Android devices. Without a budget,
+  // several full-resolution marketplace images can trigger an OS-level OOM.
+  PaintingBinding.instance.imageCache
+    ..maximumSize = 140
+    ..maximumSizeBytes = 40 << 20;
   print('📱 App starting...');
 
   // Setup global exception handler

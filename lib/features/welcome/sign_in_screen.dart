@@ -226,7 +226,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   },
                   child: RichText(
                     text: TextSpan(
-                      style: AppTextStyles.bodyMedium,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w500,
+                      ),
                       children: [
                         const TextSpan(text: 'Don’t have an account? '),
                         TextSpan(

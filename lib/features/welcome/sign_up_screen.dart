@@ -15,16 +15,21 @@ class SignUpScreen extends ConsumerStatefulWidget {
 
 class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isSubmitting = false;
 
   @override
   void dispose() {
+    _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -33,6 +38,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     setState(() => _isSubmitting = true);
     try {
       await ref.read(authControllerProvider.notifier).signUpWithMembership(
+            _fullNameController.text.trim(),
             _emailController.text.trim(),
             _passwordController.text,
             membershipType: widget.membershipType,
@@ -101,6 +107,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   ),
                   const SizedBox(height: 40),
 
+                  TextFormField(
+                    controller: _fullNameController,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.name],
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      hintText: 'Enter your full name',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                    validator: (value) {
+                      final name = value?.trim() ?? '';
+                      if (name.isEmpty) return 'Please enter your full name';
+                      if (name.split(RegExp(r'\s+')).length < 2) {
+                        return 'Enter your first and last name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
                   // Email Field
                   TextFormField(
                     controller: _emailController,
@@ -147,6 +174,41 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       }
                       if (value.length < 6) {
                         return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _handleSignUp(),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm password',
+                      hintText: 'Enter your password again',
+                      prefixIcon: const Icon(Icons.lock_reset_rounded),
+                      suffixIcon: IconButton(
+                        tooltip: _obscureConfirmPassword
+                            ? 'Show confirm password'
+                            : 'Hide confirm password',
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () => setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        }),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
                       }
                       return null;
                     },

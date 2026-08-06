@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,18 +16,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   static const _green = Color(0xFF006248);
   static const _ink = Color(0xFF101722);
   final _controller = PageController();
+  Timer? _autoAdvanceTimer;
   int _page = 0;
 
   static const _pages = <_OnboardingPageData>[
     _OnboardingPageData(
-      image: 'assets/images/onboardimg1.jpg',
+      image: 'assets/images/coopx_onboarding_welcome.jpg',
       title: 'Welcome to CoopX',
       subtitle:
           "Nigeria's controlled trade infrastructure for reliable buying and selling.",
       features: [],
     ),
     _OnboardingPageData(
-      image: 'assets/images/lastonboardimg.png',
+      image: 'assets/images/coopx_onboarding_membership.jpg',
       title: 'Membership Benefits',
       subtitle:
           'Unlock exclusive discounts at every tier — from Bronze to Platinum.',
@@ -39,7 +42,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ],
     ),
     _OnboardingPageData(
-      image: 'assets/images/onboardimg2.jpg',
+      image: 'assets/images/coopx_onboarding_wholesale.jpg',
       title: 'Unlock Wholesale Power',
       subtitle:
           'Take your business further with our cooperative wholesale marketplace.',
@@ -62,7 +65,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _startAutoAdvance();
+  }
+
+  void _startAutoAdvance() {
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      final nextPage = (_page + 1) % _pages.length;
+      _controller.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 720),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  @override
   void dispose() {
+    _autoAdvanceTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -78,7 +101,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             return PageView.builder(
               controller: _controller,
               itemCount: _pages.length,
-              onPageChanged: (value) => setState(() => _page = value),
+              onPageChanged: (value) {
+                setState(() => _page = value);
+                _startAutoAdvance();
+              },
               itemBuilder: (context, index) => _buildPage(
                 context,
                 _pages[index],
@@ -147,6 +173,9 @@ class _HeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final decodeWidth =
+        (media.size.width * media.devicePixelRatio).round().clamp(480, 1080);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: ClipRRect(
@@ -154,11 +183,22 @@ class _HeroImage extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            AnimatedScale(
-              scale: activePage == page ? 1.0 : 1.04,
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutCubic,
-              child: Image.asset(data.image, fit: BoxFit.cover),
+            RepaintBoundary(
+              child: AnimatedOpacity(
+                opacity: activePage == page ? 1 : .78,
+                duration: const Duration(milliseconds: 360),
+                child: AnimatedScale(
+                  scale: activePage == page ? 1.0 : 1.035,
+                  duration: const Duration(milliseconds: 650),
+                  curve: Curves.easeOutCubic,
+                  child: Image.asset(
+                    data.image,
+                    fit: BoxFit.cover,
+                    cacheWidth: decodeWidth,
+                    filterQuality: FilterQuality.medium,
+                  ),
+                ),
+              ),
             ),
             const DecoratedBox(
               decoration: BoxDecoration(
