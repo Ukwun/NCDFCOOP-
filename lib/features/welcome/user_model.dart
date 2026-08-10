@@ -33,13 +33,13 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     final rawRoles = <dynamic>[
-      if (json['roles'] is Iterable) ...(json['roles'] as Iterable),
       json['marketplaceRole'],
       json['selectedRole'],
       json['role'],
       json['userRole'],
       json['userType'],
       json['accountType'],
+      if (json['roles'] is Iterable) ...(json['roles'] as Iterable),
     ].where((value) => value != null);
     final rolesList = <UserRole>[];
     for (final rawRole in rawRoles) {

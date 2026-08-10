@@ -103,6 +103,53 @@ class AuthService {
     }
   }
 
+  Future<bool> _hasRoleProfile({
+    required String collection,
+    required firebase_auth.User firebaseUser,
+  }) async {
+    final firestore = FirebaseFirestore.instance;
+    try {
+      if ((await firestore.collection(collection).doc(firebaseUser.uid).get())
+          .exists) {
+        return true;
+      }
+    } on FirebaseException catch (error) {
+      debugPrint('Direct $collection role lookup deferred: ${error.code}');
+    }
+
+    // Website releases used both UID document IDs and generated document IDs.
+    // Resolve the latter without tying mobile identity to a local cache.
+    for (final field in const ['userId', 'uid']) {
+      try {
+        final result = await firestore
+            .collection(collection)
+            .where(field, isEqualTo: firebaseUser.uid)
+            .limit(1)
+            .get();
+        if (result.docs.isNotEmpty) return true;
+      } on FirebaseException catch (error) {
+        debugPrint('$collection.$field role lookup deferred: ${error.code}');
+      }
+    }
+
+    final email = firebaseUser.email?.trim().toLowerCase();
+    if (email != null && email.isNotEmpty) {
+      for (final field in const ['email', 'sellerEmail', 'userEmail']) {
+        try {
+          final result = await firestore
+              .collection(collection)
+              .where(field, isEqualTo: email)
+              .limit(1)
+              .get();
+          if (result.docs.isNotEmpty) return true;
+        } on FirebaseException catch (error) {
+          debugPrint('$collection.$field role lookup deferred: ${error.code}');
+        }
+      }
+    }
+    return false;
+  }
+
   Future<User> _firebaseUserToAppUser(
     firebase_auth.User firebaseUser, {
     String? fallbackName,
@@ -119,24 +166,18 @@ class AuthService {
       // The website historically stored role-specific records separately.
       // Hydrate those records into the canonical mobile identity so a website
       // seller/member/buyer is never asked to choose an account type again.
-      final roleSnapshots = await Future.wait([
-        FirebaseFirestore.instance
-            .collection('sellers')
-            .doc(firebaseUser.uid)
-            .get(),
-        FirebaseFirestore.instance
-            .collection('members')
-            .doc(firebaseUser.uid)
-            .get(),
-        FirebaseFirestore.instance
-            .collection('wholesale_buyers')
-            .doc(firebaseUser.uid)
-            .get(),
+      final roleProfiles = await Future.wait([
+        _hasRoleProfile(collection: 'sellers', firebaseUser: firebaseUser),
+        _hasRoleProfile(
+          collection: 'wholesale_buyers',
+          firebaseUser: firebaseUser,
+        ),
+        _hasRoleProfile(collection: 'members', firebaseUser: firebaseUser),
       ]);
       final inferredRoles = <String>[
-        if (roleSnapshots[0].exists) 'seller',
-        if (roleSnapshots[1].exists) 'coopMember',
-        if (roleSnapshots[2].exists) 'wholesaleBuyer',
+        if (roleProfiles[0]) 'seller',
+        if (roleProfiles[1]) 'wholesaleBuyer',
+        if (roleProfiles[2]) 'coopMember',
       ];
       if (inferredRoles.isNotEmpty) {
         final websiteRoles = existing?['roles'] is Iterable
@@ -145,12 +186,13 @@ class AuthService {
                 .toList()
             : <String>[];
         final mergedRoles =
-            <String>{...websiteRoles, ...inferredRoles}.toList();
+            <String>{...inferredRoles, ...websiteRoles}.toList();
         existing = <String, dynamic>{
           ...?existing,
           'roles': mergedRoles,
-          'marketplaceRole':
-              existing?['marketplaceRole'] ?? inferredRoles.first,
+          // A concrete role collection is stronger evidence than an old
+          // default marketplaceRole written by early website onboarding.
+          'marketplaceRole': inferredRoles.first,
           'roleSelectionCompleted': true,
         };
       }

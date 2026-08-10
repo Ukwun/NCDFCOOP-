@@ -44,5 +44,23 @@ void main() {
       expect(user.roles, isEmpty);
       expect(user.roleSelectionCompleted, isFalse);
     });
+
+    test('explicit marketplace role outranks a stale roles array', () {
+      final seller = User.fromJson({
+        'id': 'shared-seller',
+        'email': 'seller@example.com',
+        'marketplaceRole': 'seller',
+        'roles': ['coopMember', 'seller'],
+      });
+      final wholesale = User.fromJson({
+        'id': 'shared-wholesale',
+        'email': 'wholesale@example.com',
+        'marketplaceRole': 'wholesaleBuyer',
+        'roles': ['coopMember', 'wholesaleBuyer'],
+      });
+
+      expect(seller.roles.first, UserRole.seller);
+      expect(wholesale.roles.first, UserRole.wholesaleBuyer);
+    });
   });
 }
