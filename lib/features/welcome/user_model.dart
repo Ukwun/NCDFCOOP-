@@ -109,6 +109,7 @@ class User {
         'photoUrl': photoUrl,
         'token': token,
         'roles': roles.map((r) => r.name).toList(),
+        'marketplaceRole': roles.isEmpty ? null : roles.first.name,
         'contexts': {
           for (final entry in contexts.entries)
             entry.key.name: entry.value.toJson(),

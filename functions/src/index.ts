@@ -143,6 +143,183 @@ export const provisionMarketplaceRole = functions.https.onCall(
   },
 );
 
+async function legacyRoleProfileExists(
+  collection: string,
+  uid: string,
+  email: string,
+): Promise<boolean> {
+  if ((await db.collection(collection).doc(uid).get()).exists) return true;
+  for (const [field, value] of [
+    ['userId', uid],
+    ['uid', uid],
+    ['email', email],
+    ['sellerEmail', email],
+    ['userEmail', email],
+  ]) {
+    if (!value) continue;
+    const match = await db.collection(collection)
+      .where(field, '==', value)
+      .limit(1)
+      .get();
+    if (!match.empty) return true;
+  }
+  return false;
+}
+
+async function queryExists(
+  collection: string,
+  field: string,
+  value: string,
+): Promise<boolean> {
+  if (!value) return false;
+  return !(await db.collection(collection)
+    .where(field, '==', value)
+    .limit(1)
+    .get()).empty;
+}
+
+/**
+ * Resolves website and mobile records into one authoritative marketplace
+ * identity. This must run server-side because clients cannot safely inspect
+ * every legacy profile collection or repair protected role fields.
+ */
+export const resolveMarketplaceIdentity = functions.https.onCall(
+  async (_data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Sign in before resolving your marketplace identity.',
+      );
+    }
+
+    const uid = context.auth.uid;
+    await enforceRateLimit(uid, 'resolve_marketplace_identity', 12, 300);
+    const authUser = await admin.auth().getUser(uid);
+    const email = String(authUser.email || '').trim().toLowerCase();
+    const userRef = db.collection('users').doc(uid);
+    const userSnapshot = await userRef.get();
+    const userData = userSnapshot.data() || {};
+
+    const [sellerProfile, wholesaleBuyer, coopMember, sellerCommerce] =
+      await Promise.all([
+      Promise.all([
+        legacyRoleProfileExists('sellers', uid, email),
+        legacyRoleProfileExists('seller_profiles', uid, email),
+        legacyRoleProfileExists('sellerProfiles', uid, email),
+        legacyRoleProfileExists('vendors', uid, email),
+      ]).then((matches) => matches.some(Boolean)),
+      legacyRoleProfileExists('wholesale_buyers', uid, email),
+      legacyRoleProfileExists('members', uid, email),
+      Promise.all([
+        queryExists('seller_products', 'sellerId', uid),
+        queryExists('seller_products', 'sellerUserId', uid),
+        queryExists('seller_products', 'uploadedBy', uid),
+        queryExists('products', 'sellerId', uid),
+        queryExists('products', 'uploadedBy', uid),
+      ]).then((matches) => matches.some(Boolean)),
+    ]);
+    const seller = sellerProfile || sellerCommerce;
+
+    const profileRoles: MarketplaceRole[] = [
+      ...(seller ? ['seller' as const] : []),
+      ...(wholesaleBuyer ? ['wholesaleBuyer' as const] : []),
+      ...(coopMember ? ['coopMember' as const] : []),
+    ];
+    const declaredValues = [
+      userData.marketplaceRole,
+      userData.selectedRole,
+      userData.role,
+      userData.userRole,
+      userData.userType,
+      userData.accountType,
+      ...(Array.isArray(userData.roles) ? userData.roles : []),
+    ];
+    const declaredRoles = declaredValues
+      .map((value) => String(value || '').trim().toLowerCase()
+        .replace(/[^a-z0-9]/g, ''))
+      .map((value): MarketplaceRole | null => {
+        if (['seller', 'vendor', 'merchant'].includes(value)) return 'seller';
+        if (['wholesale', 'wholesalebuyer', 'bulkbuyer'].includes(value)) {
+          return 'wholesaleBuyer';
+        }
+        if (['member', 'coopmember', 'cooperativemember', 'buyer']
+          .includes(value)) return 'coopMember';
+        return null;
+      })
+      .filter((role): role is MarketplaceRole => role !== null);
+
+    const activeRole: MarketplaceRole | null = seller
+      ? 'seller'
+      : wholesaleBuyer
+        ? 'wholesaleBuyer'
+        : declaredRoles[0] || (coopMember ? 'coopMember' : null);
+    // CoopX currently provisions one marketplace route per account. Preserve
+    // incidental legacy profile data, but never expose it as another active
+    // role or allow it to override the selected route again.
+    const roles: MarketplaceRole[] = activeRole ? [activeRole] : [];
+    if (!activeRole) {
+      return { role: null, roles: [], roleSelectionCompleted: false };
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    if (activeRole === 'seller' && !sellerProfile) {
+      await db.collection('sellers').doc(uid).set({
+        userId: uid,
+        email,
+        businessName: String(userData.businessName ||
+          (authUser.displayName ? `${authUser.displayName} Store` : 'My Store')),
+        sellerType: String(userData.sellerType || 'individual'),
+        sellerStatus: String(userData.sellerStatus || 'pending'),
+        isVerified: userData.isVerified === true,
+        identitySource: 'legacy_website_account',
+        createdAt: now,
+        updatedAt: now,
+      }, { merge: true });
+    } else if (activeRole === 'wholesaleBuyer' && !wholesaleBuyer) {
+      await db.collection('wholesale_buyers').doc(uid).set({
+        userId: uid,
+        email,
+        name: String(authUser.displayName || userData.name || ''),
+        verificationStatus: 'pending',
+        identitySource: 'legacy_website_account',
+        createdAt: now,
+        updatedAt: now,
+      }, { merge: true });
+    } else if (activeRole === 'coopMember' && !coopMember) {
+      await db.collection('members').doc(uid).set({
+        userId: uid,
+        email,
+        name: String(authUser.displayName || userData.name || ''),
+        tier: 'bronze',
+        membershipStatus: 'active',
+        identitySource: 'legacy_website_account',
+        joiningDate: now,
+        updatedAt: now,
+      }, { merge: true });
+    }
+
+    await userRef.set({
+      id: uid,
+      email,
+      name: String(authUser.displayName || userData.name || 'CoopX User'),
+      marketplaceRole: activeRole,
+      roles,
+      roleSelectionCompleted: true,
+      identityResolvedAt: now,
+      updatedAt: now,
+      ...(!userSnapshot.exists ? {
+        createdAt: now,
+      } : {}),
+    }, { merge: true });
+
+    return {
+      role: activeRole,
+      roles,
+      roleSelectionCompleted: true,
+    };
+  },
+);
+
 function requireMarketplaceAdmin(context: functions.https.CallableContext): void {
   const email = String(context.auth?.token.email || '').toLowerCase();
   const privileged = context.auth?.token.admin === true ||

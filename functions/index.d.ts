@@ -4,6 +4,12 @@ import * as functions from 'firebase-functions';
  * Keeping this server-side prevents clients from fabricating role/profile data.
  */
 export declare const provisionMarketplaceRole: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Resolves website and mobile records into one authoritative marketplace
+ * identity. This must run server-side because clients cannot safely inspect
+ * every legacy profile collection or repair protected role fields.
+ */
+export declare const resolveMarketplaceIdentity: functions.HttpsFunction & functions.Runnable<any>;
 /** Returns real pending seller products to the moderation dashboard. */
 export declare const listPendingSellerProducts: functions.HttpsFunction & functions.Runnable<any>;
 /** Real operational counts for the super-admin control tower. */

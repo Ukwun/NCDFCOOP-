@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'api_client.dart';
@@ -158,28 +159,61 @@ class AuthService {
         FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid);
     Map<String, dynamic>? existing;
     var profileExists = false;
+    var serverIdentityResolved = false;
     try {
       final snapshot = await profileRef.get();
       existing = snapshot.data();
       profileExists = snapshot.exists;
 
+      // Resolve the canonical website/mobile identity with trusted server
+      // access before falling back to client-readable legacy profiles.
+      try {
+        final result = await FirebaseFunctions.instance
+            .httpsCallable('resolveMarketplaceIdentity')
+            .call<Map<String, dynamic>>();
+        final identity = Map<String, dynamic>.from(result.data);
+        if (identity['role'] != null) {
+          serverIdentityResolved = true;
+          existing = <String, dynamic>{
+            ...?existing,
+            'marketplaceRole': identity['role'],
+            'roles': identity['roles'],
+            'roleSelectionCompleted':
+                identity['roleSelectionCompleted'] == true,
+          };
+        }
+      } on FirebaseFunctionsException catch (error) {
+        debugPrint(
+          'Server identity resolution deferred (${error.code}): ${error.message}',
+        );
+      }
+
       // The website historically stored role-specific records separately.
       // Hydrate those records into the canonical mobile identity so a website
       // seller/member/buyer is never asked to choose an account type again.
-      final roleProfiles = await Future.wait([
-        _hasRoleProfile(collection: 'sellers', firebaseUser: firebaseUser),
-        _hasRoleProfile(
-          collection: 'wholesale_buyers',
-          firebaseUser: firebaseUser,
-        ),
-        _hasRoleProfile(collection: 'members', firebaseUser: firebaseUser),
-      ]);
-      final inferredRoles = <String>[
-        if (roleProfiles[0]) 'seller',
-        if (roleProfiles[1]) 'wholesaleBuyer',
-        if (roleProfiles[2]) 'coopMember',
-      ];
-      if (inferredRoles.isNotEmpty) {
+      if (!serverIdentityResolved) {
+        final roleProfiles = await Future.wait([
+          _hasRoleProfile(collection: 'sellers', firebaseUser: firebaseUser),
+          _hasRoleProfile(
+            collection: 'wholesale_buyers',
+            firebaseUser: firebaseUser,
+          ),
+          _hasRoleProfile(collection: 'members', firebaseUser: firebaseUser),
+        ]);
+        final inferredRoles = <String>[
+          if (roleProfiles[0]) 'seller',
+          if (roleProfiles[1]) 'wholesaleBuyer',
+          if (roleProfiles[2]) 'coopMember',
+        ];
+        if (inferredRoles.isEmpty) {
+          return _completeFirebaseUser(
+            firebaseUser,
+            existing: existing,
+            profileExists: profileExists,
+            profileRef: profileRef,
+            fallbackName: fallbackName,
+          );
+        }
         final websiteRoles = existing?['roles'] is Iterable
             ? (existing!['roles'] as Iterable)
                 .map((role) => role.toString())
@@ -205,6 +239,22 @@ class AuthService {
         'Deferred Firestore profile read (${error.code}): ${error.message}',
       );
     }
+    return _completeFirebaseUser(
+      firebaseUser,
+      existing: existing,
+      profileExists: profileExists,
+      profileRef: profileRef,
+      fallbackName: fallbackName,
+    );
+  }
+
+  Future<User> _completeFirebaseUser(
+    firebase_auth.User firebaseUser, {
+    required Map<String, dynamic>? existing,
+    required bool profileExists,
+    required DocumentReference<Map<String, dynamic>> profileRef,
+    String? fallbackName,
+  }) async {
     final idToken = await firebaseUser.getIdToken();
     final profile = <String, dynamic>{
       ...?existing,
