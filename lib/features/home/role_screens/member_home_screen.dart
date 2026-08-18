@@ -40,30 +40,24 @@ class MemberHomeScreen extends ConsumerWidget {
               final displayData = data;
 
               if (displayData == null) {
-                final isSignedIn = user != null;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: .1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.orange.withValues(alpha: .35),
-                          ),
-                        ),
-                        child: Text(
-                          isSignedIn
-                              ? 'Your member benefits profile is still syncing. You can continue shopping and contacting sellers now.'
-                              : 'Sign in to purchase products and contact sellers.',
-                          style: AppTextStyles.bodyMedium,
+                    DashboardReveal(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: _buildMemberHero(
+                          context,
+                          user?.name ?? 'Member',
+                          user?.membershipTier ?? 'bronze',
+                          0,
+                          0,
                         ),
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    _buildMembershipTiers(context),
+                    const SizedBox(height: 18),
                     _buildRecentlyBrowsedProductsSection(
                       context,
                       featuredAsync,
@@ -73,6 +67,8 @@ class MemberHomeScreen extends ConsumerWidget {
                       context,
                       featuredAsync,
                     ),
+                    const SizedBox(height: 24),
+                    _buildMembershipCallToAction(context),
                     const SizedBox(height: 80),
                   ],
                 );
@@ -139,6 +135,9 @@ class MemberHomeScreen extends ConsumerWidget {
                     displayData.isActive,
                   ),
 
+                  const SizedBox(height: 16),
+                  _buildMembershipTiers(context),
+
                   const SizedBox(height: 14),
                   _buildRecentActivity(context, activityAsync),
 
@@ -202,6 +201,8 @@ class MemberHomeScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _buildMemberProductsList(context, featuredAsync),
 
+                  const SizedBox(height: 24),
+                  _buildMembershipCallToAction(context),
                   const SizedBox(height: 24),
                   const SizedBox(height: 80), // Bottom padding for nav bar
                 ],
@@ -465,6 +466,183 @@ class MemberHomeScreen extends ConsumerWidget {
           Text(label,
               style: TextStyle(
                   color: Colors.white.withValues(alpha: .72), fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMembershipTiers(BuildContext context) {
+    const tiers = [
+      (
+        name: 'Bronze',
+        benefit: '5% off eligible purchases',
+        icon: Icons.workspace_premium_outlined,
+        color: Color(0xFFB26A2E),
+      ),
+      (
+        name: 'Silver',
+        benefit: '10% member discount',
+        icon: Icons.military_tech_outlined,
+        color: Color(0xFF7A8795),
+      ),
+      (
+        name: 'Gold',
+        benefit: '15% on eligible products',
+        icon: Icons.emoji_events_outlined,
+        color: Color(0xFFD89B16),
+      ),
+      (
+        name: 'Platinum',
+        benefit: '20% maximum savings',
+        icon: Icons.diamond_outlined,
+        color: Color(0xFF168C9C),
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Choose your membership', style: AppTextStyles.h3),
+          const SizedBox(height: 5),
+          Text(
+            'Compare the benefits and select the tier that fits how you shop.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: tiers.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: .91,
+            ),
+            itemBuilder: (context, index) {
+              final tier = tiers[index];
+              return DashboardReveal(
+                delay: Duration(milliseconds: 70 * index),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: tier.color.withValues(alpha: .3)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tier.color.withValues(alpha: .09),
+                        blurRadius: 16,
+                        offset: const Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(tier.icon, color: tier.color, size: 28),
+                      const SizedBox(height: 9),
+                      Text(tier.name, style: AppTextStyles.h4),
+                      const SizedBox(height: 5),
+                      Expanded(
+                        child: Text(
+                          tier.benefit,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () =>
+                              context.pushNamed('premium-membership'),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            backgroundColor: tier.color,
+                          ),
+                          child: const Text('Subscribe'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMembershipCallToAction(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF006248), Color(0xFF009873)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33006248),
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome_rounded,
+              color: Color(0xFFFFD65A), size: 30),
+          const SizedBox(height: 10),
+          Text(
+            'Start your membership',
+            style: AppTextStyles.h3.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Unlock stronger savings, member rewards and priority benefits.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: Colors.white.withValues(alpha: .82),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => context.pushNamed('premium-membership'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFD65A),
+                    foregroundColor: const Color(0xFF17352E),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  child: const Text('₦5,000 / year'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => context.pushNamed('products'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white54),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  child: const Text('Continue Shopping'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
