@@ -119,7 +119,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       label: 'Continue with Facebook',
                       onTap: () => _runSocial(() => ref
                           .read(authControllerProvider.notifier)
-                          .signInWithFacebook()),
+                          .signInWithFacebook(rememberMe: _rememberMe)),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -128,7 +128,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     label: 'Continue with Google',
                     onTap: () => _runSocial(() => ref
                         .read(authControllerProvider.notifier)
-                        .signInWithGoogle()),
+                        .signInWithGoogle(rememberMe: _rememberMe)),
                   ),
                   const SizedBox(height: 16),
                   _SocialButton(
@@ -136,7 +136,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     label: 'Continue with Apple',
                     onTap: () => _runSocial(() => ref
                         .read(authControllerProvider.notifier)
-                        .signInWithApple()),
+                        .signInWithApple(rememberMe: _rememberMe)),
                   ),
                 ],
 

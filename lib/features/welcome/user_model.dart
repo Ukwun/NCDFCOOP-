@@ -71,7 +71,11 @@ class User {
       token: json['token'],
       roles: rolesList,
       contexts: contextsMap,
-      membershipTier: json['membershipTier'] ?? 'free',
+      membershipTier: (json['membershipTier'] ??
+              json['memberTier'] ??
+              json['membershipPlanTier'] ??
+              'free')
+          .toString(),
       membershipExpiryDate: json['membershipExpiryDate'] != null
           ? DateTime.parse(json['membershipExpiryDate'])
           : null,
@@ -94,10 +98,20 @@ class User {
       'seller' || 'vendor' || 'merchant' => UserRole.seller,
       'member' ||
       'coopmember' ||
+      'cooperative' ||
       'cooperativemember' ||
       'buyer' =>
         UserRole.coopMember,
       'wholesale' || 'wholesalebuyer' || 'bulkbuyer' => UserRole.wholesaleBuyer,
+      'institutionalbuyer' => UserRole.institutionalBuyer,
+      'institutionalapprover' => UserRole.institutionalApprover,
+      'admin' || 'administrator' => UserRole.admin,
+      'superadmin' => UserRole.superAdmin,
+      'warehouse' || 'warehousestaff' => UserRole.warehouseStaff,
+      'driver' || 'deliverydriver' => UserRole.deliveryDriver,
+      'storemanager' => UserRole.storeManager,
+      'storestaff' => UserRole.storeStaff,
+      'franchiseowner' || 'franchisee' => UserRole.franchiseOwner,
       _ => null,
     };
   }

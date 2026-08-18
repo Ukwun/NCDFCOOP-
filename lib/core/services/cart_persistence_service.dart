@@ -24,10 +24,12 @@ class CartPersistenceService {
         'lastUpdated': FieldValue.serverTimestamp(),
       };
 
-      await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .set(cartData, SetOptions(merge: true));
+      final batch = _firestore.batch();
+      batch.set(_firestore.collection(_cartsCollection).doc(userId), cartData,
+          SetOptions(merge: true));
+      batch.set(_firestore.collection('carts').doc(userId), cartData,
+          SetOptions(merge: true));
+      await batch.commit();
 
       debugPrint('✅ Cart saved: ${items.length} items');
     } catch (e) {
@@ -40,20 +42,40 @@ class CartPersistenceService {
     try {
       debugPrint('📦 Loading cart from Firestore for user: $userId');
 
-      final doc =
-          await _firestore.collection(_cartsCollection).doc(userId).get();
-
-      if (!doc.exists) {
+      final documents = await Future.wait([
+        _firestore.collection(_cartsCollection).doc(userId).get(),
+        _firestore.collection('carts').doc(userId).get(),
+      ]);
+      final legacyItems = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('cart')
+          .get();
+      if (documents.every((document) => !document.exists) &&
+          legacyItems.docs.isEmpty) {
         debugPrint('⚠️  No saved cart found, returning empty cart');
         return [];
       }
 
-      final data = doc.data() as Map<String, dynamic>;
-      final itemsList = data['items'] as List<dynamic>? ?? [];
-
-      final items = itemsList.map((itemJson) {
-        return CartItem.fromJson(itemJson as Map<String, dynamic>);
-      }).toList();
+      final merged = <String, CartItem>{};
+      for (final document in documents.where((document) => document.exists)) {
+        final data = document.data() as Map<String, dynamic>;
+        for (final itemJson in data['items'] as List<dynamic>? ?? const []) {
+          try {
+            final item =
+                CartItem.fromJson(Map<String, dynamic>.from(itemJson as Map));
+            if (item.productId.isNotEmpty) merged[item.productId] = item;
+          } catch (_) {}
+        }
+      }
+      for (final document in legacyItems.docs) {
+        try {
+          final item =
+              CartItem.fromJson({...document.data(), 'id': document.id});
+          if (item.productId.isNotEmpty) merged[item.productId] = item;
+        } catch (_) {}
+      }
+      final items = merged.values.toList();
 
       debugPrint('✅ Cart loaded: ${items.length} items');
       return items;
@@ -68,10 +90,19 @@ class CartPersistenceService {
     try {
       debugPrint('🗑️  Clearing cart for user: $userId');
 
-      await _firestore
-          .collection(_cartsCollection)
-          .doc(userId)
-          .update({'items': []});
+      final batch = _firestore.batch();
+      for (final collectionName in [_cartsCollection, 'carts']) {
+        batch.set(
+          _firestore.collection(collectionName).doc(userId),
+          {
+            'userId': userId,
+            'items': [],
+            'lastUpdated': FieldValue.serverTimestamp()
+          },
+          SetOptions(merge: true),
+        );
+      }
+      await batch.commit();
 
       debugPrint('✅ Cart cleared');
     } catch (e) {
@@ -84,7 +115,10 @@ class CartPersistenceService {
     try {
       debugPrint('❌ Deleting cart for user: $userId');
 
-      await _firestore.collection(_cartsCollection).doc(userId).delete();
+      final batch = _firestore.batch();
+      batch.delete(_firestore.collection(_cartsCollection).doc(userId));
+      batch.delete(_firestore.collection('carts').doc(userId));
+      await batch.commit();
 
       debugPrint('✅ Cart deleted');
     } catch (e) {

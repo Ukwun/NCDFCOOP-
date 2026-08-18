@@ -9,6 +9,7 @@ import 'package:coop_commerce/core/api/service_locator.dart';
 import 'package:coop_commerce/core/error/exception_handler.dart';
 import 'package:coop_commerce/core/services/fcm_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:coop_commerce/features/notifications/notification_screens.dart';
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
 import 'package:coop_commerce/providers/app_settings_provider.dart';
@@ -34,6 +35,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await ExceptionHandler.initializeCrashReporting();
     try {
       await FirebaseAppCheck.instance.activate(
         androidProvider:
@@ -64,6 +66,7 @@ class MyApp extends ConsumerStatefulWidget {
 
 class _MyAppState extends ConsumerState<MyApp> {
   bool _startedBootstrap = false;
+  GoRouter? _router;
 
   @override
   void initState() {
@@ -117,7 +120,10 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Watch dark mode setting
     final isDarkMode = ref.watch(darkModeProvider);
 
-    final router = AppRouter.createRouter(ref);
+    // Keep the navigator stable while auth/profile providers refresh. Recreating
+    // GoRouter here resets it to /splash and can bounce an authenticated user
+    // back to the public homepage while they are opening their dashboard.
+    final router = _router ??= AppRouter.createRouter(ref);
 
     // Define light theme - comprehensive with all UI elements
     final lightTheme = ThemeData(

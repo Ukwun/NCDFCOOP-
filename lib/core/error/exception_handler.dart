@@ -1,7 +1,17 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 /// Global exception handler for production environments
 class ExceptionHandler {
+  static bool _crashReportingReady = false;
+
+  static Future<void> initializeCrashReporting() async {
+    if (kIsWeb) return;
+    await FirebaseCrashlytics.instance
+        .setCrashlyticsCollectionEnabled(!kDebugMode);
+    _crashReportingReady = true;
+  }
+
   static void setupGlobalExceptionHandler() {
     // Catch all uncaught exceptions in the main isolate
     FlutterError.onError = (FlutterErrorDetails details) {
@@ -45,8 +55,14 @@ class ExceptionHandler {
     Object error,
     StackTrace stack,
   ) {
-    // In production, you would send this to a logging service
-    // For now, we'll log to console in debug mode only
+    if (_crashReportingReady && !kIsWeb) {
+      FirebaseCrashlytics.instance.recordError(
+        error,
+        stack,
+        reason: type,
+        fatal: false,
+      );
+    }
     if (kDebugMode) {
       debugPrint('═' * 80);
       debugPrint('[$type]');

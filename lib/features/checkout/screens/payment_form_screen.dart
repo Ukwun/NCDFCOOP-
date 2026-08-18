@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:coop_commerce/theme/app_theme.dart';
 import 'package:coop_commerce/services/payments/flutterwave_payment_service.dart';
-import 'package:coop_commerce/core/payments/payment_config.dart';
 
 enum PaymentMethod {
   card,
@@ -96,11 +95,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
 
   Future<void> _initializePaymentService() async {
     try {
-      await _flutterwavePaymentService.initialize(
-        publicKey: PaymentConfig.flutterwavePublicKey,
-        secretKey: PaymentConfig.flutterwaveSecretKey,
-        testMode: !PaymentConfig.isProduction(),
-      );
+      await _flutterwavePaymentService.initialize();
       if (mounted) {
         setState(() => _paymentServiceInitialized = true);
       }

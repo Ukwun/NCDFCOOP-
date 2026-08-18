@@ -28,7 +28,11 @@ class MembershipInfoScreen extends ConsumerWidget {
             const SizedBox(height: 20),
 
             // Tier progression
-            _buildTierProgression(),
+            memberAsync.when(
+              data: (member) => _buildTierProgression(member),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
 
             const SizedBox(height: 20),
 
@@ -139,9 +143,11 @@ class MembershipInfoScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTierProgression() {
-    final tiers = ['BASIC', 'SILVER', 'GOLD', 'PLATINUM'];
-    final currentTierIndex = 0; // TODO: Get from member
+  Widget _buildTierProgression(Member? member) {
+    if (member == null) return const SizedBox.shrink();
+    final tiers = ['BASIC', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM'];
+    final matchedIndex = tiers.indexOf(member.memberTier.trim().toUpperCase());
+    final currentTierIndex = matchedIndex < 0 ? 0 : matchedIndex;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),

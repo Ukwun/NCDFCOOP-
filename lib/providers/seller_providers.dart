@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/seller_models.dart';
 import '../../core/services/seller_service.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
+import 'package:coop_commerce/core/auth/role.dart';
 
 // Services
 final sellerServiceProvider = Provider((ref) {
@@ -11,7 +13,28 @@ final sellerServiceProvider = Provider((ref) {
 final sellerProfileByUserIdProvider =
     FutureProvider.family<SellerProfile?, String>((ref, userId) async {
   final service = ref.watch(sellerServiceProvider);
-  return service.getSellerProfileByUserId(userId);
+  final profile = await service.getSellerProfileByUserId(userId);
+  if (profile != null) return profile;
+
+  // Website sellers may predate the mobile-only `sellers` profile collection.
+  // Their trusted Firebase role and UID remain authoritative, so build a
+  // non-persisted compatibility profile instead of hiding owned inventory.
+  final user = ref.read(currentUserProvider);
+  if (user == null || user.id != userId || !user.hasRole(UserRole.seller)) {
+    return null;
+  }
+  return SellerProfile(
+    id: userId,
+    userId: userId,
+    businessName: user.name.isEmpty ? 'My CoopX Store' : user.name,
+    sellerType: 'website',
+    sellingPath: 'marketplace',
+    country: 'Nigeria',
+    category: '',
+    targetCustomer: TargetCustomer.individual,
+    isVerified: false,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+  );
 });
 
 final sellerProfileByIdProvider =

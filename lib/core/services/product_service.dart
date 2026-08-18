@@ -179,6 +179,28 @@ class ProductService {
     // NOTE: auditLogService parameter reserved for future feature enhancements
   }
 
+  Query _activeProductsQuery() {
+    return _firestore.collection(_productsCollection).where(
+          'isActive',
+          isEqualTo: true,
+        );
+  }
+
+  Query _activeProductsQueryLegacy() {
+    return _firestore.collection(_productsCollection).where(
+          'is_active',
+          isEqualTo: true,
+        );
+  }
+
+  Future<Query> _resolveActiveQuery() async {
+    final primarySnapshot = await _activeProductsQuery().limit(1).get();
+    if (primarySnapshot.docs.isNotEmpty) {
+      return _activeProductsQuery();
+    }
+    return _activeProductsQueryLegacy();
+  }
+
   /// Get all products with pagination
   Future<ProductSearchResult> getAllProducts({
     int limit = 20,
@@ -186,24 +208,8 @@ class ProductService {
     String sortBy = 'popularity',
   }) async {
     try {
-      Query query = _firestore.collection(_productsCollection);
-
-      // Apply filters
-      query = query.where('is_active', isEqualTo: true);
-
-      // Apply sorting
-      if (sortBy == 'name') {
-        query = query.orderBy('name');
-      } else if (sortBy == 'price') {
-        query = query.orderBy('price');
-      } else if (sortBy == 'rating') {
-        query = query.orderBy('rating', descending: true);
-      } else if (sortBy == 'newest') {
-        query = query.orderBy('created_at', descending: true);
-      } else {
-        // Default: popularity (by popularity_score or review_count)
-        query = query.orderBy('popularity_score', descending: true);
-      }
+      final activeQuery = await _resolveActiveQuery();
+      final query = _resolveSorting(activeQuery, sortBy);
 
       // Get total count
       final countSnapshot = await query.count().get();
@@ -234,6 +240,19 @@ class ProductService {
         offset: offset,
       );
     }
+  }
+
+  Query _resolveSorting(Query query, String sortBy) {
+    if (sortBy == 'name') {
+      return query.orderBy('name');
+    } else if (sortBy == 'price') {
+      return query.orderBy('price');
+    } else if (sortBy == 'rating') {
+      return query.orderBy('rating', descending: true);
+    } else if (sortBy == 'newest') {
+      return query.orderBy('created_at', descending: true);
+    }
+    return query.orderBy('popularity_score', descending: true);
   }
 
   /// Search products by query

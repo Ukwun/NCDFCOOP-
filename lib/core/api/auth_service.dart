@@ -154,6 +154,7 @@ class AuthService {
   Future<User> _firebaseUserToAppUser(
     firebase_auth.User firebaseUser, {
     String? fallbackName,
+    String? initialRole,
   }) async {
     final profileRef =
         FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid);
@@ -164,6 +165,15 @@ class AuthService {
       final snapshot = await profileRef.get();
       existing = snapshot.data();
       profileExists = snapshot.exists;
+
+      if (initialRole != null && initialRole.isNotEmpty) {
+        existing = <String, dynamic>{
+          ...?existing,
+          'marketplaceRole': initialRole,
+          'roles': [initialRole],
+          'roleSelectionCompleted': true,
+        };
+      }
 
       // Resolve the canonical website/mobile identity with trusted server
       // access before falling back to client-readable legacy profiles.
@@ -398,6 +408,14 @@ class AuthService {
     _latestUser = null;
     _apiClient.setAuthToken('');
     _authStateController.add(null);
+  }
+
+  /// Resolves the currently signed-in Firebase identity into CoopX's trusted
+  /// application profile. Firebase remains authoritative and no cached profile
+  /// is returned for a signed-out session.
+  Future<User?> refreshCurrentUser() async {
+    await initialize();
+    return _latestUser;
   }
 
   String _normalizeIdentity(String value) {

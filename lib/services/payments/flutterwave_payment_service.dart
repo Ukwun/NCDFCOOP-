@@ -9,14 +9,7 @@ class FlutterwavePaymentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
-  Future<void> initialize({
-    required String publicKey,
-    required String secretKey,
-    bool testMode = true,
-  }) async {
-    // Kept for call-site compatibility. Credentials are intentionally ignored;
-    // Cloud Functions obtains the secret from Google Secret Manager.
-  }
+  Future<void> initialize() async {}
 
   Future<Map<String, dynamic>> initiatePayment({
     required String email,

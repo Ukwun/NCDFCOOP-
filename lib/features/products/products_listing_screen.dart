@@ -121,6 +121,9 @@ class _ProductsListingScreenState extends ConsumerState<ProductsListingScreen> {
       if (role == UserRole.coopMember || role == UserRole.premiumMember) {
         return product.visibleToRetail;
       }
+      if (role == UserRole.seller) {
+        return product.visibleToWholesale || product.visibleToRetail;
+      }
       return false;
     }
 

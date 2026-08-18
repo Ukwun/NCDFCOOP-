@@ -99,7 +99,12 @@ service cloud.firestore {
                      resource.data.is_active == true ||
                      resource.data.isActive == true ||
                      resource.data.status == 'live' ||
-                     (isAuthenticated() && request.auth.uid == resource.data.uploadedBy) ||
+                     (isAuthenticated() && (
+                       request.auth.uid == resource.data.uploadedBy ||
+                       request.auth.uid == resource.data.sellerId ||
+                       request.auth.uid == resource.data.sellerUserId ||
+                       request.auth.uid == resource.data.sellerProfileId
+                     )) ||
                      isAdmin();
       
       allow create: if isAuthenticated() && (
@@ -110,10 +115,12 @@ service cloud.firestore {
       );
       allow update: if isAuthenticated() && (
         isAdmin() ||
-        (resource.data.uploadedBy == request.auth.uid &&
-         request.resource.data.uploadedBy == request.auth.uid &&
+        ((resource.data.uploadedBy == request.auth.uid ||
+          resource.data.sellerId == request.auth.uid ||
+          resource.data.sellerUserId == request.auth.uid ||
+          resource.data.sellerProfileId == request.auth.uid) &&
          !request.resource.data.diff(resource.data).affectedKeys()
-           .hasAny(['uploadedBy', 'sellerId', 'sellerProfileId', 'status', 'is_active', 'created_at', 'activeOffer']))
+           .hasAny(['uploadedBy', 'sellerId', 'sellerUserId', 'sellerProfileId', 'status', 'is_active', 'created_at', 'activeOffer']))
       );
       allow delete: if isAuthenticated() && isAdmin();
       
@@ -291,7 +298,20 @@ service cloud.firestore {
       match /items/{notificationId} {
         allow read: if isAuthenticated() && isOwner(userId);
         allow update: if isAuthenticated() && isOwner(userId);
-        allow create, delete: if false;
+        allow create: if false;
+        allow delete: if isAuthenticated() && isOwner(userId);
+      }
+
+      match /saved_items/{productId} {
+        allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+
+      match /saved_collections/{collectionId} {
+        allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
+      }
+
+      match /cart/{itemId} {
+        allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
       }
     }
 
@@ -533,6 +553,7 @@ service cloud.firestore {
                        request.resource.data.status == 'pending';
       allow read: if isAuthenticated() &&
                      (request.auth.uid == resource.data.buyerId ||
+                      request.auth.uid == resource.data.userId ||
                       request.auth.uid == resource.data.sellerId);
       allow update: if isAuthenticated() &&
                        request.auth.uid == resource.data.sellerId &&
@@ -679,6 +700,23 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.auth.uid == request.resource.data.userId;
 
+      allow update, delete: if false;
+
+      match /activities/{eventId} {
+        allow read: if isAuthenticated() &&
+          (request.auth.uid == activityId || isAdmin());
+        allow create: if isAuthenticated() &&
+          request.auth.uid == activityId &&
+          request.auth.uid == request.resource.data.userId;
+        allow update, delete: if false;
+      }
+    }
+
+    match /activityLogs/{activityId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
       allow update, delete: if false;
     }
 

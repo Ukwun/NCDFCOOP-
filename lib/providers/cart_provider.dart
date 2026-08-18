@@ -38,13 +38,26 @@ class CartItem {
 
   /// Create from JSON
   factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
-        id: json['id'] as String,
-        productId: json['productId'] as String,
-        productName: json['productName'] as String,
-        memberPrice: (json['memberPrice'] as num).toDouble(),
-        marketPrice: (json['marketPrice'] as num).toDouble(),
-        quantity: json['quantity'] as int,
-        imageUrl: json['imageUrl'] as String?,
+        id: (json['id'] ?? json['productId'] ?? json['product_id'] ?? '')
+            .toString(),
+        productId: (json['productId'] ?? json['product_id'] ?? json['id'] ?? '')
+            .toString(),
+        productName:
+            (json['productName'] ?? json['name'] ?? 'Product').toString(),
+        memberPrice: (json['memberPrice'] ??
+                json['unitPrice'] ??
+                json['price'] ??
+                0 as num)
+            .toDouble(),
+        marketPrice: (json['marketPrice'] ??
+                json['originalPrice'] ??
+                json['retailPrice'] ??
+                json['unitPrice'] ??
+                json['price'] ??
+                0 as num)
+            .toDouble(),
+        quantity: (json['quantity'] ?? json['qty'] ?? 1 as num).toInt(),
+        imageUrl: (json['imageUrl'] ?? json['thumbnail']) as String?,
       );
 
   /// Calculate total price for this item (member price)

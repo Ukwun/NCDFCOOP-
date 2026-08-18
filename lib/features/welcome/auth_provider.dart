@@ -58,6 +58,7 @@ class AuthController extends AsyncNotifier<void> {
     String password, {
     bool rememberMe = false,
   }) async {
+    const authTimeout = Duration(seconds: 25);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final user = await _authService
@@ -66,7 +67,7 @@ class AuthController extends AsyncNotifier<void> {
             rememberMe: rememberMe,
           )
           .timeout(
-            const Duration(seconds: 20),
+            authTimeout,
             onTimeout: () => throw TimeoutException(
               'Sign in is taking too long. Check your connection and try again.',
             ),
@@ -86,18 +87,26 @@ class AuthController extends AsyncNotifier<void> {
     String password, {
     bool rememberMe = false,
   }) async {
+    const authTimeout = Duration(seconds: 35);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      var user = await _authService.register(
-        RegisterRequest(
-          name: _fallbackNameFromEmail(email),
-          email: email,
-          password: password,
-        ),
-        rememberMe: rememberMe,
-      );
+      var user = await _authService
+          .register(
+            RegisterRequest(
+              name: _fallbackNameFromEmail(email),
+              email: email,
+              password: password,
+            ),
+            rememberMe: rememberMe,
+          )
+          .timeout(
+            authTimeout,
+            onTimeout: () => throw TimeoutException(
+              'Sign up is taking too long. Check your connection and try again.',
+            ),
+          );
       // Save user to persistent secure storage
-      await UserPersistence.saveUser(user);
+      await UserPersistence.saveUser(user).timeout(const Duration(seconds: 5));
       // Log signup/login activity
       await ref.read(activityLoggerProvider.notifier).logLogin(email);
       // Update the global current user provider
@@ -115,8 +124,7 @@ class AuthController extends AsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final normalizedRole =
-          membershipType == 'member' ? 'coopMember' : membershipType;
+      final normalizedRole = _normalizeMembershipType(membershipType);
       var user = await _authService
           .register(
             RegisterRequest(
@@ -130,7 +138,7 @@ class AuthController extends AsyncNotifier<void> {
             rememberMe: rememberMe,
           )
           .timeout(
-            const Duration(seconds: 25),
+            const Duration(seconds: 35),
             onTimeout: () => throw TimeoutException(
               'Account creation is taking too long. Check your connection and try again.',
             ),
@@ -145,12 +153,37 @@ class AuthController extends AsyncNotifier<void> {
     });
   }
 
-  Future<void> signInWithGoogle() async {
+  String _normalizeMembershipType(String membershipType) {
+    final normalized = membershipType.trim().toLowerCase();
+    if (normalized == 'member' || normalized == 'cooperative') {
+      return 'coopMember';
+    }
+    if (normalized == 'wholesale' ||
+        normalized == 'wholesalebuyer' ||
+        normalized == 'bulkbuyer') {
+      return 'wholesaleBuyer';
+    }
+    if (normalized == 'seller' ||
+        normalized == 'vendor' ||
+        normalized == 'merchant') {
+      return 'seller';
+    }
+    return 'coopMember';
+  }
+
+  Future<void> signInWithGoogle({bool rememberMe = true}) async {
+    const authTimeout = Duration(seconds: 40);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      var user = await _authService.signInWithGoogle(rememberMe: true);
+      var user =
+          await _authService.signInWithGoogle(rememberMe: rememberMe).timeout(
+                authTimeout,
+                onTimeout: () => throw TimeoutException(
+                  'Google sign in is taking too long. Check your connection and try again.',
+                ),
+              );
       // Save user to persistent secure storage
-      await UserPersistence.saveUser(user);
+      await UserPersistence.saveUser(user).timeout(const Duration(seconds: 5));
       // Log login activity
       await ref.read(activityLoggerProvider.notifier).logLogin(user.email);
       ref.read(global_auth.currentUserProvider.notifier).setUser(user);
@@ -158,12 +191,19 @@ class AuthController extends AsyncNotifier<void> {
     });
   }
 
-  Future<void> signInWithFacebook() async {
+  Future<void> signInWithFacebook({bool rememberMe = true}) async {
+    const authTimeout = Duration(seconds: 40);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      var user = await _authService.signInWithFacebook(rememberMe: true);
+      var user =
+          await _authService.signInWithFacebook(rememberMe: rememberMe).timeout(
+                authTimeout,
+                onTimeout: () => throw TimeoutException(
+                  'Facebook sign in is taking too long. Check your connection and try again.',
+                ),
+              );
       // Save user to persistent secure storage
-      await UserPersistence.saveUser(user);
+      await UserPersistence.saveUser(user).timeout(const Duration(seconds: 5));
       // Log login activity
       await ref.read(activityLoggerProvider.notifier).logLogin(user.email);
       ref.read(global_auth.currentUserProvider.notifier).setUser(user);
@@ -171,12 +211,19 @@ class AuthController extends AsyncNotifier<void> {
     });
   }
 
-  Future<void> signInWithApple() async {
+  Future<void> signInWithApple({bool rememberMe = true}) async {
+    const authTimeout = Duration(seconds: 40);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      var user = await _authService.signInWithApple(rememberMe: true);
+      var user =
+          await _authService.signInWithApple(rememberMe: rememberMe).timeout(
+                authTimeout,
+                onTimeout: () => throw TimeoutException(
+                  'Apple sign in is taking too long. Check your connection and try again.',
+                ),
+              );
       // Save user to persistent secure storage
-      await UserPersistence.saveUser(user);
+      await UserPersistence.saveUser(user).timeout(const Duration(seconds: 5));
       // Log login activity
       await ref.read(activityLoggerProvider.notifier).logLogin(user.email);
       ref.read(global_auth.currentUserProvider.notifier).setUser(user);

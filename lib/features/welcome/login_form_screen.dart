@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +8,9 @@ import 'package:coop_commerce/theme/app_theme.dart';
 import 'auth_provider.dart';
 
 class LoginFormScreen extends ConsumerStatefulWidget {
-  const LoginFormScreen({super.key});
+  const LoginFormScreen({this.returnTo, super.key});
+
+  final String? returnTo;
 
   @override
   ConsumerState<LoginFormScreen> createState() => _LoginFormScreenState();
@@ -37,14 +41,22 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(authControllerProvider.notifier).signIn(
+      await ref
+          .read(authControllerProvider.notifier)
+          .signIn(
             email,
             password,
             rememberMe: _rememberMe,
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw TimeoutException(
+              'Sign in is taking too long. Check your connection and try again.',
+            ),
           );
       final result = ref.read(authControllerProvider);
       if (result.hasError) throw result.error!;
-      if (mounted) context.go('/splash');
+      if (mounted) context.go(_safeReturnTo());
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -74,6 +86,18 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
     return 'Sign in failed. Please try again.';
   }
 
+  String _safeReturnTo() {
+    final candidate = widget.returnTo;
+    if (candidate == null ||
+        !candidate.startsWith('/') ||
+        candidate.startsWith('//') ||
+        candidate.startsWith('/signin') ||
+        candidate.startsWith('/splash')) {
+      return '/';
+    }
+    return candidate;
+  }
+
   Future<void> _handleSocialSignIn(Future<void> Function() action) async {
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
@@ -81,7 +105,7 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
       await action().timeout(const Duration(seconds: 30));
       final result = ref.read(authControllerProvider);
       if (result.hasError) throw result.error!;
-      if (mounted) context.go('/splash');
+      if (mounted) context.go(_safeReturnTo());
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -315,7 +339,7 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
                         ? null
                         : () => _handleSocialSignIn(() => ref
                             .read(authControllerProvider.notifier)
-                            .signInWithFacebook()),
+                            .signInWithFacebook(rememberMe: _rememberMe)),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -326,7 +350,7 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
                       ? null
                       : () => _handleSocialSignIn(() => ref
                           .read(authControllerProvider.notifier)
-                          .signInWithGoogle()),
+                          .signInWithGoogle(rememberMe: _rememberMe)),
                 ),
                 const SizedBox(height: 12),
                 _ProviderButton(
@@ -336,7 +360,7 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
                       ? null
                       : () => _handleSocialSignIn(() => ref
                           .read(authControllerProvider.notifier)
-                          .signInWithApple()),
+                          .signInWithApple(rememberMe: _rememberMe)),
                 ),
                 const SizedBox(height: 24),
 
@@ -346,7 +370,10 @@ class _LoginFormScreenState extends ConsumerState<LoginFormScreen> {
                     onTap: () => context.push('/signup'),
                     child: RichText(
                       text: TextSpan(
-                        style: AppTextStyles.bodyMedium,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.text,
+                          fontWeight: FontWeight.w500,
+                        ),
                         children: [
                           const TextSpan(text: 'Don\'t have an account? '),
                           TextSpan(

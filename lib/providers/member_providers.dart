@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/member_models.dart';
+import '../core/providers/order_providers.dart' as commerce_orders;
+import '../core/services/order_fulfillment_service.dart';
 import 'auth_provider.dart';
 
 // ============================================================================
@@ -15,10 +17,15 @@ final currentMemberProvider = FutureProvider<Member?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
 
-  final snapshot =
-      await FirebaseFirestore.instance.collection('members').doc(user.id).get();
-  if (!snapshot.exists) return null;
-  final data = snapshot.data()!;
+  final firestore = FirebaseFirestore.instance;
+  final snapshots = await Future.wait([
+    firestore.collection('members').doc(user.id).get(),
+    firestore.collection('users').doc(user.id).get(),
+  ]);
+  final memberData = snapshots[0].data() ?? const <String, dynamic>{};
+  final userData = snapshots[1].data() ?? const <String, dynamic>{};
+  if (memberData.isEmpty && userData.isEmpty) return null;
+  final data = <String, dynamic>{...userData, ...memberData};
   final storedName = (data['name'] as String?)?.trim();
   final nameParts = (storedName?.isNotEmpty == true ? storedName! : user.name)
       .split(RegExp(r'\s+'));
@@ -32,7 +39,7 @@ final currentMemberProvider = FutureProvider<Member?>((ref) async {
     firstName: firstName.isEmpty ? 'User' : firstName,
     lastName: lastName.isEmpty ? 'Member' : lastName,
     email: (data['email'] as String?) ?? user.email,
-    phone: (data['phone'] as String?) ?? user.phoneNumber,
+    phone: (data['phone'] ?? data['phoneNumber'] ?? user.phoneNumber) as String,
     memberTier: ((data['memberTier'] ?? data['tier'] ?? 'bronze') as String)
         .toUpperCase(),
     loyaltyPoints: (data['loyaltyPoints'] as num?)?.toInt() ?? 0,
@@ -42,7 +49,8 @@ final currentMemberProvider = FutureProvider<Member?>((ref) async {
         ? (data['lastPurchaseDate'] as Timestamp).toDate()
         : null,
     totalOrders:
-        (data['totalOrders'] ?? data['ordersCount'] as num?)?.toInt() ?? 0,
+        (data['totalOrders'] as num? ?? data['ordersCount'] as num? ?? 0)
+            .toInt(),
     totalSpent: (data['totalSpent'] as num?)?.toDouble() ?? 0.0,
     isActive: data['isActive'] as bool? ??
         (data['membershipStatus'] == null ||
@@ -200,16 +208,28 @@ final memberNotificationsStreamProvider =
   //         .map((doc) => AppNotification.fromFirestore(doc))
   //         .toList());
 
-  return Stream.value([]);
+  return FirebaseFirestore.instance
+      .collection('notifications')
+      .doc(user.id)
+      .collection('items')
+      .snapshots()
+      .map((snapshot) {
+    final notifications =
+        snapshot.docs.map(AppNotification.fromFirestore).toList();
+    notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return notifications;
+  });
 });
 
 /// Real-time unread notification count
-final memberUnreadCountProvider = StreamProvider<int>((ref) {
+final memberUnreadCountProvider = Provider<AsyncValue<int>>((ref) {
   final user = ref.watch(currentUserProvider);
-  if (user == null) return Stream.value(0);
+  if (user == null) return const AsyncValue.data(0);
 
-  // For now, return 0 - in production, query unread count from Firestore
-  return Stream.value(0);
+  return ref.watch(memberNotificationsStreamProvider).whenData(
+        (notifications) =>
+            notifications.where((notification) => !notification.isRead).length,
+      );
 });
 
 /// Real-time member loyalty points updates
@@ -217,17 +237,20 @@ final memberLoyaltyStreamProvider = StreamProvider<MemberLoyalty?>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return Stream.value(null);
 
-  // For now, return null - in production, listen to Firestore
-  return Stream.value(null);
+  return FirebaseFirestore.instance
+      .collection('memberLoyalty')
+      .doc(user.id)
+      .snapshots()
+      .map((document) =>
+          document.exists ? MemberLoyalty.fromFirestore(document) : null);
 });
 
 /// Real-time member order updates
-final memberOrdersStreamProvider = StreamProvider<List<dynamic>>((ref) {
+final memberOrdersStreamProvider = Provider<AsyncValue<List<OrderData>>>((ref) {
   final user = ref.watch(currentUserProvider);
-  if (user == null) return Stream.value([]);
+  if (user == null) return const AsyncValue.data([]);
 
-  // For now, return empty - in production, listen to Firestore
-  return Stream.value([]);
+  return ref.watch(commerce_orders.userOrdersProvider(user.id));
 });
 
 // ============================================================================
@@ -237,67 +260,69 @@ final memberOrdersStreamProvider = StreamProvider<List<dynamic>>((ref) {
 /// Mark notification as read
 final markNotificationAsReadProvider =
     FutureProvider.family<void, String>((ref, notificationId) async {
-  try {
-    await FirebaseFirestore.instance
-        .collection('notifications')
-        .doc(notificationId)
-        .update({
-      'isRead': true,
-      'readAt': Timestamp.now(),
-    });
-  } catch (e) {
-    rethrow;
-  }
+  final user = ref.watch(currentUserProvider);
+  if (user == null) throw StateError('Authentication required');
+  await FirebaseFirestore.instance
+      .collection('notifications')
+      .doc(user.id)
+      .collection('items')
+      .doc(notificationId)
+      .update({'isRead': true, 'readAt': Timestamp.now()});
 });
 
 /// Mark all notifications as read
 final markAllNotificationsAsReadProvider = FutureProvider<void>((ref) async {
-  try {
-    final user = ref.watch(currentUserProvider);
-    if (user == null) return;
-
-    // In production, update all user's notifications in Firestore
-    // await FirebaseFirestore.instance
-    //     .collection('members')
-    //     .doc(user.id)
-    //     .collection('notifications')
-    //     .where('isRead', isEqualTo: false)
-    //     .get()
-    //     .then((snapshot) {
-    //   for (var doc in snapshot.docs) {
-    //     doc.reference.update({'isRead': true, 'readAt': Timestamp.now()});
-    //   }
-    // });
-    return;
-  } catch (e) {
-    // Silently fail if Firebase is not available
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return;
+  final unread = await FirebaseFirestore.instance
+      .collection('notifications')
+      .doc(user.id)
+      .collection('items')
+      .where('isRead', isEqualTo: false)
+      .get();
+  for (var offset = 0; offset < unread.docs.length; offset += 450) {
+    final batch = FirebaseFirestore.instance.batch();
+    for (final document in unread.docs.skip(offset).take(450)) {
+      batch.update(document.reference,
+          {'isRead': true, 'readAt': FieldValue.serverTimestamp()});
+    }
+    await batch.commit();
   }
 });
 
 /// Delete notification
 final deleteNotificationProvider =
     FutureProvider.family<void, String>((ref, notificationId) async {
-  try {
-    await FirebaseFirestore.instance
-        .collection('notifications')
-        .doc(notificationId)
-        .delete();
-  } catch (e) {
-    // Silently fail if Firebase is not available
-  }
+  final user = ref.watch(currentUserProvider);
+  if (user == null) throw StateError('Authentication required');
+  await FirebaseFirestore.instance
+      .collection('notifications')
+      .doc(user.id)
+      .collection('items')
+      .doc(notificationId)
+      .delete();
 });
 
 /// Update member profile
 final updateMemberProfileProvider =
     FutureProvider.family<void, Member>((ref, updatedMember) async {
-  try {
-    await FirebaseFirestore.instance
-        .collection('members')
-        .doc(updatedMember.id)
-        .update(updatedMember.toFirestore());
-  } catch (e) {
-    // Silently fail if Firebase is not available
-  }
+  final firestore = FirebaseFirestore.instance;
+  final batch = firestore.batch();
+  final memberData = updatedMember.toFirestore();
+  batch.set(firestore.collection('members').doc(updatedMember.id), memberData,
+      SetOptions(merge: true));
+  batch.set(
+      firestore.collection('users').doc(updatedMember.id),
+      {
+        'name': updatedMember.fullName.trim(),
+        'firstName': updatedMember.firstName,
+        'lastName': updatedMember.lastName,
+        'phone': updatedMember.phone,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true));
+  await batch.commit();
+  ref.invalidate(currentMemberProvider);
 });
 
 /// Update member payment methods

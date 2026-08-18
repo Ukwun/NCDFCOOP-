@@ -5,7 +5,7 @@ import 'package:coop_commerce/features/home/role_aware_primary_tab_screen.dart';
 import 'package:coop_commerce/features/welcome/auth_provider.dart';
 import 'package:coop_commerce/providers/auth_provider.dart' as global_auth;
 import 'package:coop_commerce/features/home/scaffold_with_navbar.dart';
-import 'package:coop_commerce/features/welcome/welcome_screen.dart';
+import 'package:coop_commerce/features/public_home/legal_screen.dart';
 import 'package:coop_commerce/features/welcome/splash_screen.dart';
 import 'package:coop_commerce/features/welcome/onboarding_screen.dart';
 import 'package:coop_commerce/features/welcome/feature_discovery_screen.dart';
@@ -322,15 +322,6 @@ class AppRouter {
         final isWithdrawalAdminRoute =
             state.uri.path == '/admin/seller-withdrawals';
         final isOnSplash = state.uri.path == '/splash';
-        const retiredRolePrefixes = <String>[
-          '/admin',
-          '/franchise',
-          '/franchisee',
-          '/institutional',
-          '/warehouse',
-          '/driver',
-          '/store-manager',
-        ];
 
         final isOnPublicRoute = state.uri.path == '/welcome' ||
             state.uri.path == '/signin' ||
@@ -343,7 +334,9 @@ class AppRouter {
             state.uri.path == '/about-cooperatives' ||
             state.uri.path == '/features-guide' ||
             state.uri.path == '/app-tour' ||
-            state.uri.path == '/help-center';
+            state.uri.path == '/help-center' ||
+            state.uri.path == '/privacy' ||
+            state.uri.path == '/terms';
 
         // Cold-start navigation belongs to SplashScreen so the brand intro is
         // visible and session/onboarding checks happen in one place.
@@ -374,6 +367,16 @@ class AppRouter {
           if (state.uri.path == '/role-selection') {
             return '/signin';
           }
+          final protectedCommerceAttempt =
+              state.uri.path.startsWith('/checkout') ||
+                  state.uri.path.startsWith('/payment') ||
+                  state.uri.path.startsWith('/order-confirmation');
+          if (protectedCommerceAttempt) {
+            return Uri(
+              path: '/signin',
+              queryParameters: {'returnTo': state.uri.toString()},
+            ).toString();
+          }
           if (isOnPublicRoute) {
             return null;
           }
@@ -397,10 +400,6 @@ class AppRouter {
         // Check role-based permissions for protected routes
         if (currentUser != null && !isOnPublicRoute) {
           final currentPath = state.uri.path;
-          if (retiredRolePrefixes.any(currentPath.startsWith) &&
-              !(isPrimarySuperAdmin && isWithdrawalAdminRoute)) {
-            return '/';
-          }
           final userRolesSet = currentUser.roles.toSet();
 
           // Skip permission check for non-protected routes
@@ -430,7 +429,19 @@ class AppRouter {
         GoRoute(
           path: '/welcome',
           name: 'welcome',
-          builder: (context, state) => const WelcomeScreen(),
+          redirect: (context, state) => '/onboarding',
+        ),
+        GoRoute(
+          path: '/privacy',
+          name: 'privacy',
+          builder: (context, state) =>
+              const LegalScreen(document: LegalDocument.privacy),
+        ),
+        GoRoute(
+          path: '/terms',
+          name: 'terms',
+          builder: (context, state) =>
+              const LegalScreen(document: LegalDocument.terms),
         ),
         // Onboarding Route
         GoRoute(
@@ -479,7 +490,9 @@ class AppRouter {
           path: '/signin',
           name: 'signin',
           parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) => const LoginFormScreen(),
+          builder: (context, state) => LoginFormScreen(
+            returnTo: state.uri.queryParameters['returnTo'],
+          ),
         ),
 
         // Login Form Route
@@ -520,9 +533,12 @@ class AppRouter {
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
-            final userId = extra?['userId'] ?? '';
-            final userEmail = extra?['userEmail'] ?? '';
-            final userName = extra?['userName'] ?? 'User';
+            final currentUser =
+                ProviderScope.containerOf(context, listen: false)
+                    .read(global_auth.currentUserProvider);
+            final userId = extra?['userId'] ?? currentUser?.id ?? '';
+            final userEmail = extra?['userEmail'] ?? currentUser?.email ?? '';
+            final userName = extra?['userName'] ?? currentUser?.name ?? 'User';
 
             return RoleSelectionScreen(
               userId: userId,

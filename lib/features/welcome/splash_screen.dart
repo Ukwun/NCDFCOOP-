@@ -61,38 +61,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _navigateBasedOnAuthStatus() async {
     if (_hasNavigated) return;
 
-    // Wait for Firebase and the app-level profile to agree before choosing a
-    // destination. This prevents stale local users from reaching role setup.
     await ref.read(authControllerProvider.future);
     await ref.read(initializePersistedUserProvider.future);
     if (!mounted || _hasNavigated) return;
 
-    final isAuthenticated = ref.read(isAuthenticatedProvider);
     final currentUser = ref.read(global_auth.currentUserProvider);
-
-    // Prefer persisted app user context first; Firebase stream can lag on some devices.
     if (currentUser != null) {
       _hasNavigated = true;
-      if (!currentUser.roleSelectionCompleted) {
-        // Role not selected yet, go to role selection
-        context.go('/role-selection');
-      } else {
-        // Role selected, go to home
-        context.go('/');
-      }
+      context.go(currentUser.roleSelectionCompleted ? '/' : '/role-selection');
       return;
     }
 
-    if (isAuthenticated && currentUser != null) {
-      _hasNavigated = true;
-      context.go(currentUser.roleSelectionCompleted ? '/' : '/role-selection');
-    } else {
-      final onboardingCompleted =
-          await ref.read(onboardingCompletedProvider.future);
-      if (!mounted || _hasNavigated) return;
-      _hasNavigated = true;
-      context.go(onboardingCompleted ? '/signin' : '/onboarding');
-    }
+    final onboardingCompleted =
+        await ref.read(onboardingCompletedProvider.future);
+    if (!mounted || _hasNavigated) return;
+    _hasNavigated = true;
+    context.go(onboardingCompleted ? '/signin' : '/onboarding');
   }
 
   @override
@@ -246,17 +230,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusIcon({double width = 20}) {
-    return Container(
-      width: width,
-      height: 20,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4),
       ),
     );
   }

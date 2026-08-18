@@ -234,34 +234,87 @@ class SellerService {
     try {
       final Map<String, SellerProduct> merged = {};
 
-      Future<void> collectByField(String field, String value) async {
-        Query query = _firestore
-            .collection('seller_products')
-            .where(field, isEqualTo: value);
-        if (filterStatus != null) {
-          query = query.where('status', isEqualTo: filterStatus.name);
-        }
-
-        final snapshot = await query.get();
-        for (final doc in snapshot.docs) {
-          final product = SellerProduct.fromFirestore(doc);
-          merged[doc.id] = product;
+      Future<void> collectQuery(Query query) async {
+        try {
+          if (filterStatus != null) {
+            query = query.where('status', isEqualTo: filterStatus.name);
+          }
+          final snapshot = await query.get();
+          for (final doc in snapshot.docs) {
+            try {
+              final product = SellerProduct.fromFirestore(doc);
+              merged[doc.id] = product;
+            } catch (_) {
+              // One historical malformed listing must not erase valid inventory.
+            }
+          }
+        } on FirebaseException catch (error) {
+          if (error.code != 'permission-denied' &&
+              error.code != 'failed-precondition') {
+            rethrow;
+          }
         }
       }
 
-      // Every normalized upload stores sellerUserId. Querying by a separate
-      // profile id cannot satisfy the owner rule and causes Firestore to deny
-      // the entire dashboard request, hiding even valid pending products.
-      await collectByField('sellerUserId', userId);
-      await collectByField('sellerId', userId);
+      final sellerProductsCollection = _firestore.collection('seller_products');
+      final marketplaceProductsCollection = _firestore.collection('products');
+
+      // Seller listings stored directly in seller_products
+      await collectQuery(
+        sellerProductsCollection.where('sellerUserId', isEqualTo: userId),
+      );
+      await collectQuery(
+        sellerProductsCollection.where('sellerId', isEqualTo: userId),
+      );
+      if (sellerProfileId != null && sellerProfileId.isNotEmpty) {
+        await collectQuery(
+          sellerProductsCollection.where('sellerProfileId',
+              isEqualTo: sellerProfileId),
+        );
+      }
+      await collectQuery(
+        sellerProductsCollection.where('sellerUserIds', arrayContains: userId),
+      );
+      await collectQuery(
+        sellerProductsCollection.where('sellerIds', arrayContains: userId),
+      );
+      await collectQuery(
+        sellerProductsCollection.where('sellerProfileIds',
+            arrayContains: userId),
+      );
+
+      // Some seller inventory exists in the marketplace products collection.
+      await collectQuery(
+        marketplaceProductsCollection.where('uploadedBy', isEqualTo: userId),
+      );
+      await collectQuery(
+        marketplaceProductsCollection.where('sellerUserId', isEqualTo: userId),
+      );
+      await collectQuery(
+        marketplaceProductsCollection.where('sellerId', isEqualTo: userId),
+      );
+      if (sellerProfileId != null && sellerProfileId.isNotEmpty) {
+        await collectQuery(
+          marketplaceProductsCollection.where('sellerProfileId',
+              isEqualTo: sellerProfileId),
+        );
+      }
+      await collectQuery(
+        marketplaceProductsCollection.where('sellerUserIds',
+            arrayContains: userId),
+      );
+      await collectQuery(
+        marketplaceProductsCollection.where('sellerIds', arrayContains: userId),
+      );
+      await collectQuery(
+        marketplaceProductsCollection.where('sellerProfileIds',
+            arrayContains: userId),
+      );
 
       final products = merged.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return products;
     } on FirebaseException catch (e) {
-      if (e.code == 'permission-denied') {
-        return const [];
-      }
       throw Exception('Failed to get seller products: $e');
     } catch (e) {
       throw Exception('Failed to get seller products: $e');

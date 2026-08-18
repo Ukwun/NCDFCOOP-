@@ -571,7 +571,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           return Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
+                              color: statusColor.withValues(alpha: 0.1),
                               border: Border.all(color: statusColor),
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -602,7 +602,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         loading: () => Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
+                            color: Colors.grey.withValues(alpha: 0.1),
                             border: Border.all(color: Colors.grey),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -616,7 +616,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         error: (err, stack) => Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
+                            color: Colors.orange.withValues(alpha: 0.1),
                             border: Border.all(color: Colors.orange),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -2189,82 +2189,89 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           Text('Color:', style: AppTextStyles.labelSmall),
           const SizedBox(height: AppSpacing.sm),
           Row(
-            children: ['Black', 'White', 'Navy', 'Grey'].map((color) {
-              final isSelected = color == 'Black';
-              return GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Selected: $color')),
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: AppSpacing.md),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
-                      width: isSelected ? 2 : 1,
+            children: [
+              ...['Black', 'White', 'Navy', 'Grey'].map((color) {
+                final isSelected = color == 'Black';
+                return GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Selected: $color')),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.05)
-                        : null,
-                  ),
-                  child: Text(
-                    color,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: isSelected ? AppColors.primary : AppColors.text,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color:
+                            isSelected ? AppColors.primary : AppColors.border,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      color: isSelected
+                          ? AppColors.primary.withValues(alpha: 0.05)
+                          : null,
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          // Size options
-          Text('Size:', style: AppTextStyles.labelSmall),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: ['S', 'M', 'L', 'XL'].map((size) {
-              final isSelected = size == 'M';
-              return GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Selected size: $size')),
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: AppSpacing.md),
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
-                      width: isSelected ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.05)
-                        : null,
-                  ),
-                  child: Center(
                     child: Text(
-                      size,
-                      style: AppTextStyles.labelSmall.copyWith(
+                      color,
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: isSelected ? AppColors.primary : AppColors.text,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // Size options
+          Text('Size:', style: AppTextStyles.labelSmall),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              ...['S', 'M', 'L', 'XL'].map((size) {
+                final isSelected = size == 'M';
+                return GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Selected size: $size')),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: AppSpacing.md),
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color:
+                            isSelected ? AppColors.primary : AppColors.border,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      color: isSelected
+                          ? AppColors.primary.withValues(alpha: 0.05)
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        size,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color:
+                              isSelected ? AppColors.primary : AppColors.text,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
         ],
       ),
@@ -2357,7 +2364,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

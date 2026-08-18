@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/member_models.dart';
 import '../../providers/member_providers.dart';
+import '../../core/services/order_fulfillment_service.dart';
 
 class OrderHistoryScreen extends ConsumerStatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -37,7 +38,16 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           Expanded(
             child: ordersAsync.when(
               data: (orders) {
-                if (orders.isEmpty) {
+                final visibleOrders = orders.where((order) {
+                  final matchesStatus = _selectedStatus == 'all' ||
+                      order.status.toLowerCase() == _selectedStatus;
+                  final matchesDate = _selectedDateRange == null ||
+                      (!order.createdAt.isBefore(_selectedDateRange!.start) &&
+                          order.createdAt.isBefore(_selectedDateRange!.end
+                              .add(const Duration(days: 1))));
+                  return matchesStatus && matchesDate;
+                }).toList();
+                if (visibleOrders.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -51,9 +61,9 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: orders.length,
+                  itemCount: visibleOrders.length,
                   itemBuilder: (context, index) =>
-                      _buildOrderCard(orders[index]),
+                      _buildOrderCard(visibleOrders[index]),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -81,11 +91,11 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
         children: [
           _buildStatColumn('${stats.totalOrders}', 'Total Orders'),
           _buildStatColumn(
-            '\$${stats.totalSpent.toStringAsFixed(2)}',
+            '₦${stats.totalSpent.toStringAsFixed(2)}',
             'Total Spent',
           ),
           _buildStatColumn(
-            '\$${stats.averageOrderValue.toStringAsFixed(2)}',
+            '₦${stats.averageOrderValue.toStringAsFixed(2)}',
             'Avg Order',
           ),
         ],
@@ -161,8 +171,12 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
     );
   }
 
-  Widget _buildOrderCard(dynamic order) {
-    // Note: order structure depends on your Order model
+  Widget _buildOrderCard(OrderData order) {
+    final status = order.status.replaceAll('_', ' ');
+    final date = MaterialLocalizations.of(context)
+        .formatMediumDate(order.createdAt.toLocal());
+    final isComplete =
+        const {'delivered', 'completed'}.contains(order.status.toLowerCase());
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -178,12 +192,12 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Order #12345',
+                Text(
+                  'Order #${order.orderId.length > 10 ? order.orderId.substring(0, 10) : order.orderId}',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'Jan 28, 2025',
+                  date,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,
@@ -195,8 +209,8 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
-                '\$125.50',
+              Text(
+                '₦${order.totalAmount.toStringAsFixed(2)}',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               Container(
@@ -205,12 +219,19 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade100,
+                  color: isComplete
+                      ? Colors.green.shade100
+                      : Colors.orange.shade100,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'Delivered',
-                  style: TextStyle(fontSize: 10, color: Colors.green),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isComplete
+                        ? Colors.green.shade800
+                        : Colors.orange.shade900,
+                  ),
                 ),
               ),
             ],

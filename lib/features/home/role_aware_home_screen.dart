@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/core/auth/role.dart';
 import 'package:coop_commerce/providers/auth_provider.dart';
-import 'package:coop_commerce/core/providers/rbac_providers.dart';
 import 'package:coop_commerce/features/home/role_screens/member_home_screen.dart';
 import 'package:coop_commerce/features/selling/seller_home_screen.dart';
 import 'package:coop_commerce/features/home/role_screens/wholesale_buyer_home_screen.dart';
@@ -14,7 +13,7 @@ class RoleAwareHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final highestRole = ref.watch(highestUserRoleProvider);
+    final activeRole = ref.watch(currentRoleProvider);
 
     // If not authenticated, show a login prompt
     if (user == null) {
@@ -25,8 +24,10 @@ class RoleAwareHomeScreen extends ConsumerWidget {
       );
     }
 
-    // Route to home screen based on highest role
-    return _buildHomeScreenForRole(highestRole);
+    // The authenticated profile resolver is the single source of truth for the
+    // active marketplace role. Using a separately ranked role here can make the
+    // home tab disagree with messaging, products, and the bottom navigation.
+    return _buildHomeScreenForRole(activeRole);
   }
 
   Widget _buildHomeScreenForRole(UserRole role) {

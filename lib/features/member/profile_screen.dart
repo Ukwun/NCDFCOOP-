@@ -15,6 +15,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
   bool _isEditing = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -48,8 +49,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             )
           else
             TextButton(
-              onPressed: _saveChanges,
-              child: const Text('Save'),
+              onPressed: _isSaving ? null : _saveChanges,
+              child: _isSaving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
             ),
         ],
       ),
@@ -99,13 +105,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _initializeControllers(Member? member) {
-    if (member == null) return;
+    if (member == null || _isEditing || _isSaving) return;
     _firstNameController.text = member.firstName;
     _lastNameController.text = member.lastName;
     _phoneController.text = member.phone;
   }
 
-  void _saveChanges() {
+  Future<void> _saveChanges() async {
     // Validate inputs
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
@@ -142,15 +148,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
 
-    // TODO: Persist changes to Firestore
-    // For now, just update local state and show success message
-    setState(() => _isEditing = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated successfully'),
+    final current = ref.read(currentMemberProvider).value;
+    if (current == null) return;
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(updateMemberProfileProvider(current.copyWith(
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone,
+        updatedAt: DateTime.now(),
+      )).future);
+      if (!mounted) return;
+      setState(() => _isEditing = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Profile updated across CoopX'),
         duration: Duration(seconds: 2),
-      ),
-    );
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Profile could not be updated. Please retry.'),
+      ));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Widget _buildProfileHeader(Member member) {

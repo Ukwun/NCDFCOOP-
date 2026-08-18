@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
@@ -39,12 +41,89 @@ class SellerDashboardScreen extends StatefulWidget {
 
 class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
   late List<SellerProduct> _filteredProducts;
+  late Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _ordersStream;
+  late Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+      _enquiriesStream;
   String _filterStatus = 'all'; // all, pending, approved
+
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _mergeQueries(
+    Map<String, Query<Map<String, dynamic>>> queries,
+  ) {
+    final controller =
+        StreamController<List<QueryDocumentSnapshot<Map<String, dynamic>>>>();
+    final sources =
+        <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+    final subscriptions =
+        <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+    void emit() {
+      final merged = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
+      for (final documents in sources.values) {
+        for (final document in documents) {
+          merged[document.id] = document;
+        }
+      }
+      final values = merged.values.toList()
+        ..sort((a, b) {
+          DateTime date(dynamic value) {
+            if (value is Timestamp) return value.toDate();
+            return DateTime.tryParse(value?.toString() ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+          }
+
+          return date(b.data()['createdAt'])
+              .compareTo(date(a.data()['createdAt']));
+        });
+      if (!controller.isClosed) controller.add(values);
+    }
+
+    for (final entry in queries.entries) {
+      subscriptions.add(entry.value.snapshots().listen((snapshot) {
+        sources[entry.key] = snapshot.docs;
+        emit();
+      }, onError: (Object _) {
+        sources[entry.key] = const [];
+        emit();
+      }));
+    }
+    controller.onCancel = () async {
+      for (final subscription in subscriptions) {
+        await subscription.cancel();
+      }
+    };
+    return controller.stream;
+  }
+
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+      _sellerOrdersStream() {
+    final orders = FirebaseFirestore.instance.collection('orders');
+    return _mergeQueries({
+      'sellerId': orders.where('sellerId', isEqualTo: widget.sellerId),
+      'sellerUserId': orders.where('sellerUserId', isEqualTo: widget.sellerId),
+      'sellerIds': orders.where('sellerIds', arrayContains: widget.sellerId),
+      'sellerUserIds':
+          orders.where('sellerUserIds', arrayContains: widget.sellerId),
+    });
+  }
+
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+      _sellerEnquiriesStream() {
+    final firestore = FirebaseFirestore.instance;
+    return _mergeQueries({
+      'website': firestore
+          .collection('inquiries')
+          .where('sellerId', isEqualTo: widget.sellerId),
+      'quotes': firestore
+          .collection('quote_requests')
+          .where('sellerId', isEqualTo: widget.sellerId),
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _filteredProducts = widget.products;
+    _ordersStream = _sellerOrdersStream();
+    _enquiriesStream = _sellerEnquiriesStream();
   }
 
   @override
@@ -52,6 +131,10 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.products != widget.products) {
       _filterProducts();
+    }
+    if (oldWidget.sellerId != widget.sellerId) {
+      _ordersStream = _sellerOrdersStream();
+      _enquiriesStream = _sellerEnquiriesStream();
     }
   }
 
@@ -768,15 +851,10 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
   }
 
   Widget _buildIncomingOrdersPanel() {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('orders')
-          .where('sellerUserId', isEqualTo: widget.sellerId)
-          .orderBy('createdAt', descending: true)
-          .limit(5)
-          .snapshots(),
+    return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+      stream: _ordersStream,
       builder: (context, snapshot) {
-        final orders = snapshot.data?.docs ?? const [];
+        final orders = (snapshot.data ?? const []).take(5);
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -1173,13 +1251,10 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
   }
 
   Widget _buildBulkEnquiriesPanel() {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('quote_requests')
-          .where('sellerId', isEqualTo: widget.sellerId)
-          .snapshots(),
+    return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+      stream: _enquiriesStream,
       builder: (context, snapshot) {
-        final enquiries = snapshot.data?.docs ?? const [];
+        final enquiries = snapshot.data ?? const [];
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),

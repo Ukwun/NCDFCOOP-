@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:coop_commerce/models/product.dart';
+import 'package:coop_commerce/providers/auth_provider.dart';
 import 'package:coop_commerce/core/services/local_cache_service.dart';
 
 // ==================== MEMBER HOME PROVIDERS ====================
@@ -37,17 +38,34 @@ class MemberData {
   }
 
   factory MemberData.fromMap(String memberId, Map<String, dynamic> data) {
+    int integer(dynamic value) => (value as num?)?.toInt() ?? 0;
+    DateTime date(dynamic value) {
+      if (value is Timestamp) return value.toDate();
+      if (value is DateTime) return value;
+      return DateTime.tryParse(value?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
+    final status = (data['membershipStatus'] ?? data['status'] ?? 'active')
+        .toString()
+        .toLowerCase();
     return MemberData(
       memberId: memberId,
-      tier: data['tier'] ?? 'bronze',
-      rewardsPoints: data['rewardsPoints'] ?? 0,
-      lifetimePoints: data['lifetimePoints'] ?? 0,
+      tier: (data['tier'] ??
+              data['memberTier'] ??
+              data['membershipTier'] ??
+              data['membershipPlanTier'] ??
+              'bronze')
+          .toString()
+          .toLowerCase(),
+      rewardsPoints: integer(data['rewardsPoints'] ?? data['loyaltyPoints']),
+      lifetimePoints: integer(data['lifetimePoints'] ?? data['loyaltyPoints']),
       memberSince:
-          (data['memberSince'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isActive: data['isActive'] ?? true,
-      discountPercentage: (data['discountPercentage'] ?? 0).toDouble(),
-      ordersCount: data['ordersCount'] ?? 0,
-      totalSpent: (data['totalSpent'] ?? 0).toDouble(),
+          date(data['memberSince'] ?? data['joiningDate'] ?? data['createdAt']),
+      isActive: data['isActive'] == true || status == 'active',
+      discountPercentage: (data['discountPercentage'] as num?)?.toDouble() ?? 0,
+      ordersCount: integer(data['ordersCount']),
+      totalSpent: (data['totalSpent'] as num?)?.toDouble() ?? 0,
     );
   }
 }
@@ -68,6 +86,7 @@ final memberDataProvider =
 
   try {
     final firestore = FirebaseFirestore.instance;
+    final currentUser = ref.watch(currentUserProvider);
     final doc = await firestore.collection('members').doc(userId).get();
 
     if (doc.exists) {
@@ -80,20 +99,71 @@ final memberDataProvider =
               (data['memberSince'] as Timestamp?)?.millisecondsSinceEpoch,
         });
       }
-      return MemberData.fromFirestore(doc);
-    } else {
-      // Log warning but return null (not mock)
-      print('⚠️ No member document for $userId in Firestore');
-      final cached = await cache.getCachedMemberData(userId);
-      if (cached == null) return null;
-      final memberSinceMs = cached['memberSince'] as int?;
-      return MemberData.fromMap(userId, {
-        ...cached,
-        'memberSince': memberSinceMs == null
-            ? null
-            : Timestamp.fromMillisecondsSinceEpoch(memberSinceMs),
-      });
+      final member = MemberData.fromFirestore(doc);
+      final orderSnapshots = await Future.wait([
+        firestore.collection('orders').where('userId', isEqualTo: userId).get(),
+        firestore
+            .collection('orders')
+            .where('buyerId', isEqualTo: userId)
+            .get(),
+      ]);
+      final liveOrderCount = <String>{
+        for (final snapshot in orderSnapshots)
+          for (final order in snapshot.docs) order.id,
+      }.length;
+      return MemberData(
+        memberId: member.memberId,
+        tier: member.tier,
+        rewardsPoints: member.rewardsPoints,
+        lifetimePoints: member.lifetimePoints,
+        memberSince: member.memberSince,
+        isActive: member.isActive,
+        discountPercentage: member.discountPercentage,
+        ordersCount: liveOrderCount > 0 ? liveOrderCount : member.ordersCount,
+        totalSpent: member.totalSpent,
+      );
     }
+
+    // Do not manufacture a membership record on the client. Membership state
+    // and tier must originate from trusted website/server provisioning.
+    if (currentUser != null && currentUser.id == userId) {
+      final defaultTier = currentUser.membershipTier.toLowerCase() == 'free'
+          ? 'bronze'
+          : currentUser.membershipTier.toLowerCase();
+      final defaultMemberData = {
+        'userId': userId,
+        'email': currentUser.email,
+        'name': currentUser.name,
+        'tier': defaultTier,
+        'loyaltyPoints': 0,
+        'totalSpent': 0.0,
+        'membershipStatus': 'active',
+        'memberSince': Timestamp.now(),
+        'createdAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      };
+
+      final userDoc = await firestore.collection('users').doc(userId).get();
+      final trustedData = userDoc.data();
+      if (trustedData != null &&
+          (trustedData['membershipStatus'] != null ||
+              trustedData['memberTier'] != null ||
+              trustedData['membershipTier'] != null)) {
+        return MemberData.fromMap(
+            userId, {...defaultMemberData, ...trustedData});
+      }
+    }
+
+    print('⚠️ No member document for $userId in Firestore');
+    final cached = await cache.getCachedMemberData(userId);
+    if (cached == null) return null;
+    final memberSinceMs = cached['memberSince'] as int?;
+    return MemberData.fromMap(userId, {
+      ...cached,
+      'memberSince': memberSinceMs == null
+          ? null
+          : Timestamp.fromMillisecondsSinceEpoch(memberSinceMs),
+    });
   } catch (e) {
     // Log error but return null (not mock)
     print('❌ Error fetching member data: $e');
@@ -676,7 +746,8 @@ bool _companyProductVisibleForRole(Map<String, dynamic> data, String role) {
 
   if (role.contains('member') ||
       role.contains('cooperative') ||
-      role.contains('wholesale')) {
+      role.contains('wholesale') ||
+      role.contains('seller')) {
     return wholesaleVisible || retailVisible;
   }
 
@@ -734,6 +805,9 @@ bool _sellerProductVisibleForRole(Product product, String role) {
   if (role.contains('member') || role.contains('cooperative')) {
     return product.visibleToRetail;
   }
+  if (role.contains('seller')) {
+    return product.visibleToWholesale || product.visibleToRetail;
+  }
   return false;
 }
 
@@ -769,10 +843,11 @@ final roleAwareFeaturedProductsProvider =
       }
     }
 
-    // Seller listings are intended for cooperative members and wholesale buyers.
+    // Seller listings are intended for cooperative members, wholesale buyers, and sellers.
     final canSeeSellerProducts = role.contains('member') ||
         role.contains('cooperative') ||
-        role.contains('wholesale');
+        role.contains('wholesale') ||
+        role.contains('seller');
 
     if (canSeeSellerProducts) {
       final sellerSnapshot = await firestore
@@ -817,7 +892,8 @@ final roleAwareProductsProvider =
 
     final sellerStream = (role.contains('member') ||
             role.contains('cooperative') ||
-            role.contains('wholesale'))
+            role.contains('wholesale') ||
+            role.contains('seller'))
         ? firestore
             .collection('seller_products')
             .where('status', isEqualTo: 'approved')

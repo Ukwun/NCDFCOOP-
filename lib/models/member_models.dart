@@ -153,7 +153,7 @@ class MemberLoyalty {
     final data = doc.data() as Map<String, dynamic>;
     return MemberLoyalty(
       id: doc.id,
-      memberId: data['memberId'] as String? ?? '',
+      memberId: (data['memberId'] ?? data['userId']) as String? ?? '',
       currentTier: data['currentTier'] as String? ?? 'BASIC',
       currentPoints: data['currentPoints'] as int? ?? 0,
       pointsNeededForNextTier: data['pointsNeededForNextTier'] as int? ?? 0,
@@ -345,11 +345,11 @@ class AppNotification {
       id: doc.id,
       memberId: data['memberId'] as String? ?? '',
       title: data['title'] as String? ?? '',
-      message: data['message'] as String? ?? '',
+      message: (data['message'] ?? data['body']) as String? ?? '',
       type: data['type'] as String? ?? 'system',
       actionUrl: data['actionUrl'] as String?,
       data: data['data'] as Map<String, dynamic>?,
-      isRead: data['isRead'] as bool? ?? false,
+      isRead: (data['isRead'] ?? data['read']) as bool? ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       readAt: (data['readAt'] as Timestamp?)?.toDate(),
     );

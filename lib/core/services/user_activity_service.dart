@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -47,17 +49,52 @@ class UserActivity {
 
   factory UserActivity.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final eventData = data['eventData'] is Map
+        ? Map<String, dynamic>.from(data['eventData'] as Map)
+        : data['activityData'] is Map
+            ? Map<String, dynamic>.from(data['activityData'] as Map)
+            : data['details'] is Map
+                ? Map<String, dynamic>.from(data['details'] as Map)
+                : <String, dynamic>{};
+    final metadata = data['metadata'] is Map
+        ? Map<String, dynamic>.from(data['metadata'] as Map)
+        : <String, dynamic>{};
+    metadata.addAll(eventData);
+    final rawType = data['activityType'] ??
+        data['eventType'] ??
+        data['action'] ??
+        (data['quoteId'] != null || data['targetUnitPrice'] != null
+            ? 'quote_request'
+            : null);
+    final normalizedType = switch (rawType?.toString()) {
+      'product_view' || 'viewed_product' => 'view',
+      'product_search' => 'search',
+      'cart_add' => 'add_to_cart',
+      'purchase_complete' || 'purchase_completed' => 'purchase',
+      'review_submitted' => 'review',
+      'wishlist_add' => 'wishlist',
+      final value when value != null && value.isNotEmpty => value,
+      _ => 'unknown',
+    };
+    DateTime readTimestamp(dynamic value) {
+      if (value is Timestamp) return value.toDate();
+      if (value is DateTime) return value;
+      return DateTime.tryParse(value?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
     return UserActivity(
       id: doc.id,
-      userId: data['userId'] ?? '',
-      activityType: data['activityType'] ?? 'unknown',
-      productId: data['productId'],
-      productName: data['productName'],
-      category: data['category'],
-      price: (data['price'] as num?)?.toDouble(),
-      quantity: data['quantity'],
-      metadata: data['metadata'],
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      userId: data['userId'] ?? data['buyerId'] ?? data['memberId'] ?? '',
+      activityType: normalizedType,
+      productId: data['productId'] ?? eventData['productId'],
+      productName: data['productName'] ?? eventData['productName'],
+      category: data['category'] ?? eventData['productCategory'],
+      price: (data['price'] as num?)?.toDouble() ??
+          (eventData['productPrice'] as num?)?.toDouble(),
+      quantity: data['quantity'] ?? eventData['quantity'],
+      metadata: metadata.isEmpty ? null : metadata,
+      timestamp: readTimestamp(data['timestamp'] ?? data['createdAt']),
       sessionId: data['sessionId'],
     );
   }
@@ -664,19 +701,84 @@ class UserActivityService {
   Stream<List<UserActivity>> watchUserActivity({
     required String userId,
     int limit = 100,
-  }) async* {
+  }) {
     try {
-      await for (final snapshot in _firestore
-          .collection(_activitiesCollection)
-          .where('userId', isEqualTo: userId)
-          .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .snapshots()) {
-        yield snapshot.docs.map(UserActivity.fromFirestore).toList();
+      final controller = StreamController<List<UserActivity>>();
+      final bySource = <String, List<UserActivity>>{};
+      final subscriptions = <StreamSubscription<QuerySnapshot>>[];
+      void emit() {
+        final merged = <String, UserActivity>{};
+        for (final entry in bySource.entries) {
+          for (final activity in entry.value) {
+            final canonicalSource = entry.key.split(':').first;
+            merged['$canonicalSource:${activity.id}'] = activity;
+          }
+        }
+        final result = merged.values.toList()
+          ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        if (!controller.isClosed) {
+          controller.add(result.take(limit).toList());
+        }
       }
+
+      void listenToSource(
+        String sourceKey,
+        Query<Map<String, dynamic>> query,
+      ) {
+        subscriptions.add(query.limit(limit).snapshots().listen((snapshot) {
+          bySource[sourceKey] = snapshot.docs
+              .map(UserActivity.fromFirestore)
+              .where((activity) =>
+                  activity.userId.isEmpty || activity.userId == userId)
+              .toList();
+          emit();
+        }, onError: (Object error) {
+          debugPrint('Activity source $sourceKey unavailable: $error');
+          bySource[sourceKey] = const [];
+          emit();
+        }));
+      }
+
+      for (final collectionName in [_activitiesCollection, 'activityLogs']) {
+        final base = _firestore
+            .collection(collectionName)
+            .where('userId', isEqualTo: userId);
+        listenToSource('$collectionName:timestamp',
+            base.orderBy('timestamp', descending: true));
+        listenToSource('$collectionName:createdAt',
+            base.orderBy('createdAt', descending: true));
+      }
+      listenToSource(
+        'user_activities_nested',
+        _firestore
+            .collection(_activitiesCollection)
+            .doc(userId)
+            .collection('activities')
+            .orderBy('timestamp', descending: true),
+      );
+      listenToSource(
+        'quote_requests:buyerId',
+        _firestore
+            .collection('quote_requests')
+            .where('buyerId', isEqualTo: userId)
+            .orderBy('createdAt', descending: true),
+      );
+      listenToSource(
+        'quote_requests:userId',
+        _firestore
+            .collection('quote_requests')
+            .where('userId', isEqualTo: userId)
+            .orderBy('createdAt', descending: true),
+      );
+      controller.onCancel = () async {
+        for (final subscription in subscriptions) {
+          await subscription.cancel();
+        }
+      };
+      return controller.stream;
     } catch (e) {
       debugPrint('⚠️ Activity stream fallback for user $userId: $e');
-      yield const [];
+      return Stream.value(const <UserActivity>[]);
     }
   }
 

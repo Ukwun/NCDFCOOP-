@@ -140,33 +140,41 @@ class SellerProduct {
     final data = doc.data() as Map<String, dynamic>;
     return SellerProduct(
       id: doc.id,
-      sellerId: data['sellerId'] ?? '',
-      sellerUserId: data['sellerUserId'],
+      sellerId: data['sellerId'] ?? data['uploadedBy'] ?? '',
+      sellerUserId: data['sellerUserId'] ?? data['uploadedBy'],
       sellerProfileId: data['sellerProfileId'],
-      productName: data['productName'] ?? '',
-      category: data['category'] ?? '',
-      price: (data['price'] ?? 0).toDouble(),
+      productName: (data['productName'] ?? data['name'] ?? '').toString(),
+      category: (data['category'] ?? data['categoryId'] ?? '').toString(),
+      price: (data['price'] ?? data['retailPrice'] ?? 0 as num).toDouble(),
       retailPrice: (data['retailPrice'] as num?)?.toDouble(),
       wholesalePrice: (data['wholesalePrice'] as num?)?.toDouble(),
       audience: ProductAudience.values.firstWhere(
         (value) => value.name == (data['audience'] ?? 'both'),
         orElse: () => ProductAudience.both,
       ),
-      quantity: data['quantity'] ?? 0,
-      moq: data['moq'] ?? 1,
+      quantity: (data['quantity'] ?? data['stock'] ?? 0 as num).toInt(),
+      moq: (data['moq'] ?? data['minOrderQuantity'] ?? 1 as num).toInt(),
       imageUrl: data['imageUrl'] ??
           data['image_url'] ??
+          data['thumbnail'] ??
           ((data['images'] is List && (data['images'] as List).isNotEmpty)
               ? (data['images'] as List).first.toString()
               : ''),
       description: data['description'] ?? '',
       status: ProductApprovalStatus.values.firstWhere(
-        (e) => e.name == (data['status'] ?? 'pending'),
+        (e) =>
+            e.name ==
+            ((data['status'] == 'live' || data['status'] == 'active')
+                ? 'approved'
+                : (data['status'] ?? 'pending')),
         orElse: () => ProductApprovalStatus.pending,
       ),
       rejectionReason: data['rejectionReason'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      approvedAt: (data['approvedAt'] as Timestamp?)?.toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ??
+          (data['created_at'] as Timestamp?)?.toDate() ??
+          DateTime.now(),
+      approvedAt: (data['approvedAt'] as Timestamp?)?.toDate() ??
+          (data['approved_at'] as Timestamp?)?.toDate(),
       rejectedAt: (data['rejectedAt'] as Timestamp?)?.toDate(),
     );
   }

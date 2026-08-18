@@ -9,6 +9,8 @@ import '../../../core/providers/home_providers.dart';
 import '../../../core/intelligence/role_commerce_intelligence.dart';
 import '../../../providers/savings_provider.dart';
 import '../../../core/widgets/dashboard_motion.dart';
+import '../../../core/services/user_activity_service.dart';
+import '../../../providers/user_activity_providers.dart';
 
 /// MEMBER HOME SCREEN
 /// Co-operative members with loyalty benefits
@@ -25,6 +27,9 @@ class MemberHomeScreen extends ConsumerWidget {
     final memberData = ref.watch(memberDataProvider(user?.id ?? ''));
     final featuredAsync =
         ref.watch(roleAwareFeaturedProductsProvider(userRole));
+    final activityAsync = user == null
+        ? const AsyncValue<List<UserActivity>>.data([])
+        : ref.watch(userActivityTimelineProvider(user.id));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -131,7 +136,11 @@ class MemberHomeScreen extends ConsumerWidget {
                     context,
                     displayData.tier,
                     displayData.rewardsPoints,
+                    displayData.isActive,
                   ),
+
+                  const SizedBox(height: 14),
+                  _buildRecentActivity(context, activityAsync),
 
                   const SizedBox(height: 18),
                   _buildRecentlyBrowsedProductsSection(context, featuredAsync),
@@ -245,6 +254,80 @@ class MemberHomeScreen extends ConsumerWidget {
                 ],
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentActivity(
+    BuildContext context,
+    AsyncValue<List<UserActivity>> activityAsync,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DashboardReveal(
+        delay: const Duration(milliseconds: 110),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Icon(Icons.history_rounded, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text('Your recent CoopX activity', style: AppTextStyles.h4),
+              ]),
+              const SizedBox(height: 12),
+              activityAsync.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (_, __) => const Text(
+                  'Activity is temporarily unavailable. Pull to refresh shortly.',
+                ),
+                data: (activities) {
+                  if (activities.isEmpty) {
+                    return const Text(
+                      'Your purchases, product views, searches and rewards activity will appear here.',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    );
+                  }
+                  return Column(
+                    children: activities.take(4).map((activity) {
+                      final title = activity.productName?.trim().isNotEmpty ==
+                              true
+                          ? activity.productName!
+                          : activity.activityType
+                              .replaceAll('_', ' ')
+                              .split(' ')
+                              .map((word) => word.isEmpty
+                                  ? word
+                                  : '${word[0].toUpperCase()}${word.substring(1)}')
+                              .join(' ');
+                      final date = MaterialLocalizations.of(context)
+                          .formatShortDate(activity.timestamp.toLocal());
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFFE4F4ED),
+                          child: Icon(Icons.bolt_rounded,
+                              color: AppColors.primary, size: 19),
+                        ),
+                        title: Text(title,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(date),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -391,6 +474,7 @@ class MemberHomeScreen extends ConsumerWidget {
     BuildContext context,
     String currentTier,
     int points,
+    bool isActive,
   ) {
     final tier = currentTier.trim().isEmpty ? 'Bronze' : currentTier;
     return Container(
@@ -448,9 +532,11 @@ class MemberHomeScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      const Text(
-                        'Unlock more member savings',
-                        style: TextStyle(
+                      Text(
+                        isActive
+                            ? 'Membership active'
+                            : 'Membership awaiting activation',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 17,
                           fontWeight: FontWeight.w800,

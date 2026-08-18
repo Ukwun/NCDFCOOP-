@@ -1760,15 +1760,16 @@ async function sendNotification(
 
     // Store in notifications collection for in-app display
     await db
-      .collection('users')
-      .doc(userId)
       .collection('notifications')
+      .doc(userId)
+      .collection('items')
       .add({
-        userId: userId,
+        userId,
+        memberId: userId,
         title: notification.title,
-        body: notification.body,
+        message: notification.body,
         type: notification.type || 'general',
-        read: false,
+        isRead: false,
         data: notification,
         createdAt: admin.firestore.Timestamp.now(),
       });
@@ -2855,7 +2856,8 @@ export const reviewSellerWithdrawal = functions.https.onCall(async (data, contex
         : {}),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
-    transaction.set(db.collection('notifications').doc(), {
+    transaction.set(db.collection('notifications').doc(sellerId)
+      .collection('items').doc(), {
       userId: sellerId,
       type: 'seller_withdrawal_review',
       title: `Withdrawal ${decision}`,

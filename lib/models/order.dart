@@ -256,32 +256,97 @@ class Order {
         'trackingNumber': trackingNumber,
       };
 
-  factory Order.fromJson(Map<String, dynamic> json) => Order(
-        id: json['id'] as String,
-        items: (json['items'] as List)
-            .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        address:
-            DeliveryAddress.fromJson(json['address'] as Map<String, dynamic>),
-        paymentMethod: json['paymentMethod'] as String,
-        paymentStatus:
-            PaymentStatus.values.byName(json['paymentStatus'] as String),
-        orderStatus: OrderStatus.values.byName(json['orderStatus'] as String),
-        subtotal: json['subtotal'] as double,
-        deliveryFee: json['deliveryFee'] as double,
-        totalSavings: json['totalSavings'] as double,
-        total: json['total'] as double,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        estimatedDeliveryAt: json['estimatedDeliveryAt'] != null
-            ? DateTime.parse(json['estimatedDeliveryAt'] as String)
-            : null,
-        deliveredAt: json['deliveredAt'] != null
-            ? DateTime.parse(json['deliveredAt'] as String)
-            : null,
-        driverName: json['driverName'] as String?,
-        driverPhone: json['driverPhone'] as String?,
-        driverImage: json['driverImage'] as String?,
-        driverRating: json['driverRating'] as double?,
-        trackingNumber: json['trackingNumber'] as String?,
+  factory Order.fromJson(Map<String, dynamic> json) {
+    double number(dynamic value) => (value as num?)?.toDouble() ?? 0;
+    DateTime date(dynamic value) {
+      if (value is DateTime) return value;
+      try {
+        return value.toDate() as DateTime;
+      } catch (_) {
+        return DateTime.tryParse(value?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+      }
+    }
+
+    final rawItems = json['items'] is List ? json['items'] as List : const [];
+    final items = rawItems.whereType<Map>().map((raw) {
+      final item = Map<String, dynamic>.from(raw);
+      return OrderItem(
+        productId: (item['productId'] ?? item['id'] ?? '').toString(),
+        name: (item['name'] ?? item['productName'] ?? 'Product').toString(),
+        size: (item['size'] ?? item['unit'] ?? '').toString(),
+        price: number(item['price'] ?? item['unitPrice']),
+        quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+        savings: number(item['savings']),
+        imageUrl: (item['imageUrl'] ?? item['image'])?.toString(),
       );
+    }).toList();
+    final addressData = json['address'] is Map
+        ? Map<String, dynamic>.from(json['address'] as Map)
+        : json['shippingAddress'] is Map
+            ? Map<String, dynamic>.from(json['shippingAddress'] as Map)
+            : <String, dynamic>{};
+    final rawPayment =
+        (json['paymentStatus'] ?? 'pending').toString().toLowerCase();
+    final payment = switch (rawPayment) {
+      'paid' ||
+      'completed' ||
+      'successful' ||
+      'success' =>
+        PaymentStatus.success,
+      'processing' => PaymentStatus.processing,
+      'failed' => PaymentStatus.failed,
+      'refunded' => PaymentStatus.refunded,
+      _ => PaymentStatus.pending,
+    };
+    final rawStatus = (json['orderStatus'] ?? json['status'] ?? 'pending')
+        .toString()
+        .toLowerCase();
+    final status = switch (rawStatus) {
+      'paid' || 'confirmed' => OrderStatus.confirmed,
+      'processing' => OrderStatus.processing,
+      'shipped' || 'dispatched' => OrderStatus.dispatched,
+      'out_for_delivery' || 'outfordelivery' => OrderStatus.outForDelivery,
+      'delivered' => OrderStatus.delivered,
+      'cancelled' || 'canceled' => OrderStatus.cancelled,
+      'failed' => OrderStatus.failed,
+      _ => OrderStatus.pending,
+    };
+    return Order(
+      id: (json['id'] ?? '').toString(),
+      items: items,
+      address: DeliveryAddress(
+        id: (addressData['id'] ?? '').toString(),
+        fullName:
+            (addressData['fullName'] ?? addressData['name'] ?? '').toString(),
+        phoneNumber: (addressData['phoneNumber'] ?? addressData['phone'] ?? '')
+            .toString(),
+        street:
+            (addressData['street'] ?? addressData['address'] ?? '').toString(),
+        city: (addressData['city'] ?? '').toString(),
+        state: (addressData['state'] ?? '').toString(),
+        zipCode: (addressData['zipCode'] ?? addressData['postalCode'] ?? '')
+            .toString(),
+        landmark: addressData['landmark']?.toString(),
+      ),
+      paymentMethod: (json['paymentMethod'] ?? 'Not specified').toString(),
+      paymentStatus: payment,
+      orderStatus: status,
+      subtotal: number(json['subtotal']),
+      deliveryFee: number(json['deliveryFee'] ?? json['shippingFee']),
+      totalSavings: number(json['totalSavings']),
+      total: number(json['total'] ?? json['totalAmount']),
+      createdAt: date(json['createdAt']),
+      estimatedDeliveryAt: json['estimatedDeliveryAt'] == null
+          ? null
+          : date(json['estimatedDeliveryAt']),
+      deliveredAt:
+          json['deliveredAt'] == null ? null : date(json['deliveredAt']),
+      driverName: json['driverName']?.toString(),
+      driverPhone: json['driverPhone']?.toString(),
+      driverImage: json['driverImage']?.toString(),
+      driverRating: number(json['driverRating']),
+      trackingNumber: json['trackingNumber']?.toString(),
+    );
+  }
 }

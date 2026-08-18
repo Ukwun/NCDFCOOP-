@@ -40,8 +40,12 @@ final currentUserProvider = NotifierProvider<UserNotifier, User?>(() {
 /// Currently active role (for multi-role users)
 final currentRoleProvider = Provider<UserRole>((ref) {
   final user = ref.watch(currentUserProvider);
-  for (final role in user?.roles ?? const <UserRole>[]) {
+  final roles = user?.roles ?? const <UserRole>[];
+  for (final role in roles) {
     if (role.isSupported) return role;
+  }
+  if (roles.isNotEmpty) {
+    return roles.first;
   }
   // A missing role must never grant commercial buyer capabilities. The router
   // sends incomplete profiles through role selection; this is only a
