@@ -49,11 +49,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // Failsafe: never allow splash to hang indefinitely
     _failsafeTimer = Timer(const Duration(seconds: 8), () async {
       if (mounted && !_hasNavigated) {
-        final onboardingCompleted =
-            await ref.read(onboardingCompletedProvider.future);
         if (!mounted || _hasNavigated) return;
         _hasNavigated = true;
-        context.go(onboardingCompleted ? '/signin' : '/onboarding');
+        context.go('/onboarding');
       }
     });
   }
@@ -65,18 +63,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     await ref.read(initializePersistedUserProvider.future);
     if (!mounted || _hasNavigated) return;
 
-    final currentUser = ref.read(global_auth.currentUserProvider);
-    if (currentUser != null) {
-      _hasNavigated = true;
-      context.go(currentUser.roleSelectionCompleted ? '/' : '/role-selection');
-      return;
-    }
-
-    final onboardingCompleted =
-        await ref.read(onboardingCompletedProvider.future);
     if (!mounted || _hasNavigated) return;
     _hasNavigated = true;
-    context.go(onboardingCompleted ? '/signin' : '/onboarding');
+    // Always present onboarding. It preserves the authenticated Firebase
+    // session and returns existing users to their canonical role dashboard.
+    context.go('/onboarding');
   }
 
   @override
